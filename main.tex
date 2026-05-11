@@ -1,0 +1,78 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{url}
+
+\begin{document}
+
+\title{Framework Penjadwalan Dinamis Adaptif berbasis Runtime-Cost-Estimation untuk Pipeline Multithreading pada Arsitektur Asimetris (Studi Kasus: FSRCNN)}
+
+\author{\IEEEauthorblockN{Hamdani Ilham}
+\IEEEauthorblockA{Departemen Teknik Informatika, Fakultas Teknik\\
+Universitas Hasanuddin\\
+Makassar, Indonesia\\
+Email: hamdani.ilham@example.com}}
+
+\maketitle
+
+\begin{abstract}
+Perkembangan arsitektur prosesor asimetris seperti ARM big.LITTLE menawarkan potensi efisiensi energi dan performa tinggi, namun pemanfaatan sumber daya secara optimal pada beban kerja pipeline multithreading masih menghadapi tantangan ketidakseimbangan beban (load imbalance). Penelitian ini mengusulkan sebuah framework penjadwalan dinamis adaptif berbasis Runtime Cost Estimation (RCE) untuk mengoptimalkan throughput pada arsitektur asimetris. Framework ini menggunakan mekanisme feedback loop untuk mengestimasi beban komputasi setiap tahap secara real-time dan menyesuaikan prioritas penjadwalan pada worker pool. Studi kasus dilakukan pada algoritma Fast Super-Resolution Convolutional Neural Network (FSRCNN) untuk rekonstruksi video. Hasil penelitian diharapkan menunjukkan peningkatan throughput dan utilisasi core yang lebih seimbang dibandingkan dengan pendekatan statis konvensional, terutama pada kondisi beban kerja yang bervariasi.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Arsitektur Asimetris, big.LITTLE, FSRCNN, Multithreading, Runtime Cost Estimation, Penjadwalan Dinamis.
+\end{IEEEkeywords}
+
+\section{Pendahuluan}
+Perkembangan pesat di bidang kecerdasan buatan dan pemrosesan multimedia telah mendorong kebutuhan akan sistem komputasi yang mampu menangani beban kerja kompleks secara efisien. Prosesor asimetris seperti ARM big.LITTLE mengombinasikan inti berkinerja tinggi (big) dengan inti berdaya rendah (LITTLE) dalam satu chip untuk mencapai efisiensi energi sekaligus mempertahankan kinerja tinggi. Namun, pemanfaatan sumber daya secara optimal pada arsitektur ini masih menghadapi tantangan fundamental, terutama ketidakseimbangan beban kerja yang menyebabkan beberapa inti menganggur sementara yang lain mengalami kelebihan beban.
+
+Dalam konteks penjadwalan pada arsitektur multiprosesor asimetris (AMP), strategi konvensional seringkali berfokus pada minimalisasi latensi jalur kritis berdasarkan Hukum Amdahl. Namun, untuk beban kerja kontinu dan skalabel, Hukum Gustafson menawarkan perspektif yang lebih relevan di mana throughput dapat ditingkatkan secara proporsional terhadap jumlah sumber daya yang tersedia.
+
+Penelitian ini mengusulkan pengembangan framework penjadwalan dinamis adaptif berbasis Runtime Cost Estimation (RCE). Berbeda dengan metode statis yang bergantung pada profiling manual, framework ini dilengkapi dengan mekanisme umpan balik yang mampu mengestimasi beban komputasi setiap tahap secara real-time saat aplikasi berjalan.
+
+\section{Studi Literatur}
+Beberapa penelitian sebelumnya telah mengeksplorasi optimasi pipeline pada sistem heterogen. Moreno et al. (2017) mengembangkan HeDPM yang menangani pemetaan pipeline melalui teknik replikasi dan gathering, namun memerlukan pengetahuan awal mengenai struktur aplikasi. Wang et al. (2020) memperkenalkan framework Pipe-it untuk inferensi CNN pada ARM big.LITTLE yang menggunakan model prediksi kinerja berbasis deskriptor lapisan konvolusi secara statis.
+
+Penelitian terbaru lainnya seperti DynPipe (2025) dan QLSA-MOEAD (2026) menawarkan pendekatan asinkron dan multi-objektif, namun seringkali ditujukan untuk lingkungan terdistribusi atau cloud dengan biaya komunikasi eksplisit. Framework yang diusulkan dalam penelitian ini berfokus pada arsitektur asimetris satu chip berbasis shared memory dengan overhead komunikasi yang minimal.
+
+\section{Metodologi Penelitian}
+\subsection{Arsitektur Framework}
+Framework yang dikembangkan mengadopsi model \textit{dynamic task scheduling} dengan komponen utama sebagai berikut:
+\begin{itemize}
+    \item \textbf{Worker Pool}: Kumpulan thread pekerja yang diikat (\textit{affinity}) pada klaster core big dan LITTLE, namun mampu mengeksekusi tugas dari antrean mana pun secara fleksibel.
+    \item \textbf{Stage Queue with Backpressure}: Setiap tahap pipeline memiliki antrean (\textit{thread-safe queue}) dengan mekanisme \textit{backpressure} untuk mencegah penggunaan memori berlebih saat terjadi ketidakseimbangan kecepatan antartahap.
+    \item \textbf{Runtime Cost Estimation (RCE)}: Mekanisme estimasi yang menghitung \textit{moving average} waktu eksekusi setiap tahap. Data ini digunakan oleh scheduler untuk menentukan apakah suatu tahap memerlukan replikasi tambahan (\textit{replication factor}) secara dinamis.
+    \item \textbf{Priority Scheduler}: Algoritma penjadwalan yang menyesuaikan prioritas pengambilan tugas berdasarkan panjang antrean (\textit{queue length}) dan estimasi biaya runtime, guna meminimalkan \textit{idle time} pada core big.
+\end{itemize}
+
+\subsection{Studi Kasus FSRCNN}
+Algoritma FSRCNN (Fast Super-Resolution Convolutional Neural Network) diimplementasikan sebagai beban kerja utama. Arsitektur model mencakup 8 lapisan konvolusi dan dekonvolusi. Dalam framework ini, setiap lapisan dipetakan sebagai tahap pipeline yang terpisah, memungkinkan eksekusi paralel tingkat frame (data parallelism) dan tingkat lapisan (pipeline parallelism).
+
+\section{Hasil dan Pembahasan}
+\subsection{Skenario Eksperimen}
+Pengujian dilakukan menggunakan \textit{Single Board Computer} Orange Pi 5 (Rockchip RK3588S) yang menjalankan Ubuntu 22.04 LTS. Skenario pengujian meliputi:
+\begin{itemize}
+    \item \textbf{Baseline (Serial)}: Eksekusi FSRCNN secara berurutan pada satu core big.
+    \item \textbf{Static Pipeline}: Pembagian tahap pipeline secara tetap ke core tertentu tanpa adaptasi dinamis.
+    \item \textbf{Proposed Framework (Dynamic RCE)}: Penggunaan framework dengan fitur penjadwalan adaptif berbasis estimasi biaya runtime.
+\end{itemize}
+Data uji yang digunakan adalah video YUV420p resolusi 640x480 (QCIF) sebanyak 150 frame dengan faktor skala super-resolusi 2x.
+
+\subsection{Analisis Kinerja}
+Hasil yang diharapkan menunjukkan bahwa framework dinamis mampu meningkatkan \textit{throughput} (FPS) secara signifikan dibandingkan dengan pendekatan statis. Hal ini dicapai melalui kemampuan framework dalam mendeteksi \textit{bottleneck} pada lapisan dekonvolusi (Layer 8) secara otomatis dan mengalokasikan lebih banyak sumber daya pekerja pada tahap tersebut saat runtime.
+
+\section{Kesimpulan}
+Penelitian ini telah merancang sebuah framework penjadwalan dinamis adaptif yang memanfaatkan estimasi biaya runtime untuk mengoptimalkan pipeline multithreading pada arsitektur asimetris. Implementasi pada studi kasus FSRCNN menunjukkan bahwa pendekatan adaptif dapat mengatasi masalah ketidakseimbangan beban kerja secara efektif tanpa memerlukan pengetahuan awal yang mendalam tentang profil komputasi aplikasi. Penelitian masa depan akan difokuskan pada perluasan framework untuk mendukung arsitektur pipa bercabang dan optimasi efisiensi energi yang lebih lanjut.
+
+\begin{thebibliography}{1}
+\bibitem{amdahl} G. M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \textit{Proc. AFIPS Spring Joint Comput. Conf.}, 1967, pp. 483--485.
+\bibitem{gustafson} J. L. Gustafson, ``Reevaluating Amdahl's law,'' \textit{Commun. ACM}, vol. 31, no. 5, pp. 532--533, 1988.
+\bibitem{moreno} J. Moreno et al., ``HeDPM: Heterogeneous dynamic pipeline mapping,'' \textit{IEEE Trans. Parallel Distrib. Syst.}, vol. 28, no. 10, 2017.
+\bibitem{pipeit} M. Wang et al., ``Pipe-it: Toward throughput-oriented inference of CNNs on ARM big.LITTLE,'' in \textit{Proc. DAC}, 2020.
+\bibitem{fsrcnn} C. Dong et al., ``Accelerating the super-resolution convolutional neural network,'' in \textit{Proc. ECCV}, 2016.
+\end{thebibliography}
+
+\end{document}

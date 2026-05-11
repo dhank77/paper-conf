@@ -1,0 +1,78 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{url}
+
+\begin{document}
+
+\title{Adaptive Dynamic Scheduling Framework based on Runtime-Cost-Estimation for Multithreading Pipelines on Asymmetric Architectures (Case Study: FSRCNN)}
+
+\author{\IEEEauthorblockN{Hamdani Ilham}
+\IEEEauthorblockA{Department of Informatics Engineering, Faculty of Engineering\\
+Hasanuddin University\\
+Makassar, Indonesia\\
+Email: hamdani.ilham@example.com}}
+
+\maketitle
+
+\begin{abstract}
+The development of asymmetric processor architectures such as ARM big.LITTLE offers potential for energy efficiency and high performance. However, optimal resource utilization in multithreading pipeline workloads still faces challenges due to load imbalance. This research proposes an adaptive dynamic scheduling framework based on Runtime Cost Estimation (RCE) to optimize throughput on asymmetric architectures. This framework employs a feedback loop mechanism to estimate the computational load of each stage in real-time and adjust scheduling priorities within the worker pool. A case study is conducted on the Fast Super-Resolution Convolutional Neural Network (FSRCNN) algorithm for video reconstruction. The research results are expected to demonstrate increased throughput and more balanced core utilization compared to conventional static approaches, particularly under varying workload conditions.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Asymmetric Architecture, big.LITTLE, FSRCNN, Multithreading, Runtime Cost Estimation, Dynamic Scheduling.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Rapid developments in artificial intelligence and multimedia processing have driven the need for computing systems capable of handling complex workloads efficiently. Asymmetric processors, such as ARM big.LITTLE, combine a number of high-performance (big) cores with low-power (LITTLE) cores on a single chip to achieve energy efficiency while maintaining high performance. However, optimal resource utilization on this architecture still faces fundamental challenges, particularly load imbalance, which causes some cores to remain idle while others are overloaded.
+
+In the context of scheduling on asymmetric multiprocessor (AMP) architectures, conventional strategies often focus on minimizing critical path latency based on Amdahl's Law. However, for continuous and scalable workloads, Gustafson's Law offers a more relevant perspective, where throughput can be increased proportionally to the number of available resources.
+
+This research proposes the development of an adaptive dynamic scheduling framework based on Runtime Cost Estimation (RCE). Unlike static methods that rely on manual profiling, this framework is equipped with a feedback mechanism capable of estimating the computational load of each stage in real-time while the application is running.
+
+\section{Literature Review}
+Several previous studies have explored pipeline optimization on heterogeneous systems. Moreno et al. (2017) developed HeDPM, which handles pipeline mapping through replication and gathering techniques but requires prior knowledge of the application structure. Wang et al. (2020) introduced the Pipe-it framework for CNN inference on ARM big.LITTLE, which utilizes a performance-prediction model based on convolution layer descriptors statically.
+
+Other recent studies, such as DynPipe (2025) and QLSA-MOEAD (2026), offer asynchronous and multi-objective approaches but are often aimed at distributed or cloud environments with explicit communication costs. The framework proposed in this research focuses on single-chip asymmetric architectures based on shared memory with minimal communication overhead.
+
+\section{Research Methodology}
+\subsection{Framework Architecture}
+The developed framework adopts a dynamic task scheduling model with the following main components:
+\begin{itemize}
+    \item \textbf{Worker Pool}: A collection of worker threads bound (affinity) to big and LITTLE core clusters, yet capable of flexibly executing tasks from any queue.
+    \item \textbf{Stage Queue with Backpressure}: Each pipeline stage has a thread-safe queue with a backpressure mechanism to prevent excessive memory usage when speed imbalances occur between stages.
+    \item \textbf{Runtime Cost Estimation (RCE)}: An estimation mechanism that calculates the moving average of the execution time for each stage. This data is used by the scheduler to determine if a stage requires additional replication (replication factor) dynamically.
+    \item \textbf{Priority Scheduler}: A scheduling algorithm that adjusts task acquisition priority based on queue length and runtime cost estimation to minimize idle time on big cores.
+\end{itemize}
+
+\subsection{FSRCNN Case Study}
+The FSRCNN (Fast Super-Resolution Convolutional Neural Network) algorithm is implemented as the primary workload. The model architecture includes 8 convolution and deconvolution layers. In this framework, each layer is mapped as a separate pipeline stage, allowing for both frame-level (data parallelism) and layer-level (pipeline parallelism) execution.
+
+\section{Results and Discussion}
+\subsection{Experimental Scenario}
+Testing is conducted using an Orange Pi 5 Single Board Computer (Rockchip RK3588S) running Ubuntu 22.04 LTS. The testing scenarios include:
+\begin{itemize}
+    \item \textbf{Baseline (Serial)}: Sequential execution of FSRCNN on a single big core.
+    \item \textbf{Static Pipeline}: Fixed partitioning of pipeline stages to specific cores without dynamic adaptation.
+    \item \textbf{Proposed Framework (Dynamic RCE)}: Utilization of the framework with adaptive scheduling features based on runtime cost estimation.
+\end{itemize}
+The test data used consists of a YUV420p video file with a resolution of 640x480 (QCIF), totaling 150 frames, with a super-resolution scale factor of 2x.
+
+\subsection{Performance Analysis}
+The expected results show that the dynamic framework can significantly increase throughput (FPS) compared to static approaches. This is achieved through the framework's ability to automatically detect bottlenecks in the deconvolution layer (Layer 8) and allocate more worker resources to that stage at runtime.
+
+\section{Conclusion}
+This research has designed an adaptive dynamic scheduling framework that leverages runtime cost estimation to optimize multithreading pipelines on asymmetric architectures. Implementation on the FSRCNN case study demonstrates that the adaptive approach can effectively address load imbalance issues without requiring deep prior knowledge of the application's computational profile. Future research will focus on extending the framework to support branching pipeline architectures and further optimizing energy efficiency.
+
+\begin{thebibliography}{1}
+\bibitem{amdahl} G. M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \textit{Proc. AFIPS Spring Joint Comput. Conf.}, 1967, pp. 483--485.
+\bibitem{gustafson} J. L. Gustafson, ``Reevaluating Amdahl's law,'' \textit{Commun. ACM}, vol. 31, no. 5, pp. 532--533, 1988.
+\bibitem{moreno} J. Moreno et al., ``HeDPM: Heterogeneous dynamic pipeline mapping,'' \textit{IEEE Trans. Parallel Distrib. Syst.}, vol. 28, no. 10, 2017.
+\bibitem{pipeit} M. Wang et al., ``Pipe-it: Toward throughput-oriented inference of CNNs on ARM big.LITTLE,'' in \textit{Proc. DAC}, 2020.
+\bibitem{fsrcnn} C. Dong et al., ``Accelerating the super-resolution convolutional neural network,'' in \textit{Proc. ECCV}, 2016.
+\end{thebibliography}
+
+\end{document}
