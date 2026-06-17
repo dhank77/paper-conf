@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(brew *)",
-      "Bash(pdftotext *)"
+      "Bash(pdftotext *)",
+      "Bash(mv *)",
+      "Bash(pdflatex *)"
     ]
   },
   "$version": 4
