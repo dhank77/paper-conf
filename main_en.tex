@@ -6,6 +6,7 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage{adjustbox}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -34,7 +35,7 @@ adnan@unhas.ac.id}
 
 % === ABSTRACT ===
 \begin{abstract}
-The proliferation of Asymmetric Multicore Processors (AMP), such as ARM big.LITTLE, offers significant potential for edge Deep Neural Networks (DNNs), but standard OS schedulers often fail to exploit hardware heterogeneity, leading to load imbalance in pipeline parallelism. While existing dynamic schedulers address this, they incur significant runtime overhead due to continuous profiling. We propose SyncPilot, a lightweight framework for AMP that introduces Initial Calibration Runtime Cost Estimation (IC-RCE). Unlike conventional methods, IC-RCE profiles stage costs once during initialization, eliminating monitoring overhead during steady-state execution. SyncPilot employs Asymmetry-Aware Mapping to pin heavy stages to Big cores and a capacity-aware worker pool for efficient load distribution. Experimental results on an Orange Pi 5 using an FSRCNN case study demonstrate that SyncPilot with 4 Big-core workers achieves a 3.39$\times$ speedup (10.74 FPS) over the baseline parallel implementation (3.17 FPS). Notably, the 4-worker configuration outperforms the 8-worker variant (8.86 FPS, 2.80$\times$), confirming that exclusive Big-core usage avoids the straggler effect caused by LITTLE cores handling heavy stages. The proposed initial calibration effectively reduces scheduling overhead to near-zero, and all configurations produce numerically identical outputs to the ground truth.
+The proliferation of Asymmetric Multicore Processors (AMP), such as ARM big.LITTLE, offers significant potential for edge Deep Neural Networks (DNNs), but standard OS schedulers often fail to exploit hardware heterogeneity, leading to load imbalance in pipeline parallelism. While existing dynamic schedulers address this, they incur significant runtime overhead due to continuous profiling. We propose SyncPilot, a lightweight framework for AMP that introduces Initial Calibration Runtime Cost Estimation (IC-RCE). Unlike conventional methods, IC-RCE profiles stage costs once during initialization, eliminating monitoring overhead during steady-state execution. SyncPilot employs Asymmetry-Aware Mapping to pin heavy stages to Big cores and a capacity-aware worker pool for efficient load distribution. Experimental results on an Orange Pi 5 using an FSRCNN case study demonstrate that SyncPilot with 4 Big-core workers achieves a 3.84$\times$ speedup (11.71 FPS) over the serial baseline. Notably, the 4-worker configuration outperforms the 8-worker variant (9.01 FPS, 2.95$\times$), confirming that exclusive Big-core usage avoids the straggler effect caused by LITTLE cores handling heavy stages. The proposed initial calibration effectively reduces scheduling overhead to near-zero, and all configurations produce numerically identical outputs to the ground truth.
 \end{abstract}
 
 % === KEYWORDS ===
@@ -52,13 +53,13 @@ Prior works have proposed dynamic scheduling solutions that monitor task executi
 
 In this paper, we propose \textbf{SyncPilot}, a novel scheduling framework that bridges the gap between static efficiency and dynamic adaptability. Our core contribution is the \textbf{Initial Calibration Runtime Cost Estimation (IC-RCE) mechanism}. Instead of continuous profiling, SyncPilot performs a one-time calibration during the first task execution to estimate the computational cost of each pipeline stage. This information is then used to enforce an \textbf{Asymmetry-Aware Mapping} strategy, utilizing POSIX thread affinity to pin specific stages to appropriate core types \cite{solovyev2015pthreadaffinity}.
 
-We validate our approach on an Orange Pi 5 platform (RK3588S SoC) using a Fast Super-Resolution Convolutional Neural Network (FSRCNN) \cite{dong2016fsrcnn}. Results show that SyncPilot achieves a 3.39$\times$ speedup over the baseline parallel implementation, with the 4-worker Big-core configuration yielding the best throughput at 10.74 FPS.
+We validate our approach on an Orange Pi 5 platform (RK3588S SoC) using a Fast Super-Resolution Convolutional Neural Network (FSRCNN) \cite{dong2016fsrcnn}. Results show that SyncPilot achieves a 3.84$\times$ speedup over the serial baseline, with the 4-worker Big-core configuration yielding the best throughput at 11.71 FPS.
 
 The main contributions of this paper are summarized as follows:
 \begin{itemize}
 \item We propose IC-RCE, a lightweight calibration mechanism that eliminates continuous profiling overhead.
 \item We design a Capacity-Aware Worker Pool. Unlike traditional push-based dispatchers, our workers actively pull tasks that match their processing power (Big vs. Little), reducing synchronization overhead.
-\item We evaluate 7 SyncPilot configurations on Orange Pi 5 using FSRCNN, demonstrating that the 4-worker Big-core-only setup achieves the best performance (3.39$\times$ speedup), and that all configurations produce numerically identical outputs.
+\item We evaluate configurations on Orange Pi 5 using FSRCNN, demonstrating that the 4-worker Big-core-only setup achieves the best performance (3.84$\times$ speedup over serial baseline), and that all configurations produce numerically identical outputs.
 \end{itemize}
 
 % === II. RELATED WORK ===
@@ -80,7 +81,7 @@ The system consists of three primary components: (1) Shared Stage Queues that ho
 A key advantage of this model is the elimination of a central dispatcher. Instead of a manager pushing tasks to workers, each worker thread autonomously pulls tasks from the shared queues. This pull-based mechanism naturally balances the load, as idle workers proactively seek available tasks, minimizing idle time.
 
 \subsection{Initial Calibration Runtime Cost Estimation (IC-RCE)}
-The core novelty of SyncPilot lies in its IC-RCE mechanism. During the processing of the first task (Task ID 0), the framework measures the execution time of each stage using high-precision timers (\texttt{clock\_gettime}). These measurements are stored in a Cost Table. Once all stages are processed, the system enters the "Steady State," where no further timing measurements are taken. This effectively reduces the profiling overhead to zero during the processing of subsequent tasks (Task ID > 0).
+The core novelty of SyncPilot lies in its IC-RCE mechanism. During the processing of the first task (Task ID 0), the framework measures the execution time of each stage using high-precision timers (\texttt{clock\_gettime}). These measurements are stored in a Cost Table. Once all stages are processed, the system enters the "Steady State," where no further timing measurements are taken. This effectively reduces the profiling overhead to zero during the processing of subsequent tasks (Task ID $> 0$).
 
 \subsection{Capacity-Aware Worker Pool}
 The core innovation of SyncPilot lies in integrating the IC-RCE data with the worker's decision logic. In a standard worker pool, threads pick tasks indiscriminately (e.g., random or FIFO). In SyncPilot, the pull mechanism is \textbf{capacity-aware}.
@@ -103,11 +104,11 @@ The framework is implemented in C using POSIX Threads (pthreads). It is compiled
 \section{Experimental Evaluation}
 
 \subsection{Experimental Setup}
-We implemented SyncPilot in C using POSIX threads and evaluated it on an Orange Pi 5 board equipped with a Rockchip RK3588S SoC. The SoC features a heterogeneous configuration: 4x Cortex-A76 (Big Cores) @ 2.4 GHz and 4x Cortex-A55 (LITTLE Cores) @ 1.8 GHz, with 8 nm LP process technology. The operating system was Ubuntu 22.04 with Linux Kernel 5.10. Compilation was performed using GCC 11.3.0 with \texttt{-O3} optimization flags.
+We implemented SyncPilot in C using POSIX threads and evaluated it on an Orange Pi 5 board equipped with a Rockchip RK3588S SoC. The SoC features a heterogeneous configuration: 4x Cortex-A76 (Big Cores) @ 2.4 GHz and 4x Cortex-A55 (LITTLE Cores) @ 1.8 GHz, with 8 nm LP process technology. The operating system was Ubuntu 22.04 with Linux Kernel 5.10. Compilation was performed using GCC 11.4.0 with \texttt{-O3} optimization flags.
 
 As a case study, we deployed the Fast Super-Resolution Convolutional Neural Network (FSRCNN) \cite{dong2016fsrcnn} for low-to-high resolution video reconstruction (176$\times$144 $\rightarrow$ 352$\times$288 pixels, 150 frames of the Suzie sequence). FSRCNN is an ideal candidate due to its heterogeneous layer complexity, ranging from lightweight $1\times1$ convolutions to the compute-intensive $9\times9$ deconvolution layer (Layer 8). The pipeline was partitioned into 8 stages (Layer 1 to Layer 8).
 
-To contextualize SyncPilot's performance, we compare against two baselines: (1) the \textbf{serial FSRCNN} execution from \cite{annisa2025fsrcnn}, which recorded 86s on Big CPU and 169s on LITTLE CPU for the full sequence, and (2) the \textbf{OpenMP parallel baseline} using 8 threads with Linux CFS scheduling, evaluated in our environment.
+To contextualize SyncPilot's performance, we compare against two baselines: (1) the \textbf{serial FSRCNN} execution from \cite{annisa2025fsrcnn}, which recorded 86s on Big CPU and 169s on LITTLE CPU for the full sequence, and (2) our own \textbf{serial baseline} execution on Big core pinned (49198 ms) and \textbf{parallel OpenMP baseline} (44730 ms, 3.35 FPS) using 8 threads with Linux CFS scheduling.
 
 We compared SyncPilot against the following configurations:
 \begin{itemize}
@@ -124,37 +125,45 @@ Each SyncPilot configuration was executed 8 times, with the first run treated as
 
 \subsection{Overall Performance Comparison}
 \begin{table}[htbp]
-\caption{Performance Comparison Across All Configurations}
+\caption{Performance Comparison}
 \begin{center}
+\small
 \begin{tabular}{|l|c|c|c|}
 \hline
-\textbf{Configuration} & \textbf{Avg. Time (ms)} & \textbf{Throughput (FPS)} & \textbf{Speedup} \\
+\textbf{Config.} & \textbf{Time (ms)} & \textbf{FPS} & \textbf{Speedup} \\
 \hline
-Serial (Big CPU) \cite{annisa2025fsrcnn} & 86000 & 1.74 & 1.00$\times$ \\
-Serial (LITTLE CPU) \cite{annisa2025fsrcnn} & 169000 & 0.89 & 0.51$\times$ \\
-OpenMP Big-Only (4T) \cite{annisa2025fsrcnn} & 24000 & 6.25 & 3.58$\times$ \\
-OpenMP LITTLE-Only (4T) \cite{annisa2025fsrcnn} & 75000 & 2.00 & 1.15$\times$ \\
-OpenMP Hybrid (8T) \cite{annisa2025fsrcnn} & 26000 & 5.77 & 3.31$\times$ \\
-\hline
-Baseline (OpenMP, 8T, CFS) & 47345 & 3.17 & 1.00$\times$ \\
-SyncPilot-4W & 13968 & 10.74 & 3.39$\times$ \\
-SyncPilot-8W & 16923 & 8.86 & 2.80$\times$ \\
+Serial (Big Core) & 49198 & 3.05 & 1.00$\times$ \\
+Baseline (OpenMP 8T) & 44730 & 3.35 & 1.10$\times$ \\
+SyncPilot-4W & 12805 & 11.71 & 3.84$\times$ \\
+SyncPilot-8W & 16656 & 9.01 & 2.95$\times$ \\
 \hline
 \end{tabular}
 \label{tab:throughput}
 \end{center}
 \end{table}
 
-Table \ref{tab:throughput} presents the throughput results. The reference paper \cite{annisa2025fsrcnn} established baselines using OpenMP with explicit CPU affinity: serial execution on a single Big CPU took 86s, while a single LITTLE CPU required 169s. Their best parallel configuration (4 Big CPUs) achieved 24s ($3.58\times$ speedup over serial Big), while 4 LITTLE CPUs reached 75s ($2.25\times$ over serial LITTLE). The OpenMP Hybrid configuration (big.LITTLE and LITTLE.big ordering) achieved 26s, demonstrating that thread ordering in the affinity mask has negligible impact.
+Table \ref{tab:throughput} presents the throughput results. In our evaluation, the serial execution on a pinned Big core achieved 49198 ms (3.05 FPS). The baseline OpenMP implementation using 8 threads without explicit affinity (relying on Linux CFS) completed in 44730 ms (3.35 FPS), demonstrating only marginal improvement due to suboptimal thread-to-core mapping. The reference paper \cite{annisa2025fsrcnn} reported serial execution at 86s on Big CPU and 169s on LITTLE CPU, with their best parallel configuration (4 Big CPUs) at 24s ($3.48\times$ over their serial Big baseline).
 
-Our baseline parallel implementation using 8 OpenMP threads without explicit affinity achieved 47345 ms (3.17 FPS), as the Linux CFS scheduler does not account for heterogeneous core capabilities, leading to suboptimal thread-to-core mapping and frequent cache thrashing. This is notably slower than the affinity-pinned OpenMP results from \cite{annisa2025fsrcnn}, confirming that explicit thread placement is critical on AMP architectures.
+SyncPilot-4W achieves the best performance with 11.71 FPS (12805 ms), corresponding to a \textbf{3.84$\times$ speedup} over our serial baseline and a \textbf{1.42$\times$ improvement} over the OpenMP Big-Only result (24s) from \cite{annisa2025fsrcnn}. By using exactly 4 worker threads --- matching the number of Big cores --- SyncPilot eliminates the contention between Big and LITTLE cores and ensures that the most compute-intensive pipeline stages are handled by the highest-performance cores.
 
-SyncPilot-4W achieves the best performance with 10.74 FPS (13968 ms), corresponding to a \textbf{3.39$\times$ speedup} over our CFS baseline and a \textbf{1.72$\times$ improvement} over the OpenMP Big-Only result (24s) from \cite{annisa2025fsrcnn}. By using exactly 4 worker threads --- matching the number of Big cores --- SyncPilot eliminates the contention between Big and LITTLE cores and ensures that the most compute-intensive pipeline stages are handled by the highest-performance cores.
+SyncPilot-8W (8 workers across all cores) achieves 9.01 FPS (2.95$\times$ speedup), which is lower than the 4-worker variant. This degradation confirms that the deconvolution layer in FSRCNN is too compute-intensive for the Cortex-A55 cores when they handle heavy stages.
 
-Interestingly, SyncPilot-8W (8 workers across all cores) achieves 8.86 FPS (2.80$\times$ speedup), which is lower than the 4-worker variant. This degradation mirrors the finding in \cite{annisa2025fsrcnn} where LITTLE CPUs caused a $3\times$ slowdown compared to Big CPUs (75s vs. 24s), confirming that the deconvolution layer in FSRCNN is too compute-intensive for the Cortex-A55 cores.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\columnwidth]{fsrcnn_throughput.png}
+\caption{Throughput comparison across all configurations. SyncPilot-4W achieves the highest throughput at 11.71 FPS.}
+\label{fig:throughput}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\columnwidth]{fsrcnn_time.png}
+\caption{Average execution time comparison. SyncPilot-4W achieves the lowest time at 12805 ms.}
+\label{fig:time}
+\end{figure}
 
 \subsection{Calibration Overhead Analysis}
-A key contribution of SyncPilot is the minimization of scheduling overhead through the IC-RCE mechanism. The calibration is performed only once during the first run (profiling run). As shown in the benchmark data, the profiling run for SyncPilot-4W completed in 12242 ms, which is actually faster than several steady-state runs (e.g., Run 6 at 15520 ms and Run 8 at 15962 ms). This indicates that the overhead of measuring per-stage execution times via \texttt{clock\_gettime} is negligible --- less than 1\% of total execution time.
+A key contribution of SyncPilot is the minimization of scheduling overhead through the IC-RCE mechanism. The calibration is performed only once during the first run (profiling run). As shown in the benchmark data, the profiling run for SyncPilot-4W completed in 12342 ms, demonstrating that the overhead of measuring per-stage execution times via \texttt{clock\_gettime} is negligible.
 
 Once the Cost Table is populated, subsequent runs (Task ID $> 0$) operate in steady state with zero profiling overhead. The scheduling logic simply performs a lookup in the pre-calibrated table, consuming only a few CPU cycles per task dispatch. This contrasts sharply with continuous-monitoring approaches, where timing functions are invoked for every frame, accumulating measurable overhead over time.
 
@@ -164,18 +173,19 @@ The reference paper \cite{annisa2025fsrcnn} conducted a detailed per-layer execu
 \begin{table}[htbp]
 \caption{IC-RCE Cost Table: Per-Layer Execution Time (Single Frame, Big Core)}
 \begin{center}
+\small
 \begin{tabular}{|l|c|c|c|}
 \hline
-\textbf{Layer} & \textbf{Stage Type} & \textbf{Time (s)} & \textbf{\% of Total} \\
+\textbf{Layer} & \textbf{Stage} & \textbf{Time (s)} & \textbf{\% Total} \\
 \hline
-Layer 1 & Feature Extraction ($5\times5$) & 0.01690 & 3.5 \\
-Layer 2 & Shrinking ($1\times1$) & 0.05865 & 12.1 \\
-Layer 3 & Non-linear Mapping ($3\times3$) & 0.02323 & 4.8 \\
-Layer 4 & Non-linear Mapping ($3\times3$) & 0.01942 & 4.0 \\
-Layer 5 & Non-linear Mapping ($3\times3$) & 0.01543 & 3.2 \\
-Layer 6 & Non-linear Mapping ($3\times3$) & 0.02056 & 4.2 \\
-Layer 7 & Expanding ($1\times1$) & 0.12865 & 26.5 \\
-Layer 8 & Deconvolution ($9\times9$) & 0.21721 & 44.7 \\
+Layer 1 & Feature Extraction & 0.01690 & 3.5 \\
+Layer 2 & Shrinking & 0.05865 & 12.1 \\
+Layer 3 & Non-linear Mapping & 0.02323 & 4.8 \\
+Layer 4 & Non-linear Mapping & 0.01942 & 4.0 \\
+Layer 5 & Non-linear Mapping & 0.01543 & 3.2 \\
+Layer 6 & Non-linear Mapping & 0.02056 & 4.2 \\
+Layer 7 & Expanding & 0.12865 & 26.5 \\
+Layer 8 & Deconvolution & 0.21721 & 44.7 \\
 \hline
 \textbf{Total} & & \textbf{0.48471} & \textbf{100.0} \\
 \hline
@@ -191,9 +201,9 @@ Layer 8 & Deconvolution ($9\times9$) & 0.21721 & 44.7 \\
 % \label{fig:icrce_output}
 % \end{figure}
 
-Table \ref{tab:layers} presents the IC-RCE cost table captured directly from the Orange Pi 5 terminal (Fig. \ref{fig:icrce_output}), showing per-layer execution time for a single frame on a Big core during the calibration phase. Layer 8 (deconvolution, $9\times9$) dominates at 44.7\% of total per-frame time (0.217s out of 0.485s), followed by Layer 7 (expanding, $1\times1$) at 26.5\%. Together, these two final stages account for 71.2\% of the per-frame cost, confirming them as the primary computational bottlenecks. This aligns with the findings in \cite{annisa2025fsrcnn}, where Layer 8 showed the lowest speedup across all parallel scenarios due to the $9\times9$ kernel requiring substantially more multiply-accumulate operations per output pixel and higher memory bandwidth demands during the upscaling from 176$\times$144 to 352$\times$288.
+Table \ref{tab:layers} presents the IC-RCE cost table captured during the calibration phase, showing per-layer execution time for a single frame on a Big core. Layer 8 (deconvolution, $9\times9$) dominates at 44.7\% of total per-frame time (0.217s out of 0.485s), followed by Layer 7 (expanding, $1\times1$) at 26.5\%. Together, these two final stages account for 71.2\% of the per-frame cost, confirming them as the primary computational bottlenecks. This aligns with the findings in \cite{annisa2025fsrcnn}, where Layer 8 showed the lowest speedup across all parallel scenarios due to the $9\times9$ kernel requiring substantially more multiply-accumulate operations per output pixel and higher memory bandwidth demands during the upscaling from 176$\times$144 to 352$\times$288.
 
-When scaled across the full 150-frame sequence, Layer 8's dominance translates to the aggregate execution time distribution observed in SyncPilot-4W (Table \ref{tab:layers}), where the deconvolution stage consumed 71.0\% of the total 13968 ms. This confirms that the per-frame cost profile remains consistent across the full pipeline run, validating the IC-RCE assumption that computational costs are deterministic for a fixed input resolution.
+When scaled across the full 150-frame sequence, Layer 8's dominance translates to the aggregate execution time distribution observed in SyncPilot-4W, where the deconvolution stage consumed the majority of total execution time. This confirms that the per-frame cost profile remains consistent across the full pipeline run, validating the IC-RCE assumption that computational costs are deterministic for a fixed input resolution.
 
 \subsection{Output Correctness Verification}
 The consistency of output correctness was verified across both SyncPilot configurations and compared with the reference paper's findings. Every scenario produced output frames that were \textbf{identical} ($\checkmark$) to the ground-truth reference, confirmed by pixel-wise comparison and infinite PSNR values. This result is significant in light of \cite{annisa2025fsrcnn}, which reported that the LITTLE CPU parallel scenario produced visible artifacts and pixel corruption due to race conditions during the deconvolution stage. SyncPilot's synchronized worker pool with reorder buffer eliminates these race conditions entirely, ensuring numerically identical outputs regardless of the worker configuration.
@@ -201,9 +211,9 @@ The consistency of output correctness was verified across both SyncPilot configu
 \subsection{Worker Configuration Analysis}
 The benchmark results reveal important insights about the optimal worker configuration for asymmetric pipeline processing.
 
-SyncPilot-4W (4 workers on Big cores) consistently outperformed all other configurations. The exclusive use of Big cores eliminates the straggler effect that occurs when LITTLE cores are assigned heavy stages. The 3.39$\times$ speedup over the CFS baseline demonstrates that proper core-task matching is more effective than simply maximizing thread count. This finding extends the reference paper's result \cite{annisa2025fsrcnn}, where 4 Big CPUs achieved 24s ($3\times$ over serial Big at 86s), by further reducing the time to 13.97s through the pull-based worker pool that eliminates thread-per-stage bottlenecks.
+SyncPilot-4W (4 workers on Big cores) consistently outperformed all other configurations. The exclusive use of Big cores eliminates the straggler effect that occurs when LITTLE cores are assigned heavy stages. The 3.84$\times$ speedup over the serial baseline demonstrates that proper core-task matching is more effective than simply maximizing thread count. This finding extends the reference paper's result \cite{annisa2025fsrcnn}, where 4 Big CPUs achieved 24s ($3.48\times$ over serial Big), by further reducing the time to 12.81s through the pull-based worker pool that eliminates thread-per-stage bottlenecks.
 
-SyncPilot-8W, despite using more workers, achieved only 2.80$\times$ speedup. The inclusion of 4 LITTLE cores (Cortex-A55) introduces a bottleneck: when a LITTLE-bound worker picks up a compute-intensive stage such as the deconvolution layer, it becomes a straggler that delays the entire pipeline. This is evidenced by the higher average time (16923 ms vs. 13968 ms for 4W) and the larger variance between runs (16449--17314 ms vs. 12242--15962 ms). This directly mirrors the reference paper's finding that 4 LITTLE CPUs required 75s --- over $3\times$ slower than 4 Big CPUs (24s) --- confirming the performance asymmetry between core types.
+SyncPilot-8W, despite using more workers, achieved only 2.95$\times$ speedup. The inclusion of 4 LITTLE cores (Cortex-A55) introduces a bottleneck: when a LITTLE-bound worker picks up a compute-intensive stage such as the deconvolution layer, it becomes a straggler that delays the entire pipeline. This is evidenced by the higher average time (16656 ms vs. 12805 ms for 4W) and the larger variance between runs (12207--14055 ms vs. 16136--17375 ms). This directly mirrors the reference paper's finding that 4 LITTLE CPUs required 75s --- over $3\times$ slower than 4 Big CPUs (24s) --- confirming the performance asymmetry between core types.
 
 % === VI. DISCUSSION ===
 \section{Discussion}
@@ -212,7 +222,7 @@ SyncPilot-8W, despite using more workers, achieved only 2.80$\times$ speedup. Th
 A counterintuitive finding --- also observed in \cite{annisa2025fsrcnn} --- is that using fewer workers (4) yields better performance than using all available cores (8). The reference paper showed that 4 Big CPUs achieved 24s versus 75s for 4 LITTLE CPUs, a $3.1\times$ difference. This result stems from the nature of the FSRCNN pipeline: while early convolutional layers are relatively lightweight, the final deconvolution layer (Layer 8) is highly compute-intensive, consuming 71\% of total execution time (Table \ref{tab:layers}). When 8 workers are active, the 4 LITTLE cores (Cortex-A55 @ 1.8 GHz) inevitably handle some of the heavy stages, becoming stragglers that delay the entire pipeline. With 4 workers exclusively on Big cores (Cortex-A76 @ 2.4 GHz), every heavy stage is guaranteed to be processed by the most capable hardware, eliminating the straggler bottleneck.
 
 \subsection{Comparison with OpenMP Affinity Approaches}
-The reference paper \cite{annisa2025fsrcnn} used OpenMP with explicit CPU affinity to achieve their best results (24s for 4 Big CPUs). SyncPilot-4W further improves upon this to 13.97s, a $1.72\times$ improvement. This gain comes from two key architectural differences: (1) the pull-based worker pool decouples threads from stages, allowing idle workers to proactively seek tasks rather than waiting for a specific stage's turn, and (2) the IC-RCE mechanism enables capacity-aware pulling, where Big workers preferentially select compute-intensive stages, avoiding the load imbalance that occurs in OpenMP's static or dynamic loop scheduling. The reference paper's OpenMP Hybrid configuration (26s) similarly fell short of the Big-only result (24s), confirming that LITTLE core involvement cannot match exclusive Big-core performance for compute-intensive workloads.
+SyncPilot-4W further improves upon the OpenMP Big-Only baseline (24s) from \cite{annisa2025fsrcnn} to 12.81s, a $1.42\times$ improvement. This gain comes from two key architectural differences: (1) the pull-based worker pool decouples threads from stages, allowing idle workers to proactively seek tasks rather than waiting for a specific stage's turn, and (2) the IC-RCE mechanism enables capacity-aware pulling, where Big workers preferentially select compute-intensive stages, avoiding the load imbalance that occurs in OpenMP's static or dynamic loop scheduling. The reference paper's OpenMP Hybrid configuration (26s) similarly fell short of the Big-only result (24s), confirming that LITTLE core involvement cannot match exclusive Big-core performance for compute-intensive workloads.
 
 \subsection{Race Condition Mitigation}
 A significant finding from \cite{annisa2025fsrcnn} was that parallel FSRCNN execution on LITTLE CPUs produced visible artifacts and pixel corruption due to race conditions during the deconvolution stage. Their serial execution produced artifact-free frames, while the parallel LITTLE CPU scenario showed degraded image quality. In contrast, both SyncPilot configurations produced numerically identical outputs to the ground truth (confirmed by infinite PSNR values). This improvement stems from SyncPilot's synchronized architecture: the pull-based worker pool with shared stage queues and reorder buffer ensures that each stage's output is correctly sequenced before being consumed by the next stage, eliminating the race conditions that plagued the reference paper's OpenMP-based parallelization.
@@ -222,7 +232,7 @@ The current implementation of SyncPilot is optimized for steady-state workloads 
 
 % === VII. CONCLUSION ===
 \section{Conclusion}
-We presented SyncPilot, a lightweight pipeline scheduling framework for asymmetric multicore architectures. By introducing the Initial Calibration Runtime Cost Estimation (IC-RCE), we demonstrated that efficient load balancing can be achieved without continuous runtime profiling overhead. Our evaluation on Orange Pi 5 using FSRCNN for low-to-high resolution video reconstruction (176$\times$144 $\rightarrow$ 352$\times$288, Suzie sequence) shows that SyncPilot-4W achieves a \textbf{3.39$\times$ speedup} (10.74 FPS, 13.97s) over the baseline parallel implementation (3.17 FPS, 47.35s) and a \textbf{1.72$\times$ improvement} over the OpenMP Big-Only baseline (24s) from \cite{annisa2025fsrcnn}. The capacity-aware worker pool design consistently outperforms naive thread-per-core approaches, with the 4-worker Big-core-only configuration proving optimal for this workload. Layer 8 (deconvolution) remains the dominant bottleneck at 71\% of total execution time, consistent with \cite{annisa2025fsrcnn}'s findings. All 7 tested configurations produced numerically identical outputs to the ground truth (infinite PSNR), resolving the race condition artifacts reported in \cite{annisa2025fsrcnn}'s LITTLE CPU parallel scenario. The results establish that for deterministic edge AI workloads, a one-time calibration approach combined with capacity-aware task pulling offers superior performance compared to relying solely on the OS scheduler or traditional OpenMP affinity. Future work will explore dynamic recalibration triggers for variable-resolution workloads and energy consumption measurements.
+We presented SyncPilot, a lightweight pipeline scheduling framework for asymmetric multicore architectures. By introducing the Initial Calibration Runtime Cost Estimation (IC-RCE), we demonstrated that efficient load balancing can be achieved without continuous runtime profiling overhead. Our evaluation on Orange Pi 5 using FSRCNN for low-to-high resolution video reconstruction (176$\times$144 $\rightarrow$ 352$\times$288, Suzie sequence) shows that SyncPilot-4W achieves a \textbf{3.84$\times$ speedup} (11.71 FPS, 12.81s) over the serial baseline (3.05 FPS, 49.20s) and a \textbf{1.42$\times$ improvement} over the OpenMP Big-Only baseline (24s) from \cite{annisa2025fsrcnn}. The capacity-aware worker pool design consistently outperforms naive thread-per-core approaches, with the 4-worker Big-core-only configuration proving optimal for this workload. Layer 8 (deconvolution) remains the dominant bottleneck at 71\% of total execution time, consistent with \cite{annisa2025fsrcnn}'s findings. All configurations produced numerically identical outputs to the ground truth (infinite PSNR), resolving the race condition artifacts reported in \cite{annisa2025fsrcnn}'s LITTLE CPU parallel scenario. The results establish that for deterministic edge AI workloads, a one-time calibration approach combined with capacity-aware task pulling offers superior performance compared to relying solely on the OS scheduler or traditional OpenMP affinity. Future work will explore dynamic recalibration triggers for variable-resolution workloads and energy consumption measurements.
 
 % === REFERENCES ===
 \begin{thebibliography}{00}
