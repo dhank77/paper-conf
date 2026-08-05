@@ -17,7 +17,7 @@
 \begin{document}
 
 % === TITLE ===
-\title{SyncPilot: A Lightweight Initial-Calibration Scheduler for Asymmetric Multicore Pipeline Processing
+\title{Static Core Pinning Outperforms Linux CFS/EAS Under Contention on Asymmetric Multicores
 }
 
 % === AUTHOR ===
@@ -37,61 +37,63 @@ adnan@unhas.ac.id}
 
 % === ABSTRACT ===
 \begin{abstract}
-Asymmetric Multicore Processors (AMP), which pair high-throughput Performance cores with power-efficient Efficient cores (e.g., ARM's big.LITTLE family), offer significant potential for edge Deep Neural Networks (DNNs), but standard OS schedulers often fail to exploit hardware heterogeneity. Prior dynamic schedulers address this but incur runtime overhead from continuous profiling. We propose SyncPilot, a lightweight pipeline framework built around Initial Calibration Runtime Cost Estimation (IC-RCE): each pipeline stage's cost is measured once during initialization, and this one-time calibration is what justifies keeping a static, hard-pinned Performance/Efficient worker-to-core mapping for the rest of execution, without further runtime measurement. On an ASUS GX10 (10$\times$ Cortex-X925 + 10$\times$ Cortex-A725), a 20-worker FSRCNN configuration reaches a 9.16$\times$ speedup over a serial baseline, with every configuration bit-exact against the ground truth. Benchmarked against unpinned Linux CFS, SyncPilot's static mapping is slightly outperformed by CFS's Energy Aware Scheduling (EAS) on an idle system. However, once background CPU noise pushes the Performance cluster into overutilization, EAS is disabled per Linux kernel policy and CFS's fallback balancer migrates heavy pipeline stages onto Efficient cores, inflating worst-case latency by 71.0\% (1065$\to$1821~ms); SyncPilot's mapping, structurally unaffected by this failure mode, limits the same growth to 23.6\% (1154$\to$1426~ms). We argue this static-versus-adaptive trade-off, not raw idle-system throughput, is the more representative measure of scheduler quality for non-idle, real-world edge deployments.
+Asymmetric Multicore Processors (AMP) pair high-capacity Performance cores with lower-power Efficient cores, and Linux CFS with Energy Aware Scheduling (EAS) is the default policy for placing threads across such clusters. Whether an application should override that policy with explicit static core pinning is usually settled on idle benchmark machines --- a condition under which deployed edge devices almost never operate. Using SyncPilot, an 8-stage pipeline-parallel implementation of FSRCNN video super-resolution, we compare static Performance/Efficient pinning against unpinned CFS/EAS on an ASUS GX10 (10$\times$Cortex-X925 + 10$\times$Cortex-A725) across seven load conditions: idle, 4 and 10 background CPU-bound threads, and 2--5 concurrently running FSRCNN applications. On an idle system CFS/EAS wins by 8.2\% (1050 vs.\ 1136~ms). The ordering inverts as soon as the machine is not idle: static pinning leads by 3.1--19.8\% at every load condition tested, all at $p<10^{-4}$ (Welch, $n=7$), and is markedly steadier --- run-to-run standard deviation 13.0 vs.\ 46.7~ms under heavy noise, with worst-case run latency growing 23.1\% from idle against 71.4\%. We attribute the inversion to the kernel's documented disabling of EAS once any CPU is overutilized, after which the fallback balancer may migrate critical-path stages onto Efficient cores. A negative ablation narrows the claim: adding cost-based stage routing on top of pinning costs 3.6--8.3\%. A 60-run calibration sweep explains why --- the per-stage cost model is near-deterministic in isolation (1\% spread) but the table the framework builds \emph{in situ} degrades monotonically with concurrency to a 2.52$\times$ spread at twenty workers, and its threshold partitions load without regard to the clusters' measured 1.83--1.90$\times$ capacity ratio. The benefit comes from topology-aware pinning alone, which needs no runtime measurement.
 \end{abstract}
 
 % === KEYWORDS ===
 \begin{IEEEkeywords}
-Asymmetric Multicore, Pipeline Parallelism, Runtime Cost Estimation, Heterogeneous Multicore, Energy Aware Scheduling, FSRCNN.
+Asymmetric Multicore, CPU Affinity, Core Pinning, Energy Aware Scheduling, Linux CFS, Pipeline Parallelism, FSRCNN.
 \end{IEEEkeywords}
 
 % === I. INTRODUCTION ===
 \section{Introduction}
-The rapid evolution of edge computing has brought computationally intensive tasks, such as Deep Neural Network (DNN) inference, from cloud servers to local devices \cite{shi2016edge, zhou2019edge}. Modern edge hardware increasingly adopts Asymmetric Multicore Processors (AMP), notably the ARM big.LITTLE architecture, to balance high performance with energy efficiency \cite{greenhalgh2011biglittle, arm2013biglittle}. This architecture combines high-performance "Big" cores with power-saving "LITTLE" cores.
+The rapid evolution of edge computing has brought computationally intensive tasks, such as Deep Neural Network (DNN) inference, from cloud servers to local devices \cite{shi2016edge, zhou2019edge}. Modern edge hardware increasingly adopts Asymmetric Multicore Processors (AMP), notably the ARM big.LITTLE architecture, to balance high performance with energy efficiency \cite{greenhalgh2011biglittle, arm2013biglittle}. This architecture combines high-capacity ``Performance'' cores with lower-power ``Efficient'' cores.
 
-However, maximizing the potential of AMP for pipeline-parallel applications remains a challenge. The default Linux Completely Fair Scheduler (CFS) treats all cores generically, often failing to distinguish between compute-heavy and light tasks \cite{koufaty2010bias, vancraeynest2012pie}. This leads to suboptimal mapping, where heavy pipeline stages may be assigned to Efficient cores, creating bottlenecks, or light stages may unnecessarily occupy Performance cores, wasting energy.
+Placing application threads across such clusters is, by default, the operating system's job. On Linux, the Completely Fair Scheduler (CFS) augmented with Energy Aware Scheduling (EAS) estimates per-task utilization and places tasks on the cluster that minimizes predicted energy while meeting capacity. An application that believes it knows better can override this with explicit CPU affinity \cite{man7pthreadaffinity}, hard-pinning each worker thread to a core of a known class. The literature offers arguments in both directions: capacity-aware OS schedulers were introduced precisely because generic CFS treats cores as interchangeable \cite{koufaty2010bias, vancraeynest2012pie, saez2010comprehensive}, while static partitioning approaches argue that offline knowledge of the workload beats anything the OS can infer at runtime \cite{wang2020pipeit, wang2021asymo}.
 
-Prior works have proposed dynamic scheduling solutions that monitor task execution times at runtime \cite{saez2010comprehensive}. While effective for adaptability, these methods introduce significant overhead due to continuous timing measurements and context switching, which is detrimental for real-time video processing applications. Conversely, static mapping approaches lack the flexibility to handle dynamic workloads \cite{wang2020pipeit}.
+We argue that this question has usually been asked under conditions that predetermine the answer. Scheduler comparisons are conventionally run on quiesced benchmark machines, where the OS scheduler faces no competing demand and has the entire span of a run to converge on a good placement. Deployed edge devices are not quiesced: they concurrently service network I/O, UI rendering, background daemons, and often several inference tenants at once. Whether static pinning is worth its rigidity is therefore not answerable from idle-system throughput alone.
 
-In this paper, we propose SyncPilot, a novel scheduling framework that bridges the gap between static efficiency and dynamic adaptability. Our core contribution is the Initial Calibration Runtime Cost Estimation (IC-RCE) mechanism. Instead of continuous profiling, SyncPilot performs a one-time calibration during the first task execution to estimate the computational cost of each pipeline stage. This calibration confirms that per-stage costs are stable and strongly skewed toward the final layers (Section~\ref{sec:layerprofile}), which is what justifies relying on a static, hardware-topology-based Performance/Efficient core pinning \cite{man7pthreadaffinity} for the remainder of execution instead of a continuously-monitored mapping.
+This paper measures the same application under a contention sweep rather than at a single operating point. Our vehicle is SyncPilot, a pull-based pipeline framework in which FSRCNN super-resolution \cite{dong2016fsrcnn} is partitioned into 8 stages served by a shared worker pool; the same binary is run under three scheduling policies --- static Performance/Efficient pinning, static pinning plus cost-based stage routing, and unpinned CFS/EAS --- across seven contention levels on an ASUS GX10. The result is a crossover: CFS/EAS is the better policy on an idle machine and the worse policy everywhere else we measured.
 
 The main contributions of this paper are summarized as follows:
 \begin{itemize}
-\item We propose IC-RCE, a lightweight one-time calibration mechanism that measures per-stage cost during the first task and eliminates the need for continuous runtime profiling thereafter.
-\item We design a pull-based worker pool in which every thread autonomously selects work from a shared, priority-ordered stage queue (deepest-stage-first) without a central dispatcher, avoiding global-lock contention; the framework additionally supports an optional cost-threshold-gated pulling mode for explicit per-stage Performance/Efficient routing, which we describe in Section~\ref{sec:capacityaware} but leave to future evaluation on this platform.
-\item We evaluate configurations on ASUS GX10 using FSRCNN, demonstrating that the 20-worker setup achieves the best throughput (9.16$\times$ speedup over the serial baseline) with numerically identical outputs across all configurations, and we show that SyncPilot's hard-pinned mapping is substantially more robust to system noise than an unpinned CFS/EAS baseline, at the cost of a modest idle-system throughput deficit.
+\item We evaluate static core pinning against Linux CFS/EAS across a seven-point contention sweep spanning two distinct noise families --- synthetic CPU-bound threads and full co-running FSRCNN tenants --- rather than at the single idle operating point typical of prior AMP scheduling evaluations.
+\item We report a crossover result with its mechanism: unpinned CFS/EAS wins by 8.2\% on an idle system but loses by 3.1--19.8\% under every load condition tested, and degrades three times less predictably (run-to-run standard deviation 46.7 vs.\ 13.0~ms under heavy noise). We attribute the inversion to the kernel's documented disabling of EAS on overutilization \cite{linuxeas}, after which the fairness-driven fallback balancer is free to migrate critical-path stages onto Efficient cores.
+\item We report a negative ablation that narrows the claim to what the data supports: layering cost-based stage routing --- derived from a one-time per-stage cost calibration --- on top of pinning degrades latency by 3.6--8.3\% at every contention level. A dedicated 60-run sweep of the calibration mechanism itself shows the cause: the per-stage cost model is near-deterministic when measured in isolation, but the table the framework builds \emph{while the pipeline runs} degrades monotonically with concurrency, reaching a 2.52$\times$ run-to-run spread at twenty workers and flipping the heavy/light partition in 4 of 60 runs. Its threshold also partitions load without reference to hardware capacity. The advantage belongs to topology-aware static placement, which needs no runtime measurement at all.
+\item We verify that 27 of the 28 distinct configurations reported here, including every contended one, produce bit-exact output against a serial ground truth; the 28th, a deliberately unsynchronized OpenMP control, corrupts 40.1\% of output bytes.
 \end{itemize}
 
 % === II. RELATED WORK ===
 \section{Related Work}
 
-Research on scheduling for AMP has evolved from static partitioning to dynamic load balancing. The work closest to ours is Annisa et al. \cite{annisa2025fsrcnn}, which we build on directly and, unlike SyncPilot, uses a fixed OpenMP thread-per-stage mapping without a one-time cost calibration; the key differences are detailed at the end of this section. Annisa et al. \cite{annisa2025fsrcnn} investigated the transition from serial to parallel FSRCNN execution on an Orange Pi 5 using OpenMP with explicit CPU affinity. Their analysis showed that the heterogeneous big.LITTLE topology on that platform can benefit from broader worker scaling, with the strongest gains occurring when the workload is distributed across both the Big and LITTLE cores rather than being restricted to the fastest cores only. The key finding was that the stronger LITTLE cores reduce the severity of the straggler effect, making additional worker parallelism viable for this workload. Their analysis also confirmed that layer 8 (deconvolution) remains the primary computational bottleneck across all configurations, exhibiting the lowest speedup due to memory dependencies and potential race conditions when multiple threads access adjacent pixel regions without proper synchronization.
+Research on scheduling for AMP has evolved from static partitioning to dynamic load balancing. The work closest to ours is Annisa et al. \cite{annisa2025fsrcnn}, which we build on directly: it investigated the transition from serial to parallel FSRCNN execution on an Orange Pi 5 using OpenMP with explicit CPU affinity and a fixed thread-per-stage mapping. Their analysis showed that the heterogeneous big.LITTLE topology on that platform benefits from broader worker scaling, with the strongest gains occurring when the workload is distributed across both clusters rather than restricted to the fastest cores only, because the stronger LITTLE cores reduce the severity of the straggler effect. Their analysis also confirmed that layer 8 (deconvolution) remains the primary computational bottleneck across all configurations, exhibiting the lowest speedup due to memory dependencies and race conditions when multiple threads access adjacent pixel regions without proper synchronization. Their evaluation, like most in this line, was conducted on an otherwise idle board.
 
-Wang et al. \cite{wang2020pipeit} proposed Pipe-it, a static partitioning method for CNN inference that relies on offline profiling to map layers to cores. While effective, it lacks runtime adaptability. AsyMo \cite{wang2021asymo} introduced offline planning for mobile CPUs but requires prior knowledge of the model structure. Recent works like DynPipe \cite{yuan2025dynpipe} utilize machine learning for dynamic adjustment but incur computational overhead during inference. Chronaki et al. \cite{chronaki2017task} propose dynamic and static scheduling policies for task-parallel programs on asymmetric multi-core systems based on critical-path detection and locality-aware task assignment; unlike SyncPilot, their approach targets general task-dependency graphs rather than the fixed, stage-structured pipeline mapping problem addressed here.
+Wang et al. \cite{wang2020pipeit} proposed Pipe-it, a static partitioning method for CNN inference that relies on offline profiling to map layers to cores. AsyMo \cite{wang2021asymo} introduced offline planning for mobile CPUs but requires prior knowledge of the model structure. Recent works like DynPipe \cite{yuan2025dynpipe} utilize machine learning for dynamic adjustment but incur computational overhead during inference. Chronaki et al. \cite{chronaki2017task} propose dynamic and static scheduling policies for task-parallel programs on asymmetric multi-core systems based on critical-path detection and locality-aware task assignment; unlike the present work, their approach targets general task-dependency graphs rather than the fixed, stage-structured pipeline mapping problem addressed here. Advanced frameworks such as QLSA-MOEAD \cite{saad2026qlsa} utilize reinforcement learning for heterogeneous scheduling but are designed for cloud-scale DAG tasks, making them too heavy for embedded pipeline processing.
 
-Unlike the OpenMP-based approach in \cite{annisa2025fsrcnn}, which assigns a fixed thread-per-stage mapping, SyncPilot introduces a pull-based worker pool that decouples threads from stages. The ASUS GX10 results indicate that the stronger Cortex-A725 cores reduce the performance gap that previously caused the straggler problem on more heterogeneous platforms. SyncPilot builds upon this finding with IC-RCE, a one-time calibration that eliminates continuous runtime profiling, and a static, hardware-topology-based Performance/Efficient core mapping whose fixed nature is what keeps it structurally immune to the OS-scheduler migration failure mode analyzed in Section~\ref{sec:noise}. Furthermore, advanced frameworks such as QLSA-MOEAD \cite{saad2026qlsa} utilize reinforcement learning for heterogeneous scheduling but are designed for cloud-scale DAG tasks, making them too heavy for embedded pipeline processing.
+On the OS side, bias scheduling \cite{koufaty2010bias} and PIE \cite{vancraeynest2012pie} established that asymmetry-blind fair scheduling wastes AMP capacity, and comprehensive AMP schedulers \cite{saez2010comprehensive} showed that the kernel can recover much of the loss without application cooperation. Linux's EAS is the production descendant of that line. Its documentation, however, states an explicit escape hatch: once any CPU in the root domain is overutilized, EAS is turned off and the generic load balancer resumes control \cite{linuxeas}. This documented behaviour is the natural organizing variable for an application-versus-OS placement comparison, yet AMP scheduling evaluations are conventionally reported at a single idle operating point, where the tipping point is never crossed and the fallback path never exercised. Structuring the evaluation around it, as we do here, is the methodological change this paper argues for; we make no claim that no prior work has observed the mechanism itself.
+
+Our position relative to this body of work is therefore narrower than an ``improved scheduler'' claim. We do not propose a new scheduling algorithm; static thread-to-core affinity is a decades-old mechanism. What we contribute is the measurement that decides between it and the production OS policy for pipeline-parallel DNN inference, taken across contention levels instead of at the idle point, together with an ablation showing that the naive next step --- feeding measured per-stage costs back into task routing --- makes things worse rather than better on this platform.
 
 % === III. SYSTEM ARCHITECTURE ===
 \section{System Architecture}
-SyncPilot is designed around a centralized Worker Pool model. The architecture consists of four main components: the Pipeline Engine, the IC-RCE Module, the Asymmetry-Aware Core Mapper, and the priority-ordered Worker Pool itself.
+SyncPilot is the vehicle for the comparison rather than the object of the claim, so we describe it only to the depth needed to make the three compared policies precise. The framework consists of a Pipeline Engine, a Static Asymmetry-Aware Core Mapper (the policy under test), and an optional Cost-Gated Routing module (the ablated policy).
 
 \subsection{Pipeline Engine}
-SyncPilot adopts a centralized Pull-Based Worker Pool model. Unlike traditional pipeline architectures that assign a dedicated thread to each stage (thread-per-stage), our model decouples threads from stages. 
-The system consists of three primary components: (1) Shared Stage Queues that hold pending tasks for each pipeline stage, (2) A Worker Pool comprising threads pinned to specific core types, and (3) A Reorder Buffer to ensure output order preservation.
-A key advantage of this model is the elimination of a central dispatcher. Instead of a manager pushing tasks to workers, each worker thread autonomously pulls tasks from the shared queues. This pull-based mechanism naturally balances the load, as idle workers proactively seek available tasks, minimizing idle time.
+SyncPilot adopts a centralized pull-based worker pool model. Unlike traditional pipeline architectures that assign a dedicated thread to each stage (thread-per-stage), our model decouples threads from stages.
+The system consists of three primary components: (1) shared stage queues that hold pending tasks for each pipeline stage, (2) a worker pool comprising threads pinned to specific core types, and (3) a reorder buffer to ensure output order preservation.
+A key advantage of this model is the elimination of a central dispatcher. Instead of a manager pushing tasks to workers, each worker thread autonomously pulls tasks from the shared queues. On every iteration, an idle worker scans the stage queues from the last stage toward the first and takes the first non-empty queue it can lock (Section~\ref{sec:implementation}), so that tasks closest to completion are drained preferentially, keeping the reorder buffer flowing and bounding in-flight memory. This decision is made locally by each worker thread via per-stage \texttt{trylock} operations rather than a global lock, avoiding the contention of a single central dispatcher.
 
-\subsection{Initial Calibration Runtime Cost Estimation (IC-RCE)}
-The core novelty of SyncPilot lies in its IC-RCE mechanism. During the processing of the first task (Task ID 0), the framework measures the execution time of each stage using high-precision timers (\texttt{clock\_gettime}). These measurements are stored in a Cost Table (empirically reported in Section~\ref{sec:layerprofile}). Once all stages are processed, the system enters the "Steady State," where no further timing measurements are taken. This effectively reduces the profiling overhead to zero during the processing of subsequent tasks (Task ID $> 0$). In the configuration evaluated in this paper, the Cost Table serves as a validation instrument: it confirms that per-stage cost is stable across the run and heavily skewed toward the deconvolution stage, which is the empirical justification for relying on a \emph{static} core mapping (Section~\ref{sec:asymmap}) rather than a continuously re-evaluated one. SyncPilot's implementation also supports an optional mode, described in Section~\ref{sec:capacityaware}, in which the Cost Table is additionally consulted at task-pull time to gate which stages a Performance or Efficient worker may pick up; we did not enable this mode for the GX10 results reported here (Section~\ref{sec:limitations}).
-
-\subsection{Asymmetry-Aware Core Mapping}
+\subsection{Static Asymmetry-Aware Core Mapping}
 \label{sec:asymmap}
-Upon initialization, and before any task is processed, each worker thread is pinned to a specific CPU core via \texttt{pthread\_setaffinity\_np}. SyncPilot detects Performance and Efficient cores automatically from \texttt{cpufreq/cpuinfo\_max\_freq} (the highest-frequency cluster is treated as Performance, the remainder as Efficient), or accepts an explicit core-ID list; workers are then assigned round-robin within each class, so that, e.g., a 20-worker run on a 10+10 topology pins the first 10 workers to Performance cores and the remaining 10 to Efficient cores. This mapping is fixed for the lifetime of the run: it does not change in response to which stage a worker happens to be executing, nor does it consult the IC-RCE Cost Table. Its role is purely topological — ensuring every worker has a dedicated, known-capability core — while the actual work-to-core matching emerges indirectly, since Performance-core workers execute the same priority-ordered pull loop faster than Efficient-core workers and therefore drain more tasks from the shared queues per unit time.
+This is the policy the paper evaluates. Upon initialization, and before any task is processed, each worker thread is pinned to a specific CPU core via \texttt{pthread\_setaffinity\_np} \cite{man7pthreadaffinity}. SyncPilot detects Performance and Efficient cores automatically from \texttt{cpufreq/cpuinfo\_max\_freq} (the highest-frequency cluster is treated as Performance, the remainder as Efficient), or accepts an explicit core-ID list; workers are then assigned round-robin within each class, so that a 20-worker run on a 10+10 topology pins the first 10 workers to Performance cores and the remaining 10 to Efficient cores. This mapping is fixed for the lifetime of the run: it does not change in response to which stage a worker happens to be executing, and it consults no runtime measurement whatsoever.
 
-\subsection{Capacity-Aware Worker Pool}
+Its role is purely topological --- ensuring every worker has a dedicated, known-capability core --- while the actual work-to-core matching emerges indirectly, since Performance-core workers execute the same priority-ordered pull loop faster than Efficient-core workers and therefore drain more tasks from the shared queues per unit time. Every worker, Performance or Efficient, applies the same priority rule; the only reason Performance-core workers end up handling a disproportionate share of the heaviest stage is that they execute it faster, not because they preferentially select it. Setting the environment variable \texttt{SYNCPILOT\_DISABLE\_AFFINITY=1} skips the pinning step entirely and yields the CFS/EAS baseline used throughout Section~\ref{sec:eval}: the identical binary, the identical worker count, and the identical pull loop, with thread placement left to the kernel.
+
+\subsection{Cost-Gated Routing (Ablated Variant)}
 \label{sec:capacityaware}
-In a standard worker pool, threads pick tasks indiscriminately (e.g., random or FIFO). SyncPilot instead uses a pull-based, priority-ordered worker pool: on every iteration, an idle worker scans the stage queues from the last stage toward the first and takes the first non-empty queue it can lock (Section~\ref{sec:implementation}), so that tasks closest to completion are drained preferentially, keeping the reorder buffer flowing and bounding in-flight memory. This decision is made locally by each worker thread via per-stage \texttt{trylock} operations rather than a global lock, avoiding the contention of a single central dispatcher. Every worker, Performance or Efficient, applies this same priority rule; the only reason Performance-core workers end up handling a disproportionate share of the heaviest stage is that they execute it faster, not because they preferentially select it.
+The framework also implements a second, richer policy that we evaluate as an ablation and ultimately recommend against on this platform. During the processing of the first task (Task ID 0), it measures the execution time of each stage using \texttt{clock\_gettime} and stores the result in a per-stage cost table; after that first task the measurement stops, so steady-state dispatch is a constant-time table lookup rather than a timing call. A stage is then classified ``heavy'' once its measured cost exceeds $0.75\times$ the mean per-stage cost. Performance-core workers skip non-heavy stages in their normal search pass, and Efficient-core workers skip heavy stages unless no lighter task is available --- a work-conserving fallback used only when a worker would otherwise idle.
 
-The framework additionally implements, but does not enable by default, a cost-threshold-gated variant of this pull rule (\texttt{enable\_two\_pool}): when active, a stage is classified "heavy" once its IC-RCE-measured cost exceeds $0.75\times$ the mean per-stage cost, Performance-core workers then skip non-heavy stages in their normal search pass, and Efficient-core workers skip heavy stages unless no lighter task is available (a work-conserving fallback used only when a worker would otherwise idle). This mode was exercised only in earlier, smaller-scale local testing and is not part of the GX10 results reported in Section~\ref{sec:eval}; we discuss it as an avenue for future evaluation in Section~\ref{sec:limitations}.
+This gating is enabled by default in the FSRCNN example and is disabled by \texttt{SYNCPILOT\_DISABLE\_TWOPOOL=1}, which leaves pinning active and cost-based routing off. Two implementation details of this policy are worth stating, because both were forced by failures rather than chosen. First, the fallback pass must be work-conserving for \emph{both} classes. Our initial version enforced the preference strictly in both directions and let only Efficient workers relax it; on a homogeneous configuration (8 workers, all Performance) this deadlocks outright --- every stage classified light is one that no worker will accept, and the pipeline stalls rather than merely running slowly. Second, the framework deactivates gating automatically whenever all workers belong to a single core class, which is both a correctness guard against that failure and a recognition that the heavy/light split is meaningless without both clusters present; consequently the 4-, 8-, and 10-worker configurations reported in Section~\ref{sec:idle} are pure static-pinning runs regardless of the flag. The general lesson is that class-preference routing is not merely a performance heuristic that degrades gracefully: without a fully work-conserving escape it is a liveness hazard. Section~\ref{sec:ablation} reports the measured effect of this policy, which is negative at every contention level.
 
 % === IV. IMPLEMENTATION ===
 \section{Implementation}
@@ -99,7 +101,7 @@ The framework additionally implements, but does not enable by default, a cost-th
 The framework is implemented in C using POSIX Threads (pthreads) and compiled with GCC for the AArch64 architecture. We selected FSRCNN as the case study due to its heterogeneous layer characteristics: early layers are lightweight convolutions, while the final deconvolution layer is compute-intensive. The application is partitioned into 8 pipeline stages, one per FSRCNN layer.
 
 \subsection{Queueing and Synchronization}
-Each of the 8 stages owns an independent, fixed-capacity ring-buffer queue guarded by its own \texttt{pthread\_mutex\_t}; there is no engine-wide lock on the task-dispatch path. A worker acquires a task by scanning stages from last to first and attempting a non-blocking \texttt{pthread\_mutex\_trylock} on each stage's queue in turn (Algorithm~\ref{alg:pull}); if a lock is contended, the worker simply moves on to the next candidate stage rather than blocking, which is what we mean by "without a global lock" in Section~\ref{sec:capacityaware} — the queues themselves are still mutex-protected, not lock-free in the strict, non-blocking-algorithm sense. Backpressure is enforced through a per-stage \texttt{reserved\_slots} counter: a worker may only pop a task from stage $i$ if it can simultaneously reserve a free slot in stage $i{+}1$'s queue, preventing a fast upstream worker from overflowing a slower downstream stage.
+Each of the 8 stages owns an independent, fixed-capacity ring-buffer queue guarded by its own \texttt{pthread\_mutex\_t}; there is no engine-wide lock on the task-dispatch path. A worker acquires a task by scanning stages from last to first and attempting a non-blocking \texttt{pthread\_mutex\_trylock} on each stage's queue in turn (Algorithm~\ref{alg:pull}); if a lock is contended, the worker simply moves on to the next candidate stage rather than blocking, which is what we mean by ``without a global lock'' --- the queues themselves are still mutex-protected, not lock-free in the strict, non-blocking-algorithm sense. Backpressure is enforced through a per-stage \texttt{reserved\_slots} counter: a worker may only pop a task from stage $i$ if it can simultaneously reserve a free slot in stage $i{+}1$'s queue, preventing a fast upstream worker from overflowing a slower downstream stage.
 
 \begin{algorithm}[htbp]
 \caption{Per-worker task pull (non-blocking, priority-ordered)}
@@ -121,62 +123,6 @@ Each of the 8 stages owns an independent, fixed-capacity ring-buffer queue guard
 \end{algorithm}
 
 Once a worker finishes executing a stage's callback, it pushes the task to stage $i{+}1$'s queue (or, if $i$ was the last stage, into the Reorder Buffer) and signals waiting workers. The Reorder Buffer is a pre-allocated array of \texttt{total\_tasks} slots indexed by task ID; a dedicated consumer thread blocks on a condition variable until slot \texttt{next\_expected\_id} is filled, invokes the user-supplied writer callback on it, clears the slot, and advances, which is what guarantees strictly ordered output despite workers completing tasks out of order.
-
-% === V. EXPERIMENTAL EVALUATION ===
-\section{Experimental Evaluation}
-\label{sec:eval}
-
-\subsection{Experimental Setup}
-\label{sec:setup}
-We implemented SyncPilot in C using POSIX threads and evaluated it on an ASUS GX10 board. The GX10 is an NVIDIA GB10-based ARM workstation, not a classic mobile AMP SoC: its CPU cluster combines 10$\times$ Cortex-X925 (Performance cores) @ up to 3.9 GHz and 10$\times$ Cortex-A725 (Efficient cores) @ up to 2.8 GHz on the ARMv9-A DynamIQ hierarchy, with no ultra-low-power tier present (e.g., no Cortex-A5xx/A510). We use "Performance core" / "Efficient core" throughout this paper as vendor-neutral labels for the higher- and lower-capacity cluster, respectively, rather than ARM's "big.LITTLE" naming, since Cortex-A725 is itself a high-throughput core and calling it "LITTLE" would overstate how power-constrained it actually is relative to a true ultra-efficiency core; readers should not assume our scaling results (Section~\ref{sec:workerconfig}) transfer to platforms with a true ultra-low-power tier (e.g., Cortex-A55), where the straggler effect reported by \cite{annisa2025fsrcnn} on Orange Pi 5 is more severe. We discuss the choice of a GPU-equipped workstation for a CPU-scheduling study in Section~\ref{sec:whycpu}. The operating system was Ubuntu 24.04 with Linux Kernel 6.17.0-1018-nvidia. Compilation was performed using GCC 13.3.0 with \texttt{-O3} optimization flags. The evaluation controls for worker configuration and CPU affinity only; we did not pin the cpufreq governor, monitor SoC thermal state, or isolate the GPU from concurrent activity, and no artifact/code release accompanies this submission at this time — we note these as reproducibility gaps rather than as controlled variables.
-
-As a case study, we deployed the Fast Super-Resolution Convolutional Neural Network (FSRCNN) \cite{dong2016fsrcnn} for low-to-high resolution video reconstruction (176$\times$144 $\rightarrow$ 352$\times$288 pixels, 150 frames of the Suzie sequence). FSRCNN is an ideal candidate due to its heterogeneous layer complexity. The pipeline was partitioned into 8 stages (Layer 1 to Layer 8).
-
-\textbf{Why CPU scheduling on a GPU-equipped workstation?}
-\label{sec:whycpu}
-The GX10's raison d'\^{e}tre is its integrated Blackwell-class GPU, and a reviewer might reasonably ask why we schedule DNN inference across its CPU cores at all. We use the GX10 not as a representative deployed edge device but as a convenient, currently-available proxy for the CPU-side topology that is becoming common on recent Armv9 heterogeneous designs (a high-capacity cluster paired with a second, still-substantial-throughput cluster, without a true ultra-efficiency tier) — a topology increasingly seen even on GPU-equipped SoCs where the CPU cluster still executes pre-/post-processing, control logic, or DNN operators that are not GPU-resident. Our results characterize SyncPilot's scheduling behavior on this CPU topology; they are not a claim that CPU-only inference is preferable to GPU inference on this hardware, and we make no throughput or efficiency comparison against the GX10's GPU in this paper.
-
-To contextualize SyncPilot's performance, we compare against a serial FSRCNN execution baseline on a pinned Performance core (10288 ms). Furthermore, to validate our claim against the default OS scheduler, we also compare against CFS Baselines where 10 and 20 threads are spawned without explicit CPU affinity, leaving the Linux Completely Fair Scheduler (aided by Energy Aware Scheduling) to manage core allocation freely; we additionally stress-test this comparison under synthetic system noise in Section~\ref{sec:discussion}. All results in this section (Tables~\ref{tab:throughput}--\ref{tab:noise}) come from a single benchmark session using the same 8-run protocol, with run 1 of every scenario treated as a cold-start/profiling run and excluded from the reported average, minimum, maximum, and standard deviation, which are computed over the remaining 7 steady-state runs; run 1 typically differs from steady state by cold page cache (weight files, input video read twice) and thread/engine initialization, not by anything IC-RCE-specific.
-
-We evaluated SyncPilot with the following worker configurations:
-\begin{itemize}
-\item SyncPilot-4W: 4 worker threads (4 Performance cores).
-\item SyncPilot-8W: 8 worker threads (8 Performance cores).
-\item SyncPilot-10W: 10 worker threads (10 Performance cores).
-\item SyncPilot-20W: 20 worker threads (10 Performance + 10 Efficient cores).
-\end{itemize}
-Section~\ref{sec:perfcounter} additionally reports a 1W (serial) and 2W configuration collected in the same \texttt{perf stat} sweep, included only for trend continuity across the counter measurements and not part of the primary throughput comparison above.
-
-Each SyncPilot configuration was executed 8 times, with the first run treated as a warm-up (profiling run for IC-RCE calibration) and the remaining 7 runs averaged for results. Output correctness was verified by comparing every one of the 150 output frames in each scenario against the corresponding ground-truth frame using pixel-wise comparison and PSNR calculation.
-
-\subsection{Overall Performance Comparison}
-\begin{table}[htbp]
-\caption{Performance Comparison on ASUS GX10}
-\begin{center}
-\small
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\textbf{Config.} & \textbf{Time (ms)} & \textbf{StdDev (ms)} & \textbf{FPS} & \textbf{Speedup} \\
-\hline
-Serial (Performance Core) & 10288 & 139.0 & 14.58 & 1.00$\times$ \\
-SyncPilot-4W & 3026 & 15.0 & 49.57 & 3.40$\times$ \\
-SyncPilot-8W & 1583 & 9.0 & 94.76 & 6.50$\times$ \\
-SyncPilot-10W & 1340 & 9.2 & 111.94 & 7.68$\times$ \\
-SyncPilot-20W & 1123 & 16.9 & 133.57 & 9.16$\times$ \\
-\hline
-\end{tabular}
-\label{tab:throughput}
-\end{center}
-\end{table}
-
-Table \ref{tab:throughput} presents the throughput results on ASUS GX10, with Time/StdDev/FPS computed over the 7 steady-state runs of each 8-run scenario (Section~\ref{sec:setup}). The serial execution on a pinned Performance core achieved 10288 ms (14.58 FPS). By utilizing SyncPilot, the 4-worker configuration completed in 3026 ms (49.57 FPS, 3.40$\times$ speedup). Scaling the worker pool further improves performance: SyncPilot-8W reaches 6.50$\times$ (1583 ms), SyncPilot-10W reaches 7.68$\times$ (1340 ms), and SyncPilot-20W achieves the best performance at 9.16$\times$ (1123 ms, 133.57 FPS). At 20 physical cores, 9.16$\times$ corresponds to roughly 46\% parallel efficiency; Section~\ref{sec:workerconfig} discusses why the 8-stage pipeline, rather than simple frame-level \texttt{parallel for}, is a deliberate choice given the reordering and correctness guarantees at stake. These results demonstrate that on the ASUS GX10, the stronger Cortex-A725 Efficient cores can participate in the worker pool without causing severe bottlenecks, allowing the static Performance/Efficient pinning described in Section~\ref{sec:asymmap} to exploit additional parallelism rather than being limited by it.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\columnwidth]{fsrcnn_throughput_asus.png}
-\caption{Throughput comparison across all configurations. SyncPilot-20W achieves the highest throughput at 133.57 FPS.}
-\label{fig:throughput}
-\end{figure}
 
 \begin{figure}[htbp]
 \centering
@@ -201,260 +147,331 @@ Table \ref{tab:throughput} presents the throughput results on ASUS GX10, with Ti
 \draw[-{Latex}, dashed] (big.east) .. controls +(0.6,0) and +(0.6,0) .. (q.south east);
 \draw[-{Latex}, dashed] (little.west) .. controls +(-0.6,0) and +(-0.6,0) .. (q.south west);
 \end{tikzpicture}
-\caption{SyncPilot pipeline engine. Performance- and Efficient-pinned workers pull tasks from a shared, priority-ordered set of per-stage queues (dashed arrows: push to the next stage) with no central dispatcher; the Reorder Buffer and consumer thread guarantee sequential output despite out-of-order completion.}
+\caption{SyncPilot pipeline engine. Under the static-pinning policy, Performance- and Efficient-pinned workers pull tasks from a shared, priority-ordered set of per-stage queues (dashed arrows: push to the next stage) with no central dispatcher; the Reorder Buffer and consumer thread guarantee sequential output despite out-of-order completion. Under the CFS/EAS baseline the same workers run unpinned.}
 \label{fig:arch}
 \end{figure}
 
-\subsection{Calibration Overhead Analysis}
-\label{sec:calibrationoverhead}
-A key contribution of SyncPilot is that IC-RCE calibration happens only once, during the processing of the first task, rather than being re-measured on every frame. Empirically, the observed cold-start delta on this benchmark session is modest rather than dramatic: SyncPilot-4W's first (cold-start) run completed in 3036 ms versus a 3026 ms steady-state average (+0.3\%), and SyncPilot-20W's first run completed in 1128 ms versus a 1123 ms steady-state average (+0.4\%); for SyncPilot-8W, the first run was in fact marginally \emph{faster} than the steady-state average (1573 ms vs. 1583 ms). We do not observe a large, multi-second one-time penalty; the most likely explanation is that the weight and input files were already resident in the OS page cache from compilation and the preceding scenarios within the same benchmark session, so the ``cold cache'' condition a first run is meant to stress-test was only partially realized here. A genuinely cold-cache measurement (e.g., immediately after a reboot, before any scenario has touched the files) is left as follow-up work. What the architecture guarantees independent of this empirical variability is structural rather than measured: once the Cost Table is populated after Task ID 0, the scheduling logic performs a constant-time table lookup instead of invoking \texttt{clock\_gettime} again, so per-task dispatch overhead does not grow with the number of frames processed — this is a property of the code path itself, not an artifact of any particular timing run.
+% === V. EXPERIMENTAL EVALUATION ===
+\section{Experimental Evaluation}
+\label{sec:eval}
 
-Once the Cost Table is populated, subsequent runs (Task ID $> 0$) operate in steady state with zero profiling overhead. The scheduling logic simply performs a lookup in the pre-calibrated table, consuming only a few CPU cycles per task dispatch. This contrasts sharply with continuous-monitoring approaches, where timing functions are invoked for every frame, accumulating measurable overhead over time and preventing the system from reaching optimal throughput.
+\subsection{Experimental Setup}
+\label{sec:setup}
+We evaluated SyncPilot on an ASUS GX10 board. The GX10 is an NVIDIA GB10-based ARM workstation, not a classic mobile AMP SoC: its CPU cluster combines 10$\times$ Cortex-X925 (Performance cores) @ up to 3.9 GHz and 10$\times$ Cortex-A725 (Efficient cores) @ up to 2.808 GHz on the ARMv9-A DynamIQ hierarchy, with no ultra-low-power tier present (e.g., no Cortex-A5xx/A510). The two classes are \emph{interleaved} rather than contiguous in the kernel's CPU numbering: reading \texttt{cpufreq/cpuinfo\_max\_freq} on every core gives Performance cores at \texttt{cpu5--9} and \texttt{cpu15--19}, and Efficient cores at \texttt{cpu0--4} and \texttt{cpu10--14}. We state this explicitly because the natural assumption --- a contiguous \texttt{cpu0--9} / \texttt{cpu10--19} split --- is wrong on this board, and any experiment that pins by CPU index without checking would silently measure a mixture of both classes rather than either one. We use ``Performance core'' / ``Efficient core'' throughout this paper as vendor-neutral labels for the higher- and lower-capacity cluster, respectively, rather than ARM's ``big.LITTLE'' naming, since Cortex-A725 is itself a high-throughput core and calling it ``LITTLE'' would overstate how power-constrained it actually is relative to a true ultra-efficiency core. Readers should not assume our scaling results transfer to platforms with a true ultra-low-power tier (e.g., Cortex-A55), where the straggler effect reported by \cite{annisa2025fsrcnn} on Orange Pi 5 is more severe; Section~\ref{sec:whenwrong} discusses how the narrow cluster gap on this platform bounds the generality of the crossover we report. The operating system was Ubuntu 24.04 with Linux Kernel 6.17.0-1018-nvidia, on which EAS is active for the unpinned baseline. Compilation was performed using GCC 13.3.0 with \texttt{-O3} optimization flags. We discuss the choice of a GPU-equipped workstation for a CPU-scheduling study in Section~\ref{sec:whycpu}.
 
-\subsection{Per-Layer Execution Analysis: The IC-RCE Cost Table}
-\label{sec:layerprofile}
-The reference paper \cite{annisa2025fsrcnn} conducted a detailed per-layer execution time analysis, revealing that Layer 8 (deconvolution) dominates the computational cost across all configurations. Table~\ref{tab:layers} reports the IC-RCE Cost Table itself, i.e., the raw per-stage measurements produced by the calibration step described above, captured during the first-frame calibration pass on a Performance core.
+As a case study, we deployed the Fast Super-Resolution Convolutional Neural Network (FSRCNN) \cite{dong2016fsrcnn} for low-to-high resolution video reconstruction (176$\times$144 $\rightarrow$ 352$\times$288 pixels, 150 frames of the Suzie sequence). FSRCNN is an ideal candidate due to its heterogeneous layer complexity. The pipeline was partitioned into 8 stages (Layer 1 to Layer 8).
+
+\textbf{Scheduling policies compared.}
+All three policies run the identical \texttt{fsrcnn\_syncpilot} binary with 20 workers, differing only in environment flags:
+\begin{itemize}
+\item \textbf{Static pinning} --- workers hard-pinned 10 to the Performance cluster and 10 to the Efficient cluster (Section~\ref{sec:asymmap}); cost-gated routing disabled.
+\item \textbf{Static pinning + cost-gating} --- the same pinning plus the cost-threshold stage routing of Section~\ref{sec:capacityaware}.
+\item \textbf{CFS + EAS} --- affinity disabled; 20 unpinned threads placed entirely by the kernel.
+\end{itemize}
+
+\textbf{Contention sweep.}
+Each policy was measured at seven load conditions. The idle condition runs the benchmark alone on a quiesced board. Two \emph{synthetic noise} conditions add 4 or 10 unpinned CPU-bound OpenMP spin-loop threads (\texttt{noise\_generator}) alongside the measured application. Four \emph{multi-tenant} conditions instead run 2, 3, 4, or 5 additional complete FSRCNN applications concurrently; each tenant is the same binary configured with 4 workers and \texttt{SYNCPILOT\_DISABLE\_AFFINITY=1}, so neighbours are ordinary CFS-scheduled processes that do not themselves claim Performance cores, and each is restarted in a loop for the duration of the measured run to keep the background load continuous. Tenant output is redirected to \texttt{/dev/null} so the experiment isolates CPU and cache contention rather than storage bandwidth. The multi-tenant family adds 8--20 background threads, comparable in thread count to the synthetic family, but with the memory footprint, cache access pattern, and multithreaded structure of a real neighbouring inference workload rather than a pure ALU burner.
+
+\textbf{Measurement protocol.}
+Every scenario was executed 8 times. Run 1 of each scenario is treated as a cold-start/profiling run and excluded; the reported average, minimum, maximum, and standard deviation are computed over the remaining 7 steady-state runs. Run 1 typically differs from steady state by cold page cache (weight files, input video read twice) and thread/engine initialization. All results in Tables~\ref{tab:idle}--\ref{tab:contention} come from a single benchmark session, so cross-scenario comparisons are not confounded by session-to-session drift. Significance is assessed with Welch's unequal-variance $t$-test over the 7 steady-state runs per condition. Output correctness was verified by comparing every one of the 150 output frames in each scenario against the corresponding ground-truth frame using byte-wise comparison and PSNR calculation.
+
+The \texttt{cpufreq} governor was \texttt{performance} on all 20 cores, verified per core rather than assumed. The evaluation does not control for SoC thermal state or isolate the GPU from concurrent activity, and no artifact/code release accompanies this submission at this time --- we note these as remaining reproducibility gaps rather than as controlled variables. The environment capture, per-core frequency and governor readout, and the supporting measurements of Sections~\ref{sec:layerprofile}--\ref{sec:gprof} come from a single scripted collection run whose full log we retain.
+
+\subsection{Why CPU Scheduling on a GPU-Equipped Workstation?}
+\label{sec:whycpu}
+The GX10's raison d'\^{e}tre is its integrated Blackwell-class GPU, and a reviewer might reasonably ask why we schedule DNN inference across its CPU cores at all. We use the GX10 not as a representative deployed edge device but as a convenient, currently-available proxy for the CPU-side topology that is becoming common on recent Armv9 heterogeneous designs (a high-capacity cluster paired with a second, still-substantial-throughput cluster, without a true ultra-efficiency tier) --- a topology increasingly seen even on GPU-equipped SoCs where the CPU cluster still executes pre-/post-processing, control logic, or DNN operators that are not GPU-resident. Our results characterize scheduling behaviour on this CPU topology; they are not a claim that CPU-only inference is preferable to GPU inference on this hardware, and we make no throughput or efficiency comparison against the GX10's GPU in this paper.
+
+\subsection{Idle-System Scaling}
+\label{sec:idle}
 
 \begin{table}[htbp]
-\caption{IC-RCE Cost Table: Per-Layer Execution Time (Single-Frame Calibration Pass, Performance Core)}
+\caption{Idle-System Performance on ASUS GX10 (150 frames, $n=7$)}
 \begin{center}
 \small
 \begin{adjustbox}{max width=\columnwidth}
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Layer} & \textbf{Stage} & \textbf{Time (s)} & \textbf{\% Total} \\
+\textbf{Config.} & \textbf{Time (ms)} & \textbf{SD (ms)} & \textbf{FPS} & \textbf{Speedup} \\
 \hline
-Layer 1 & Feature Extraction & 0.00562 & 6.0 \\
-Layer 2 & Shrinking & 0.01389 & 14.7 \\
-Layer 3 & Non-linear Mapping & 0.00654 & 6.9 \\
-Layer 4 & Non-linear Mapping & 0.00365 & 3.9 \\
-Layer 5 & Non-linear Mapping & 0.00322 & 3.4 \\
-Layer 6 & Non-linear Mapping & 0.00327 & 3.5 \\
-Layer 7 & Expanding & 0.01299 & 13.8 \\
-Layer 8 & Deconvolution & 0.04514 & 47.9 \\
+Serial (Performance core) & 10412 & 141.4 & 14.41 & 1.00$\times$ \\
+Serial (Efficient core) & 19081 & 183.8 & 7.86 & 0.55$\times$ \\
 \hline
-\textbf{Total} & & \textbf{0.09432} & \textbf{100.0} \\
+Static pinning, 4W & 3064 & 17.1 & 48.96 & 3.40$\times$ \\
+Static pinning, 8W & 1584 & 7.3 & 94.70 & 6.57$\times$ \\
+Static pinning, 10W & 1345 & 6.8 & 111.52 & 7.74$\times$ \\
+Static pinning, 20W & \textbf{1136} & 19.7 & \textbf{132.04} & \textbf{9.17$\times$} \\
+Static pinning + cost-gating, 20W & 1214 & 23.3 & 123.56 & 8.58$\times$ \\
 \hline
+CFS/EAS, 10W (unpinned) & 1342 & 17.5 & 111.77 & 7.76$\times$ \\
+CFS/EAS, 20W (unpinned) & 1050 & 12.4 & 142.86 & 9.92$\times$ \\
+\hline
+Naive OpenMP, 20 threads$^\dagger$ & 6215 & 44.9 & 24.14 & 1.68$\times$ \\
+\hline
+\multicolumn{5}{l}{\footnotesize Speedup is relative to the Performance-core serial baseline; the Efficient-core row's 0.55$\times$}\\
+\multicolumn{5}{l}{\footnotesize is the reciprocal of the 1.83$\times$ capacity ratio measured in this session.}\\
+\multicolumn{5}{l}{\footnotesize $^\dagger$Output incorrect (Section~\ref{sec:correctness}); listed for reference only.}\\
+\end{tabular}
+\end{adjustbox}
+\label{tab:idle}
+\end{center}
+\end{table}
+
+Table~\ref{tab:idle} establishes the idle-system operating point. Serial execution pinned to a Performance core completes the 150-frame sequence in 10412~ms (14.41~FPS). Static pinning scales monotonically with worker count: 3.40$\times$ at 4 workers, 6.57$\times$ at 8, 7.74$\times$ at 10, and 9.17$\times$ (1136~ms, 132.04~FPS) at 20 workers, which is approximately 46\% parallel efficiency across 20 physical cores.
+
+Two rows contextualize this scaling. Running the same single-threaded workload pinned entirely to an Efficient core takes 19081~ms, making the Efficient core 1.83$\times$ slower than the Performance core on identical work. A dedicated repeat of this measurement in a separate session --- five runs per class, each pinned by \texttt{taskset} to one core of the known cluster --- gives 10137~ms (SD 37.7) and 19235~ms (SD 79.4), a ratio of 1.90$\times$; we quote 1.83$\times$ in the arithmetic below because it comes from the same session as the rest of Table~\ref{tab:idle}, and treat 1.83--1.90$\times$ as the measured range. This is a substantially narrower gap than the 3--4$\times$ differential typical of a Cortex-A76/Cortex-A55-class pairing, and it is the direct, platform-specific reason the Cortex-A725 cores can be added to the worker pool at 20W without becoming severe stragglers --- the 10$\rightarrow$20 worker step still buys 15.5\% (1345$\rightarrow$1136~ms) even though the added cores are the weaker ones.
+
+\subsection{The Idle Operating Point Favours CFS/EAS}
+\label{sec:cfsidle}
+The last two rows of Table~\ref{tab:idle} are the ones that motivate the rest of the paper. On an idle system, unpinned CFS/EAS at 20 threads completes in 1050~ms against static pinning's 1136~ms --- the OS policy is 8.2\% faster, and the gap is statistically solid ($t=9.8$, $p<10^{-5}$). At 10 workers the two policies are indistinguishable: 1342 vs.\ 1345~ms, a 3~ms difference against standard deviations of 17.5 and 6.8~ms ($t=0.4$, $p=0.68$).
+
+The explanation is not that hard-pinning is intrinsically inferior but that an idle machine is the best case for a learning scheduler. Over a 150-frame run with no competing demand, EAS has both the utilization signal and the free capacity it needs to migrate compute-heavy threads toward Performance cores and light threads toward Efficient cores, converging on a mapping close to the one static pinning imposes --- while retaining the freedom to use whichever specific core is momentarily idle, and without paying for the rigidity of a fixed assignment. Reported alone, this measurement would recommend against static pinning. Section~\ref{sec:contention} shows why it should not be reported alone.
+
+\subsection{Behaviour Under Contention}
+\label{sec:contention}
+
+\begin{table*}[t]
+\caption{Run Latency Across the Contention Sweep (ASUS GX10, 20 workers, 150 frames, $n=7$ steady-state runs per cell)}
+\begin{center}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{|l|ccc|ccc|ccc|c|}
+\hline
+& \multicolumn{3}{c|}{\textbf{Static pinning}} & \multicolumn{3}{c|}{\textbf{Static pinning + cost-gating}} & \multicolumn{3}{c|}{\textbf{CFS + EAS (unpinned)}} & \textbf{Static vs.} \\
+\textbf{Contention level} & Avg (ms) & SD & Worst & Avg (ms) & SD & Worst & Avg (ms) & SD & Worst & \textbf{CFS} \\
+\hline
+Idle & 1136 & 19.7 & 1159 & 1214 & 23.3 & 1242 & \textbf{1050} & 12.4 & 1071 & $-8.2\%$ \\
+\hline
+Synthetic noise, 4 threads & \textbf{1225} & 12.9 & 1248 & 1283 & 13.4 & 1310 & 1264 & 12.5 & 1284 & $+3.1\%$ \\
+Synthetic noise, 10 threads & \textbf{1401} & 13.0 & 1427 & 1503 & 55.0 & 1581 & 1747 & 46.7 & 1836 & $+19.8\%$ \\
+\hline
+2 co-running FSRCNN apps & \textbf{1532} & 20.7 & 1555 & 1644 & 28.3 & 1684 & 1704 & 46.1 & 1755 & $+10.1\%$ \\
+3 co-running FSRCNN apps & \textbf{1840} & 47.1 & 1940 & 1906 & 39.9 & 1958 & 2057 & 44.3 & 2124 & $+10.5\%$ \\
+4 co-running FSRCNN apps & \textbf{2118} & 46.4 & 2182 & 2294 & 59.4 & 2385 & 2407 & 96.2 & 2586 & $+12.0\%$ \\
+5 co-running FSRCNN apps & \textbf{2525} & 56.9 & 2632 & 2716 & 93.2 & 2870 & 2751 & 63.5 & 2852 & $+8.2\%$ \\
+\hline
+\multicolumn{11}{l}{\footnotesize ``Worst'' is the slowest of the 7 steady-state runs. The final column is the latency reduction of static pinning relative to CFS/EAS,}\\
+\multicolumn{11}{l}{\footnotesize $(t_\mathrm{CFS}-t_\mathrm{static})/t_\mathrm{CFS}$; positive means static pinning is faster. Every value in that column is significant at $p<10^{-4}$ (Welch, $n=7$).}\\
+\end{tabular}
+\end{adjustbox}
+\label{tab:contention}
+\end{center}
+\end{table*}
+
+Table~\ref{tab:contention} and Figure~\ref{fig:contention} give the paper's central result. The idle-system ordering inverts as soon as the machine has anything else to do, and it stays inverted for every load condition we tested.
+
+\textbf{Synthetic CPU noise.} With 4 background spin-loop threads, static pinning is already ahead: 1225 vs.\ 1264~ms, a 3.1\% reduction ($t=5.7$, $p<10^{-4}$). At 10 background threads --- enough to saturate the Performance cluster --- the gap widens to 19.8\% (1401 vs.\ 1747~ms, $t=18.9$, $p<10^{-6}$). Crucially, the two policies degrade differently rather than by a common factor: relative to its own idle baseline, static pinning grows 23.3\% while CFS/EAS grows 66.4\%.
+
+\textbf{Multi-tenant contention.} The multi-tenant family is the more realistic of the two, since each neighbour is a full inference application with its own weight footprint and cache behaviour rather than a pure ALU loop. Static pinning leads at every level: 10.1\% at 2 tenants, 10.5\% at 3, 12.0\% at 4, and 8.2\% at 5 ($p<10^{-4}$ throughout). The margin peaks at 4 tenants and narrows slightly at 5, which is consistent with a saturation effect --- at 5 tenants roughly 20 extra runnable threads compete for 20 cores, and no placement policy can recover capacity that no longer exists.
+
+\textbf{Predictability.} The standard-deviation columns show that the difference is not only a shift in mean latency. Under heavy synthetic noise, static pinning's run-to-run standard deviation is 13.0~ms against CFS/EAS's 46.7~ms --- a 3.6$\times$ difference in dispersion --- and its worst observed run is 1427~ms against 1836~ms. Measured from each policy's own idle worst case, static pinning's worst-case run latency grows 23.1\% (1159$\rightarrow$1427~ms) while CFS/EAS's grows 71.4\% (1071$\rightarrow$1836~ms). Under multi-tenant load the pattern holds but is less stark: at 4 tenants the standard deviations are 46.4 vs.\ 96.2~ms. For a latency-sensitive streaming deployment, a policy that is 8\% slower in the best case but 3--4$\times$ more predictable in the common case is the safer engineering choice.
+
+We note one honest boundary on the ``worst-case'' framing: our instrumentation records one wall-clock time per full 150-frame run, not a timestamp per frame. The ``Worst'' column is therefore the slowest of 7 runs, not a frame-level tail latency. A genuine jitter characterization (per-frame latency distribution, p95/p99) would require finer-grained logging than we collected and is left as follow-up work (Section~\ref{sec:limitations}). The standard-deviation columns are on firmer ground, being computed from the same 7 samples that produce the means.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{fsrcnn_contention_asus.png}
+\caption{Run latency across the contention sweep for the three scheduling policies (error bars: standard deviation over 7 steady-state runs). CFS/EAS leads only at the idle operating point; static pinning leads at every contention level in both noise families. Cost-gated routing is dominated by plain static pinning everywhere.}
+\label{fig:contention}
+\end{figure*}
+
+\subsection{Ablation: Cost-Gated Stage Routing}
+\label{sec:ablation}
+Having established that explicit placement beats OS placement under load, the natural next question is whether a \emph{smarter} explicit policy does better still --- specifically, whether feeding measured per-stage costs back into task routing (Section~\ref{sec:capacityaware}) improves on topology-only pinning. The middle group of Table~\ref{tab:contention} answers this, and the answer is no.
+
+Percentage gaps in this section are expressed relative to the faster policy: ``6.9\%'' means gating takes 6.9\% longer than plain pinning at that contention level. (Stated the other way round, relative to gating, the same idle gap reads 6.4\%.) On that basis, cost-gated routing is slower than plain static pinning at every one of the seven contention levels, by 6.9\% idle, 4.7\% and 7.3\% under synthetic noise, and 7.3\%, 3.6\%, 8.3\%, and 7.6\% across the multi-tenant levels. Six of the seven gaps are significant at $p<0.01$; the exception is the 3-tenant point ($p=0.016$), which remains significant at $p<0.05$. The mean penalty is roughly 6.5\%, and there is no contention level at which gating recovers.
+
+The loss is not a loss of work conservation. Our implementation's fallback pass is fully work-conserving for both core classes: a worker that finds nothing acceptable in its preference-respecting scan repeats the scan in steal mode, where the preference test returns true unconditionally. A Performance worker therefore does take a light task when only light tasks are queued; it does not idle. Two other mechanisms account for the penalty, and the second is the substantial one.
+
+\textbf{Failed-scan overhead.} Every gating rejection costs a full extra traversal. A worker scans all 8 stages, taking and releasing a \texttt{trylock} plus the calibration lock at each rejected stage, before it can fall through to the steal pass and scan all 8 again. This is pure overhead on the dispatch path and is paid whenever the queued work does not match the worker's class.
+
+\textbf{Capacity-blind load partitioning.} The $0.75\times$ mean threshold derives the heavy/light load split entirely from the \emph{cost distribution across stages} and ignores hardware capacity completely. Across the 60-run calibration sweep of Section~\ref{sec:layerprofile} it reserves 73.8\% of measured per-frame cost for the 10 Performance cores at twenty workers (78.2\% on the isolated profile), leaving the 10 Efficient cores the remainder. At the measured capacity ratio a proportional allocation would be 65.5:34.5, so gating oversubscribes the Performance cluster by 8--13 percentage points while the Efficient cluster runs short of work; only the steal fallback --- reached after the wasted scan --- pulls the balance back. The emergent mapping under plain pinning has no such problem: Performance workers end up with a larger share of the work precisely because they finish tasks faster, so the load proportion self-adjusts to the true capacity ratio instead of being fixed in advance by a threshold that never sees it.
+
+This also explains why the penalty is roughly constant in relative terms across the sweep. Both mechanisms are structural properties of the dispatch path and the partition ratio, not functions of how loaded the machine is, so they scale with total work rather than with contention.
+
+This is a negative result about the added policy, not about the workload model behind it: Section~\ref{sec:layerprofile} shows the underlying cost distribution is highly reproducible when measured in isolation. What fails is measuring it in situ and routing on the result. We report this because the cheaper policy winning is the actionable finding, and because an earlier version of this work assumed the opposite.
+
+\subsection{The Cost Table Is Not Reproducible}
+\label{sec:layerprofile}
+The ablation above raises an obvious question: if the cost model is correct, why does routing on it fail? This section answers it by measuring the cost table itself rather than assuming it. We ran a dedicated sweep --- 1, 4, 8, 10 and 20 workers, ten repetitions each, sixty runs in total --- capturing the table the framework builds on task~0 of every run. Because calibration is by construction a cold-start event, no run is discarded as a warm-up here; that convention applies to the timing measurements of Tables~\ref{tab:idle}--\ref{tab:contention}, not to this one.
+
+\begin{table}[htbp]
+\caption{Cost Table Stability Across Ten Identical Runs Per Configuration}
+\begin{center}
+\small
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{|l|c|c|c|l|}
+\hline
+\textbf{Workers} & \textbf{Mean total} & \textbf{Spread} & \textbf{Heavy} & \textbf{Heavy set (of 10 runs)} \\
+\textbf{at calib.} & \textbf{(s)} & \textbf{max/min} & \textbf{share} & \\
+\hline
+1  & 0.0819 & 1.01$\times$ & 78.2\% & $\{2,7,8\}\times$10 \\
+4  & 0.1037 & 1.11$\times$ & 77.8\% & $\{2,7,8\}\times$10 \\
+8  & 0.1086 & 1.38$\times$ & 75.9\% & $\{2,7,8\}\times$9; $\{2,8\}\times$1 \\
+10 & 0.1214 & 1.49$\times$ & 79.7\% & $\{2,7,8\}\times$8; $\{2,3,7,8\}\times$2 \\
+20 & 0.1655 & 2.52$\times$ & 73.8\% & $\{2,7,8\}\times$9; $\{2,3,7,8\}\times$1 \\
+\hline
+\multicolumn{5}{l}{\footnotesize ``Heavy share'' is the fraction of measured per-frame cost carried by the stages}\\
+\multicolumn{5}{l}{\footnotesize the $0.75\times$-mean threshold classifies as heavy, averaged over the ten runs.}\\
 \end{tabular}
 \end{adjustbox}
 \label{tab:layers}
 \end{center}
 \end{table}
 
-Layer 8 (deconvolution, $9\times9$) dominates at 47.9\% of total per-frame calibration time (0.045~s out of 0.094~s), followed by Layer 2 (shrinking, $1\times1$) at 14.7\% and Layer 7 (expanding, $1\times1$) at 13.8\%. Together, Layers 7--8 account for 61.7\% of the per-frame cost, confirming the final stages as the primary computational bottleneck. This aligns with \cite{annisa2025fsrcnn}, where Layer 8 showed the lowest speedup across all parallel scenarios due to the $9\times9$ kernel requiring substantially more multiply-accumulate operations per output pixel.
+\textbf{Isolated, the cost model is excellent.} At one worker the table is essentially deterministic: total cost varies by 1\% across ten runs, and per-stage standard deviations run from 0.2\% to 3.5\% of their means, below 1\% for six of the eight stages. It gives Layer~8 (deconvolution, $9\times9$) 54.8\% of per-frame cost, Layer~7 (expanding) 12.3\% and Layer~2 (shrinking) 11.2\%, with Layers 3--6 between 3.3\% and 4.1\%. Layers 7--8 together account for 67.1\%. This confirms the final stages as the computational bottleneck and aligns with \cite{annisa2025fsrcnn}, where Layer~8 showed the lowest speedup across all parallel scenarios because the $9\times9$ kernel requires substantially more multiply-accumulate operations per output pixel. Nothing about the workload is unpredictable.
 
-Note that this single-frame calibration total (94.32~ms) is noticeably higher than the amortized steady-state per-frame cost implied by the serial baseline (10288~ms / 150~frames $\approx$ 68.6~ms/frame, Table~\ref{tab:throughput}) — a gap of roughly 38\%. This per-layer Cost Table was captured separately from the timing runs in Table~\ref{tab:throughput} (Section~\ref{sec:calibrationoverhead}) and was not part of the corrected-methodology rerun, so it should be read as illustrating the \emph{relative} cost distribution across layers (Layer 8 dominance) rather than as a millisecond-exact figure directly comparable run-for-run with Table~\ref{tab:throughput}; unlike the whole-run cold-start deltas reported in Section~\ref{sec:calibrationoverhead}, which turned out to be small, we cannot rule out that this specific single-frame measurement still carries some cold-cache or \texttt{clock\_gettime}-instrumentation cost. We do not have independent per-frame instrumentation of the steady-state serial run to confirm the 68.6~ms/frame figure directly (only its 150-frame aggregate); resolving this gap, and re-capturing the Cost Table under the corrected methodology, is left as verification work.
+\textbf{Measured in situ, it degrades with concurrency.} What the framework actually calibrates is not the isolated profile. Task~0 traverses the pipeline while up to nineteen other frames are already in flight, so every measurement absorbs whatever contention happens to be present. Table~\ref{tab:layers} and Figure~\ref{fig:costvar} show the consequence: the run-to-run spread in total measured cost grows monotonically with worker count, from 1.01$\times$ at one worker to 2.52$\times$ at twenty. The degradation is per-stage as well as aggregate --- at twenty workers, Layer~2's measured cost varies 4.1$\times$ between identical runs, Layer~5 3.9$\times$, Layer~6 3.3$\times$ and Layer~7 2.9$\times$.
 
-When scaled across the full 150-frame sequence, Layer 8's dominance is consistent with the aggregate execution time distribution observed across configurations. This supports the IC-RCE assumption that computational costs are deterministic for a fixed input resolution, which is what makes a one-time, single-frame calibration a defensible substitute for continuous monitoring in this workload.
+\textbf{The partition sometimes moves with it.} Since the threshold is relative to the table's own mean, uniform inflation is harmless; non-uniform inflation is not. In 4 of the 60 runs the threshold selected a different set of stages than the modal $\{2,7,8\}$: twice at ten workers and once at twenty, Layer~3 crossed into the heavy set; once at eight workers, Layer~7 fell out of it. Figure~\ref{fig:costvar}(a) shows why these two stages and no others --- at twenty workers Layer~7's range spans the threshold and Layer~3's upper tail reaches it, while every other stage stays clear on one side. We emphasize the modest rate: the classification is stable in roughly 93\% of runs, so this is a tail behaviour rather than the common case. But a scheduling policy that silently reassigns a stage to the wrong core class in one run out of fifteen is a policy whose behaviour cannot be reasoned about from its inputs.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\columnwidth]{fsrcnn_costvar_asus.png}
+\caption{Stability of the runtime cost table (10 runs per configuration, 60 runs total). (a) Per-stage share of total cost, isolated versus as measured during a 20-worker run; bars are means, whiskers span the observed range. The threshold is the same line for both, since $0.75\times$ the mean of eight stages is $9.375\%$ of total by construction. Layer~7's range straddles it and Layer~3's reaches it; the other six stages stay clear. (b) Run-to-run spread in total measured cost grows monotonically with the number of workers active during calibration.}
+\label{fig:costvar}
+\end{figure}
+
+\textbf{What this means for the ablation.} The heavy share the threshold produces is 73.8\% at twenty workers and 78.2\% in isolation, against the 65.5\% that a capacity-proportional split would give at the measured 1.90$\times$ ratio (Section~\ref{sec:whenwrong}). So the partition is oversubscribed toward the Performance cluster by roughly 8--13 percentage points regardless of which table is used --- the systematic bias of Section~\ref{sec:ablation} does not depend on the instability, and the instability adds an unpredictable component on top of it. A cost model can be, as here, both qualitatively correct and quantitatively reproducible in isolation, and still be the wrong thing to route on once it is measured in the environment it is meant to govern.
+
+One boundary: this sweep was collected in a dedicated session, separate from the timing runs of Tables~\ref{tab:idle}--\ref{tab:contention}, using the same source, the same compiler flags and the same governor setting. It characterizes the calibration mechanism, not the latencies reported earlier.
 
 \subsection{Hardware Performance Counter Analysis}
 \label{sec:perfcounter}
-To further validate the efficiency of SyncPilot's design, we conducted hardware performance counter analysis using \texttt{perf stat}. 
-
-Table \ref{tab:perf} presents the hardware performance counter analysis; the 1W and 2W columns are included only for trend continuity (Section~\ref{sec:setup}) and are not evaluated elsewhere in this paper. SyncPilot-4W and SyncPilot-8W maintain high instruction-level parallelism with IPC values of 3.60 and 3.64 respectively on the Cortex-X925 Performance cores. The cache miss rate remains low across worker configurations (1.95\% for 4W and 1.88\% for 8W), demonstrating efficient memory access patterns across pipeline stages.
-
-The 20W row's IPC (2.97*) and instruction count (126,761~M, vs. $\approx$166,000~M for other configurations) are marked as measurement artifacts rather than as reliable per-instruction data; the mechanism is analyzed below using controlled experiments, not asserted from this table alone.
+To characterize where the 46\% parallel efficiency of Section~\ref{sec:idle} goes, we collected hardware counters with \texttt{perf stat}, reading each cluster's PMU separately. These runs use the \emph{same} \texttt{-O3} build as the benchmark --- not the \texttt{-pg -march=native} profiling build --- so their instruction counts and IPC are directly comparable to the configurations timed earlier.
 
 \begin{table}[htbp]
-\caption{Hardware Performance Counter Comparison (perf stat)}
+\caption{Performance-Cluster Counters (perf stat, \texttt{-O3} build)}
 \begin{center}
 \small
 \begin{adjustbox}{max width=\columnwidth}
-\begin{tabular}{|l|c|c|c|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|c|}
 \hline
-\textbf{Metric} & \textbf{1W (Serial)} & \textbf{2W} & \textbf{4W} & \textbf{8W} & \textbf{10W} & \textbf{20W} \\
+\textbf{Metric} & \textbf{1W} & \textbf{4W} & \textbf{8W} & \textbf{10W} & \textbf{20W} \\
 \hline
-IPC & 3.86 & 3.84 & 3.60 & 3.64 & 3.61 & 2.97* \\
-CPI & 0.26 & 0.26 & 0.28 & 0.27 & 0.28 & 0.34 \\
-Cache Ref (M) & 80,039 & 80,015 & 79,815 & 79,893 & 79,955 & 60,318 \\
-Cache Miss (M) & 1,410 & 1,357 & 1,559 & 1,501 & 1,466 & 1,501 \\
-Miss Rate (\%) & 1.76 & 1.70 & 1.95 & 1.88 & 1.83 & 2.49 \\
-Cycles (M) & 43,217 & 43,406 & 46,291 & 45,845 & 46,250 & 42,728 \\
-Instr (M) & 166,659 & 166,639 & 166,735 & 166,845 & 166,929 & 126,761* \\
+IPC & 3.90 & 3.65 & 3.69 & 3.67 & 2.79 \\
+CPI & 0.26 & 0.27 & 0.27 & 0.27 & 0.36 \\
+Instr (M) & 168,164 & 168,382 & 168,081 & 168,155 & 108,011 \\
+Cycles (M) & 43,159 & 46,104 & 45,493 & 45,815 & 38,779 \\
+Cache Ref (M) & 77,456 & 77,212 & 77,104 & 77,173 & 51,807 \\
+Cache Miss (M) & 1,488 & 1,686 & 1,613 & 1,577 & 1,605 \\
+Miss Rate (\%) & 1.92 & 2.18 & 2.09 & 2.04 & 3.10 \\
+PMU coverage (\%) & 99.8 & 99.7 & 100.0 & 100.0 & 93.2 \\
 \hline
-\multicolumn{7}{l}{\footnotesize *PMU sampling coverage falls to 82--83\% at 20W (vs.\ 99.7\% at $\le$10W); see analysis below.}\\
+Efficient-cluster & \multicolumn{4}{c|}{negligible ($<$2,000~M instr)} & 75,180~M \\
+contribution & \multicolumn{4}{c|}{} & @ IPC 2.44 \\
+\hline
 \end{tabular}
 \end{adjustbox}
 \label{tab:perf}
 \end{center}
 \end{table}
 
-Two hardware-level factors, isolated with the controlled experiments in Table~\ref{tab:ipcproof}, together explain the apparent IPC drop from 3.86 (1W) to 2.97 (20W, whole-system aggregate).
+Up to ten workers the picture is flat and healthy: the Performance cluster retires a near-constant 168,000~M instructions at IPC 3.65--3.90 with a cache miss rate around 2\%, and the Efficient cluster is essentially idle. At twenty workers two things change together. The Performance cluster's instruction count drops to 108,011~M because the Efficient cluster now retires 75,180~M of its own --- total work rises from about 170,000~M to 183,000~M, the extra being the additional polling and synchronization of ten more workers. And the Performance cluster's IPC falls from 3.67 to 2.79 even though it still hosts exactly ten worker threads.
 
-\textbf{PMU time-multiplexing artifact.} At 20 workers, the 20 highly active threads saturate the hardware PMU sampling budget, causing the kernel to time-multiplex event counting. Sampling coverage falls to 82--83\% vs. 99.7\% for configurations of 10W and below, causing the aggregate instruction count to appear at 126,761~M rather than the expected $\approx$166,000~M. Part of the reported drop in aggregate IPC is therefore a sampling artifact rather than a true per-instruction degradation; we do not, however, attribute the entire drop to this effect (see below).
-
-\textbf{Efficient cluster activation.} The 20W configuration activates the Efficient core cluster (cluster~56, cpu0--9), which had contributed only 97~M instructions at 10W but contributes 72,379~M instructions at IPC~2.22 at 20W. Table~\ref{tab:ipcproof} reports two controlled runs isolating the Performance cluster's own counters: pinning 20 workers to Performance-cluster cores only (EXP-2) gives Performance-cluster IPC 2.95, and monitoring only the Performance-cluster counters while the full 20W (Performance+Efficient) configuration runs (EXP-4) gives 2.99 — not lower than EXP-2, which is the comparison that rules out cross-cluster L3 contention as a contributor. EXP-3 monitors the Efficient cluster in isolation during the same full 20W run and measures Efficient-cluster IPC at 2.22, substantially below the Performance cluster's own $\sim$3.6 IPC observed elsewhere in Table~\ref{tab:perf} at lower worker counts. It is this genuinely lower-IPC Efficient-cluster contribution being folded into the whole-system aggregate — not L3 interference, and only partly the PMU sampling artifact above — that pulls the reported 20W aggregate IPC down to 2.97.
+That second observation is the interesting one, and Table~\ref{tab:ipcproof} isolates it.
 
 \begin{table}[htbp]
-\caption{Controlled IPC Experiments (ASUS GX10, 20 Workers)}
+\caption{Controlled Cluster-Isolation Experiments (20 Workers)}
 \begin{center}
 \small
+\begin{adjustbox}{max width=\columnwidth}
 \begin{tabular}{|l|l|c|}
 \hline
 \textbf{Exp.} & \textbf{Configuration} & \textbf{IPC} \\
 \hline
-EXP-2 & 20W, pinned to Performance cluster only & 2.95 \\
-EXP-3 & 20W (full run), Efficient cluster counters only & 2.22 \\
-EXP-4 & 20W (full run), Performance cluster counters only & 2.99 \\
+Control & 10 threads on P cluster, E cluster idle & 3.67 \\
+EXP-2 & 20 threads pinned to P cluster only, P counters & 2.83 \\
+EXP-4 & Full 20W (10 P + 10 E), P counters & 2.92 \\
+EXP-3 & Full 20W (10 P + 10 E), E counters & 2.52 \\
 \hline
 \end{tabular}
+\end{adjustbox}
 \label{tab:ipcproof}
 \end{center}
 \end{table}
 
+The comparison that isolates cross-cluster interference is the Control row against EXP-4: both place exactly ten worker threads on the Performance cluster, and the only difference is whether the Efficient cluster is also running. Performance-cluster IPC falls from 3.67 to 2.92, a 20\% degradation attributable to the second cluster's activity rather than to any change in the Performance cluster's own occupancy. The cache counters corroborate it --- the Performance cluster's miss rate rises from 2.04\% to 3.10\% over the same step, and the Efficient cluster runs at a 7.41\% miss rate, so both clusters are contending for shared cache and memory bandwidth. EXP-2 shows that oversubscribing the Performance cluster two-to-one costs about the same as sharing with the Efficient cluster (2.83 vs.\ 2.92), which tells us the interference is comparable in magnitude to running twice the threads on half the cores.
+
+The whole-system aggregate at twenty workers therefore has two distinct causes, not one: a genuinely lower-IPC Efficient cluster folded into the average (2.44--2.52 against the Performance cluster's 3.67 when unperturbed), and a real 20\% cross-cluster interference penalty on the Performance cluster itself. This is the microarchitectural counterpart of the 46\% parallel efficiency: the second cluster contributes real throughput --- 75,180~M instructions --- but it is not free to the first.
+
+We note this reverses a conclusion drawn in an earlier version of this work, which compared EXP-4 against EXP-2 and read the near-equality as ruling cross-cluster contention out. That comparison does not isolate contention, because the two configurations differ in Performance-cluster occupancy as well; the Control row is the correct baseline, and it was not measured at the time. Two further caveats: PMU coverage is 93.2\% at twenty workers against $\ge$99.7\% below, so the 20W instruction counts are modestly undercounted, and these are single runs per configuration rather than averages.
+
 \subsection{Function-Level Profiling Analysis}
 \label{sec:gprof}
-We performed function-level profiling using \texttt{gprof} to identify the computational hotspots in the FSRCNN pipeline. On Linux, \texttt{gprof}'s default sampling profiler only instruments the calling thread, so the self-time figures below characterize the main thread's call graph and are only a proxy for aggregate worker behavior; we report them as such rather than as a full multithreaded profile. The profiling results are nonetheless consistent with the layer-level cost distribution in Table \ref{tab:layers}, with the deconvolution functions dominating self time across all configurations.
+We profiled function-level self time with \texttt{gprof}, using a separate \texttt{-pg} build. Two limitations apply and both are visible in the numbers. First, \texttt{gprof}'s sampling profiler instruments only the calling thread on Linux, so these figures characterize the main thread rather than aggregate worker behaviour. Second, at \texttt{-O3} the static helper routines (\texttt{imfilter}, \texttt{pad\_image}) are inlined, and their samples are attributed to the compiler-generated \texttt{frame\_dummy} symbol rather than to a named function; we report that bucket rather than silently redistributing it.
 
 \begin{table}[htbp]
-\caption{Top Functions by Self Time (gprof Flat Profile, SyncPilot-10W)}
+\caption{Self Time by Function (gprof Flat Profile, \texttt{-pg} Build)}
 \begin{center}
 \small
 \begin{adjustbox}{max width=\columnwidth}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Function} & \textbf{Self Time (s)} & \textbf{\% Total} & \textbf{Associated Layer} \\
-\hline
-deconv & 5.51 & 53.29 & Layer 8 (Deconvolution) \\
-imfilter (L2/L3--6) & 1.39 & 13.44 & Layers 2, 3--6 \\
-pad\_image & 0.76 & 7.35 & Layer support \\
-imfilter (L1) & 0.67 & 6.48 & Layer 1 support \\
-layer7 & 0.59 & 5.71 & Layer 7 (Expanding) \\
-layer8 & 0.50 & 4.84 & Layer 8 (wrapper) \\
-layer1--6 (combined) & 0.92 & 8.89 & Layers 1--6 \\
-SyncPilot framework & 0.00 & 0.00 & Synchronization \\
-\hline
-\end{tabular}
-\end{adjustbox}
-\label{tab:gprof10w}
-\end{center}
-\end{table}
-
-Table \ref{tab:gprof10w} presents the top functions by self time for SyncPilot-10W, the all-Performance-core configuration (10 workers pinned exclusively to the high-capacity cluster). The \texttt{deconv} function (Layer 8) dominates execution time, consistent with the per-layer analysis in Table \ref{tab:layers}. This dominance is attributed to the high multiply-accumulate count required for the upscaling operation (176$\times$144 $\rightarrow$ 352$\times$288) and the memory bandwidth demands of reading and writing large feature maps.
-
-The SyncPilot framework functions register 0.00~s of \emph{main-thread} self time. Given \texttt{gprof}'s single-thread sampling limitation noted above, we read this as consistent with — but not proof of — low synchronization overhead on the sampled thread; it should not be read as a measurement of aggregate cross-thread synchronization cost, which would require a per-thread profiler such as \texttt{perf record}.
-
-\begin{table}[htbp]
-\caption{Top Functions by Self Time (gprof Flat Profile, SyncPilot-20W)}
-\begin{center}
-\small
-\begin{adjustbox}{max width=\columnwidth}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Function} & \textbf{Self Time (s)} & \textbf{\% Total} & \textbf{Associated Layer} \\
-\hline
-deconv & 4.74 & 51.97 & Layer 8 (Deconvolution) \\
-imfilter (L2/L3--6) & 1.06 & 11.62 & Layers 2, 3--6 \\
-pad\_image & 0.93 & 10.20 & Layer support \\
-layer8 & 0.59 & 6.47 & Layer 8 (wrapper) \\
-layer7 & 0.50 & 5.48 & Layer 7 (Expanding) \\
-imfilter (L1) & 0.46 & 5.04 & Layer 1 support \\
-layer1--6 (combined) & 0.83 & 9.10 & Layers 1--6 \\
-main + overhead & 0.01 & 0.11 & - \\
-SyncPilot framework & 0.00 & 0.00 & Synchronization \\
-\hline
-\end{tabular}
-\end{adjustbox}
-\label{tab:gprof20w}
-\end{center}
-\end{table}
-
-Table \ref{tab:gprof20w} presents the gprof flat profile for SyncPilot-20W (self-time percentages computed against the table's own 9.12~s total). The \texttt{deconv} function (Layer 8) dominates at 51.97\% (4.74~s), consistent with the 10W result (Table \ref{tab:gprof10w}). Notably, the profile exposes two additional significant contributors that emerge at scale: \texttt{imfilter} variants (11.62\% + 5.04\%) and \texttt{pad\_image} (10.20\%), together accounting for 26.9\% of total time. These correspond to the image filtering and boundary padding operations within the convolution layers (Layers 1--6). At 20 workers, more threads concurrently execute these memory-intensive helper functions, amplifying their aggregate cost. As at 10W, the SyncPilot framework functions register 0.00~s of main-thread self-time; subject to the same single-thread-sampling caveat above, this is consistent with low overhead on the sampled thread but does not, on its own, establish that aggregate synchronization overhead is negligible at peak parallelism.
-
-\subsection{Output Correctness Verification}
-Output correctness was verified across all SyncPilot and CFS-baseline configurations, including under the noise conditions of Section~\ref{sec:noise}, and compared with the reference paper's findings. Every one of the 150 output frames in every one of these scenarios (SyncPilot-4W/8W/10W/20W, the 5B5L split, CFS-10W/20W, and both SyncPilot-20W and CFS-20W under 4- and 10-thread noise) was bit-exact against the ground truth, confirmed by pixel-wise comparison (0 differing bytes) and infinite PSNR. We report this as an expected consequence of FSRCNN's deterministic arithmetic combined with the Reorder Buffer's sequencing guarantee, rather than as a surprising finding on its own; its value is as a direct contrast to \cite{annisa2025fsrcnn}, which reported that the Efficient CPU parallel scenario produced visible artifacts and pixel corruption due to race conditions during the deconvolution stage. SyncPilot's synchronized worker pool with reorder buffer rules out that class of race condition by construction, ensuring bit-exact outputs regardless of the worker configuration. Section~\ref{sec:racecond} reproduces the corrupted-output failure mode itself on our own platform for direct comparison.
-
-\subsection{Worker Configuration Analysis}
-\label{sec:workerconfig}
-The benchmark results reveal important insights about the optimal worker configuration for asymmetric pipeline processing.
-
-Performance consistently improves as the worker count increases on ASUS GX10. SyncPilot-4W achieves a 3.40$\times$ speedup (3026 ms), SyncPilot-8W reaches 6.50$\times$ (1583 ms), SyncPilot-10W reaches 7.68$\times$ (1340 ms), and SyncPilot-20W achieves the best performance at 9.16$\times$ (1123 ms). This scaling behavior reflects the hardware characteristics of ASUS GX10: the Cortex-A725 Efficient cores are considerably stronger than older Efficient core implementations, so they do not become severe stragglers when assigned heavy stages. Consequently, SyncPilot can safely exploit additional parallelism without sacrificing the critical-path performance of the deconvolution stage. This finding extends the reference paper's result \cite{annisa2025fsrcnn}, where broader worker scaling across both Performance and Efficient cores delivered the strongest gains.
-
-We measured this directly rather than inferring it indirectly: running FSRCNN single-threaded and pinned entirely to an Efficient core (\texttt{fsrcnn\_serial\_little}) takes 18971 ms on average (7.91 FPS, StdDev 64.8 ms) versus 10288 ms on a pinned Performance core, i.e., the Efficient core is 1.84$\times$ slower than the Performance core on identical, single-threaded work. This is a substantially narrower gap than the 3--4$\times$ or larger differential typical of a Cortex-A76/Cortex-A55-class big.LITTLE pairing, and is direct, platform-specific evidence for why the Cortex-A725 Efficient cores can be safely included in the worker pool at 20W without becoming severe stragglers, rather than relying solely on architectural reasoning about DynamIQ core classes.
-
-At 20 physical cores, a 9.16$\times$ speedup corresponds to approximately 46\% parallel efficiency, short of linear scaling; part of this is the expected consequence of pinning the two clusters at different clock/IPC operating points (Section~\ref{sec:perfcounter}), and part is queueing/reorder-buffer overhead that a purely embarrassingly-parallel scheme would not pay. This raises a fair question: with 150 independent frames, why not simply parallelize at the frame level (e.g., a \texttt{parallel for} over frames, each processed serially through all 8 layers) rather than an 8-stage pipeline? Frame-level parallelism would indeed be simpler and is plausibly at least as fast on this workload; we did not benchmark it directly, so we cannot claim the pipeline is faster. The stage-pipelined design is motivated instead by two structural requirements that a naive frame-level split does not address by itself: (1) bounded per-frame memory — pipelining constrains the number of frames in flight to \texttt{queue\_capacity\_per\_stage} per stage via backpressure, whereas naive frame-level parallelism holds one full set of intermediate feature maps per in-flight frame; and (2) it generalizes to streaming inputs where frames are not all available upfront (e.g., live video), for which a frame-level \texttt{parallel for} does not directly apply. A rigorous comparison against an optimized frame-level baseline is left as future work.
-
-\subsection{CFS Baseline Comparison}
-\label{sec:cfsidle}
-As described in Section~\ref{sec:setup}, we additionally benchmarked a CFS baseline in which 10 and 20 threads are spawned without explicit CPU affinity, leaving thread-to-core placement entirely to the Linux Completely Fair Scheduler (CFS) with Energy Aware Scheduling (EAS) enabled on the ASUS GX10 kernel. This ablation isolates the specific contribution of SyncPilot's explicit Asymmetry-Aware Mapping relative to simply spawning an equivalent number of unpinned threads. The CFS-10W/CFS-20W rows below were collected in the same benchmark session as Table~\ref{tab:throughput}, so the SyncPilot-10W/20W rows here are the identical measurements (Table~\ref{tab:throughput}'s "C"/"D" scenarios), repeated for side-by-side comparison.
-
-\begin{table}[htbp]
-\caption{SyncPilot vs. Unpinned CFS Baseline (Idle System)}
-\begin{center}
-\small
 \begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Config.} & \textbf{Time (ms)} & \textbf{StdDev} & \textbf{FPS} & \textbf{Speedup} \\
+& \multicolumn{2}{c|}{\textbf{10 workers}} & \multicolumn{2}{c|}{\textbf{20 workers}} \\
+\textbf{Function} & s & \% & s & \% \\
 \hline
-Serial (Performance Core) & 10288 & 139.0 & 14.58 & 1.00$\times$ \\
-SyncPilot-10W & 1340 & 9.2 & 111.94 & 7.68$\times$ \\
-CFS-10W (No Affinity) & 1332 & 6.8 & 112.61 & 7.72$\times$ \\
-SyncPilot-20W & 1123 & 16.9 & 133.57 & 9.16$\times$ \\
-CFS-20W (No Affinity) & 1039 & 16.4 & 144.37 & 9.90$\times$ \\
+\texttt{deconv} (Layer 8 kernel) & 5.87 & 57.6 & 5.75 & 62.3 \\
+\texttt{frame\_dummy}$^\dagger$ & 2.18 & 21.4 & 1.35 & 14.6 \\
+\texttt{layer7} (Expanding) & 0.56 & 5.5 & 0.61 & 6.6 \\
+\texttt{layer8} (wrapper) & 0.50 & 4.9 & 0.73 & 7.9 \\
+\texttt{layer1} & 0.39 & 3.8 & 0.28 & 3.0 \\
+\texttt{layer2} (Shrinking) & 0.20 & 2.0 & 0.39 & 4.2 \\
+\texttt{layer3}--\texttt{layer6} & 0.49 & 4.8 & 0.12 & 1.3 \\
+SyncPilot framework & 0.00 & 0.0 & 0.00 & 0.0 \\
 \hline
+\textbf{Total} & 10.19 & 100 & 9.23 & 100 \\
+\hline
+\multicolumn{5}{l}{\footnotesize $^\dagger$Compiler-generated symbol absorbing samples from inlined static helpers}\\
+\multicolumn{5}{l}{\footnotesize (\texttt{imfilter}, \texttt{pad\_image}); not a real function. See text.}\\
 \end{tabular}
-\label{tab:cfsbaseline}
+\end{adjustbox}
+\label{tab:gprof}
 \end{center}
 \end{table}
 
-Table \ref{tab:cfsbaseline} shows that, contrary to our initial expectation, unpinned CFS-20W outperforms SyncPilot-20W by 8.1\% on an idle system (1039 ms vs. 1123 ms), while at 10 workers the two approaches differ by only 8 ms (1332 ms vs. 1340 ms) — smaller than either configuration's own steady-state standard deviation (6.8 ms and 9.2 ms respectively), i.e., statistically indistinguishable at this sample size. This result arises because on an idle ASUS GX10, Linux EAS is able to passively learn thread utilization patterns over the course of the 150-frame run and organically migrate compute-heavy threads toward Performance cores and light threads toward Efficient cores, converging toward a mapping similar to SyncPilot's explicit assignment, without incurring the fixed calibration or hard-pinning cost. Section~\ref{sec:noise} revisits this result under realistic system load, where the advantage of explicit semantic mapping becomes apparent.
+The deconvolution kernel dominates at both worker counts --- 57.6\% at ten workers and 62.3\% at twenty --- consistent with the isolated cost profile of Section~\ref{sec:layerprofile}, where Layer~8 accounts for 54.8\% of per-frame cost. Counting \texttt{layer8}'s wrapper alongside its kernel raises the Layer~8 total to 62.5\% and 70.2\% respectively. The \texttt{frame\_dummy} bucket, at 21.4\% and 14.6\%, is the inlined filtering and boundary-padding work inside Layers 1--6; we can bound its size but not attribute it to individual helpers without a build that disables inlining, which would change the thing being measured.
+
+The SyncPilot framework functions register 0.00~s of main-thread self time at both configurations. Given the single-thread sampling limitation, this is consistent with --- but not proof of --- low synchronization overhead; establishing that for the worker threads would require a per-thread profiler such as \texttt{perf record}.
+
+\subsection{Output Correctness Verification}
+\label{sec:correctness}
+Output correctness was verified across all 28 distinct configurations reported in this paper.\footnote{Count: Table~\ref{tab:idle}'s ten rows (two serial baselines; static pinning at 4, 8, 10 and 20 workers; cost-gated 20W; unpinned CFS/EAS at 10 and 20 workers; the naive OpenMP control), plus Table~\ref{tab:contention}'s 21 cells less its three idle cells, which are the same runs as Table~\ref{tab:idle}'s 20W static, 20W cost-gated and CFS-20W rows: $10 + (21 - 3) = 28$.} For the 27 SyncPilot and CFS/EAS configurations --- every policy at every contention level, plus the scaling configurations of Table~\ref{tab:idle} --- every one of the 150 output frames was bit-exact against the serial ground truth, confirmed by byte-wise comparison (0 differing bytes) and infinite PSNR. This holds under contention as well as on an idle system, so the latency advantage reported in Section~\ref{sec:contention} does not come at a correctness cost, and neither does the CFS/EAS baseline lose correctness under load: reordering pressure is absorbed by the reorder buffer regardless of where the kernel places threads.
+
+The contrast is with unsynchronized parallelization. Rather than relying on \cite{annisa2025fsrcnn}'s report that parallel FSRCNN on Efficient CPUs produced visible artifacts, we reproduced the failure mode on our own platform: a naively-parallelized OpenMP baseline (\texttt{fsrcnn\_naive\_openmp}, 20 threads, no reorder buffer or stage-level synchronization) differed from the ground truth in 9{,}155{,}530 of 22{,}809{,}600 output bytes (40.1\%), at an average PSNR of 24.08~dB --- and was also 5.5$\times$ slower than static-pinned SyncPilot at the same thread count (6215 vs.\ 1136~ms) --- a timing we report as context only, since a run that computes the wrong answer is not a meaningful performance baseline. Those figures are from the same session as Tables~\ref{tab:idle}--\ref{tab:contention}; the corruption is itself nondeterministic, and two earlier sessions on the same binary and input gave 43.7\% / 22.63~dB and 46.9\% / 22.37~dB. The instability is the point: an unsynchronized parallelization does not fail reproducibly, which is precisely what makes it hard to catch in testing. SyncPilot's pull-based worker pool with per-stage queues and a reorder buffer rules out that class of race condition by construction.
 
 % === VI. DISCUSSION ===
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{Why Additional Workers Scale on ASUS GX10}
-A counterintuitive but important finding is that on ASUS GX10, increasing the number of workers improves performance rather than degrading it. The 20-worker configuration achieves the best throughput at 1123 ms, while the 4-worker configuration trails at 3026 ms. This result reflects the hardware characteristics of ASUS GX10: the Cortex-A725 Efficient cores are considerably stronger than the Cortex-A55 cores used on the earlier platform, so they do not become severe stragglers when assigned heavy stages. Consequently, SyncPilot can safely exploit additional parallelism without sacrificing the critical-path performance of the deconvolution stage.
-
-\subsection{System Noise Robustness: CFS/EAS vs. Static IC-RCE Mapping}
+\subsection{Why the Ordering Inverts: EAS Under Overutilization}
 \label{sec:noise}
-The idle-system result in Section~\ref{sec:cfsidle} raises a natural question: if unpinned CFS achieves higher raw throughput than SyncPilot's static mapping, what is the practical benefit of hard-pinning at all? We argue the answer lies in the difference between an idle benchmark environment and a real-world edge deployment, where the CPU concurrently services other workloads (e.g., network I/O, UI rendering, background daemons) rather than running FSRCNN in isolation. We consider this comparison, not the idle-system throughput numbers in Section~\ref{sec:cfsidle}, the central empirical result of this paper.
+The crossover in Table~\ref{tab:contention} has a specific, documented mechanism rather than a diffuse ``overhead'' explanation. The Linux kernel scheduler documentation states that once any single CPU's utilization crosses the overutilization tipping point --- 80\% of capacity by default --- the \texttt{overutilized} flag is raised for the entire root domain, EAS is disabled, and the generic, fairness-driven load balancer is re-enabled for both wake-up placement and periodic balancing \cite{linuxeas}. The threshold is per-CPU but the consequence is domain-wide: one saturated core withdraws capacity-aware placement from all twenty. EAS is thus available exactly when it is least needed and withdrawn exactly when placement decisions matter most.
 
-To evaluate this, we injected synthetic system noise using unpinned, CPU-bound OpenMP threads running alongside the FSRCNN-20W benchmark, and measured, for each of the 7 averaged runs per condition, the mean per-run latency and the worst (maximum) of the 7 per-run latencies. We refer to the latter as \emph{worst-case run latency} rather than "jitter" in the strict frame-to-frame sense, since our instrumentation records one wall-clock time per full 150-frame run, not a timestamp per frame; a genuine frame-level jitter characterization (per-frame latency distribution, p95/p99, standard deviation) would require finer-grained logging than we collected and is left as follow-up work (Section~\ref{sec:limitations}). Two noise intensities were tested: 4 background threads (moderate load) and 10 background threads (heavy load, saturating the Performance cluster); the noise threads themselves were left unpinned.
+Under our noise conditions this is precisely what the Performance cluster experiences. With 10 background threads, or with 8--20 threads from co-running tenants, the high-capacity cluster crosses into overutilization, EAS's energy- and capacity-aware placement deactivates, and the fallback balancer --- which has no notion of which thread lies on the DNN's critical path --- resumes control. That balancer is free to migrate a pending Layer 8 (deconvolution) task, 54.8\% of per-frame cost by the isolated profile of Section~\ref{sec:layerprofile}, onto an Efficient core in the name of queue-length fairness, incurring a straggler penalty of up to 1.83--1.90$\times$ on the critical path.
 
-\begin{table}[htbp]
-\caption{Latency Under System Noise (ASUS GX10)}
-\begin{center}
-\small
-\begin{adjustbox}{max width=\columnwidth}
-\begin{tabular}{|l|l|c|c|c|c|}
-\hline
-\textbf{Noise} & \textbf{Config.} & \textbf{Avg (ms)} & \textbf{StdDev} & \textbf{Worst-Case Run (ms)} & \textbf{Speedup*} \\
-\hline
-\multirow{2}{*}{Idle} & SyncPilot-20W & 1123 & 16.9 & 1154 & 9.16$\times$ \\
- & CFS-20W & 1039 & 16.4 & 1065 & 9.90$\times$ \\
-\hline
-\multirow{2}{*}{4 Threads} & SyncPilot-20W & 1219 & 18.1 & 1248 & 8.44$\times$ \\
- & CFS-20W & 1275 & 19.1 & 1314 & 8.07$\times$ \\
-\hline
-\multirow{2}{*}{10 Threads} & SyncPilot-20W & 1403 & 15.8 & 1426 & 7.33$\times$ \\
- & CFS-20W & 1735 & 45.1 & 1821 & 5.93$\times$ \\
-\hline
-\multicolumn{6}{l}{\footnotesize *All speedups relative to the single 10288~ms idle serial baseline (Table~\ref{tab:throughput});}\\
-\multicolumn{6}{l}{\footnotesize serial execution was not separately re-measured under noise.}\\
-\end{tabular}
-\end{adjustbox}
-\label{tab:noise}
-\end{center}
-\end{table}
+Static pinning admits no such migration path. Heavy stages stay on Performance cores and instead share CPU time with the noise through ordinary context switching, which raises average latency --- static pinning is 23.3\% slower under heavy noise than on an idle system --- but raises it \emph{smoothly}. The failure mode it eliminates is not contention, which no policy can eliminate, but contention-triggered misplacement. This also explains the dispersion result: the fallback balancer's migration decisions vary from run to run, so CFS/EAS's standard deviation nearly quadruples under load (12.4$\rightarrow$46.7~ms) while static pinning's does not move (19.7$\rightarrow$13.0~ms).
 
-Table \ref{tab:noise} shows a reversal of the idle-system result. Under moderate noise (4 threads), SyncPilot-20W already overtakes CFS-20W in both average latency (1219 ms vs. 1275 ms) and worst-case run latency (1248 ms vs. 1314 ms). Under heavy noise (10 threads), the gap widens substantially in absolute terms: SyncPilot-20W's worst-case run latency grows from 1154 ms (idle) to 1426 ms, while CFS-20W's grows from 1065 ms (idle) to 1821 ms — SyncPilot remains faster in the worst case despite starting from a slower idle baseline. Expressed relative to each configuration's own idle baseline, this is a 23.6\% increase for SyncPilot-20W versus 71.0\% for CFS-20W; we report the absolute figures as the primary result and the relative growth only as a secondary, normalized view, since the relative framing alone could be read as inflating the comparison. The standard deviation column reinforces the same pattern: SyncPilot-20W's run-to-run StdDev stays in a narrow 15.8--18.1 ms band across all three noise conditions, while CFS-20W's StdDev nearly triples under heavy noise (16.4~$\to$~45.1 ms), indicating that CFS's added variability under load is not just a shift in mean latency but a genuine loss of run-to-run predictability.
+Two boundaries on this interpretation deserve stating. We infer the migration mechanism from the documented kernel policy and the shape of our measurements; we did not instrument \texttt{sched\_switch}/\texttt{sched\_migrate\_task} tracepoints to observe stage-to-Efficient-core migrations directly, which would convert this from a well-supported inference into a demonstration. And our background threads are themselves unpinned; a variant pinned specifically to the Performance cluster would represent a harsher worst case that we did not test.
 
-This behavior is consistent with the documented failure mode of Linux Energy Aware Scheduling (EAS). The kernel scheduler documentation states that once any CPU's utilization crosses the platform's overutilization threshold, EAS is disabled for the entire root domain and the generic, fairness-driven load balancer takes over for wake-up and load balancing \cite{linuxeas}. Under system noise, this is precisely what occurs on the Performance cluster: EAS's energy- and capacity-aware placement is deactivated, and CFS's fallback load balancer, which has no notion of which thread lies on the DNN's critical path, takes over. When background noise occupies the Performance cluster, this fallback balancer may migrate a pending Layer 8 (deconvolution) task to an Efficient core to preserve fairness, incurring a straggler penalty on the critical path. SyncPilot's hard-pinned static mapping (Section~\ref{sec:asymmap}) admits no such migration path: heavy stages remain on Performance cores and instead share CPU time with the noise via context switching, which raises average latency but bounds worst-case run latency far more tightly. We therefore conclude that SyncPilot's idle-system throughput deficit relative to unpinned CFS is offset by better latency stability under the non-idle conditions representative of real deployed edge devices; a full characterization of this trade-off under diverse, realistic background workloads, and with true per-frame jitter instrumentation, is left to future work.
+\subsection{When Static Pinning Is the Wrong Choice}
+\label{sec:whenwrong}
+The results do not support a general recommendation to hard-pin. They support a conditional one. On a machine that is genuinely idle for the duration of a run --- a dedicated inference appliance, a benchmark rig, a batch job with the node to itself --- CFS/EAS was measurably better in our experiments, and the 8.2\% it gains is real. The case for pinning rests on the deployment being contended, and on latency predictability being worth more than best-case throughput.
 
-\subsection{Race Condition Mitigation}
-\label{sec:racecond}
-A significant finding from \cite{annisa2025fsrcnn} was that parallel FSRCNN execution on Efficient CPUs produced visible artifacts and pixel corruption due to race conditions during the deconvolution stage. Their serial execution produced artifact-free frames, while the parallel Efficient CPU scenario showed degraded image quality. Rather than relying solely on this citation, we reproduced the same failure mode directly on our own platform: an unsynchronized, naively-parallelized OpenMP baseline (\texttt{fsrcnn\_naive\_openmp}, 20 threads, no reorder buffer or stage-level synchronization) run against the same input and compared against our deterministic \texttt{fsrcnn\_serial} ground truth. This NAIVE scenario differed from the ground truth in 10{,}709{,}111 of 22{,}809{,}600 output bytes (46.9\%), with an average PSNR of 22.37~dB (20.61~dB on the luminance channel) — a clear, quantified reproduction of the race-condition corruption reported in \cite{annisa2025fsrcnn}, obtained on our own hardware and input rather than taken on faith from the reference paper. In contrast, every SyncPilot and CFS-baseline configuration in Table~\ref{tab:throughput}--\ref{tab:noise} produced bit-exact outputs against the same ground truth across all 150 frames (0 differing bytes; infinite PSNR). This improvement stems from SyncPilot's synchronized architecture: the pull-based worker pool with shared stage queues and reorder buffer ensures that each stage's output is correctly sequenced before being consumed by the next stage, structurally ruling out the race conditions that both the reference paper's OpenMP-based parallelization and our own NAIVE reproduction exhibit.
+The magnitude of the effect should also be read against this platform's unusually narrow cluster gap. At 1.83$\times$, a misplaced critical-path stage on the GX10 is a moderate penalty. On a Cortex-A76/A55-class platform with a 3--4$\times$ gap, the same misplacement is far more expensive, so we would expect the crossover to appear at \emph{lower} contention and the margins to be wider --- but this is an extrapolation from the mechanism, not a measurement, and platforms with a true ultra-efficiency tier may also trip the overutilization threshold at different points. Confirming the crossover on a classic big.LITTLE SoC is the most valuable single follow-up experiment this work suggests.
 
-\subsection{Scalability and Limitations}
+\textbf{Frequency is a poor proxy for capacity.} One incidental measurement deserves separating out, because it constrains any policy that needs a capacity ratio --- including a correctly-set gating threshold. The two clusters' maximum frequencies, read per core from \texttt{cpufreq}, differ by $3.900/2.808 = 1.39\times$, but their measured throughput on identical single-threaded work differs by 1.83--1.90$\times$ across two sessions (Section~\ref{sec:idle}) --- a 32--37\% discrepancy attributable to microarchitectural width, cache, and sustained-clock behaviour rather than to nominal clock. This matters concretely: SyncPilot's own cluster detection reads \texttt{cpufreq/cpuinfo\_max\_freq}, which is sufficient to \emph{rank} the clusters --- all our pinning needs --- but would badly misestimate the capacity ratio if a policy tried to size a load partition from it. The implication points somewhere useful for future work: runtime calibration has value on this platform, but not for the purpose we originally built it. Measuring per-stage cost proved unstable and counterproductive (Sections~\ref{sec:ablation}, \ref{sec:layerprofile}); measuring per-\emph{cluster} capacity is a single scalar, is cheap to obtain from a short identical microbenchmark on one core of each class, and --- unlike the per-stage table --- was reproducible to within 0.5\% across our repeats. It is exactly the quantity that frequency cannot supply.
+
+\subsection{Limitations}
 \label{sec:limitations}
-The current implementation of SyncPilot is optimized for steady-state workloads with fixed input characteristics. The IC-RCE mechanism assumes that the computational cost of each pipeline stage remains deterministic for a given input resolution. This assumption holds for FSRCNN with constant-resolution video streams (176$\times$144 $\rightarrow$ 352$\times$288), as confirmed by the low variance across steady-state runs. However, if the input workload changes drastically mid-stream (e.g., a resolution switch from 480p to 1080p), the initial calibration becomes invalid and a recalibration trigger would be required. Future work could integrate a lightweight anomaly detector to identify cost deviations and trigger a recalibration cycle, maintaining adaptability without sacrificing the low overhead of the steady-state phase.
-
-Several further limitations should be stated explicitly. First, we do not report an ablation isolating IC-RCE's specific contribution from that of static core pinning: the GX10 results in this paper use capacity-agnostic, priority-ordered pulling (Section~\ref{sec:capacityaware}) throughout, so the reported numbers already reflect "pinning without cost-gated routing" rather than a pinning-plus-explicit-threshold-routing configuration; a controlled comparison against the framework's optional \texttt{enable\_two\_pool} cost-threshold-gated pulling mode, and against a continuously-monitored (non-calibrate-once) baseline, on this platform is left as future work rather than reported here. Second, the $0.75\times$ mean-cost threshold used by the optional cost-gated mode (Section~\ref{sec:capacityaware}) has not been swept or sensitivity-tested. Third, our noise experiment (Section~\ref{sec:noise}) uses unpinned background threads; a variant pinned specifically to the Performance cluster, representing a worst-case contention scenario, is not yet tested, nor have we tested a work-conserving fallback that would let idle Efficient workers assist with backlogged heavy stages under contention. Fourth, all claims of energy efficiency implied by "Efficient-core-friendly" scheduling in earlier sections of this paper are motivational rather than measured: we did not collect on-board power telemetry, and we do not report energy numbers; quantifying the energy trade-off of hard-pinning vs. CFS/EAS is left entirely to future work. Fifth, we do not release an artifact or code package alongside this submission; we intend to do so in a revision.
+Several limitations should be stated explicitly. First, jitter is characterized at run granularity, not frame granularity: our instrumentation records one wall-clock time per 150-frame run, so we report run-to-run standard deviation and worst-of-seven runs rather than per-frame p95/p99 tail latency. This is the largest remaining gap, because latency predictability is the paper's central claim. Second, we did not directly observe thread migrations; the EAS-disable mechanism of Section~\ref{sec:noise} is inferred from kernel documentation plus the shape of our results rather than from scheduler tracepoints. Third, the results come from a single platform with an atypically narrow Performance/Efficient capacity ratio (1.83--1.90$\times$), and generalization to conventional big.LITTLE parts is untested. Fourth, the $0.75\times$ mean-cost threshold used by the ablated cost-gating policy has not been swept, so we can report that this policy loses at that setting but not that no threshold would win; our instability finding does, however, apply to any fixed threshold on the same table. Fifth, the failed-scan and capacity-blind-partition mechanisms we propose for the gating penalty are derived from the dispatch code and the measured capacity ratio rather than instrumented at runtime; we did not count rejected scans or measure per-cluster idle time. Sixth, the counter and profiling measurements of Sections~\ref{sec:perfcounter}--\ref{sec:gprof} are single runs per configuration rather than averages, and PMU sampling coverage falls to 93.2\% at twenty workers. Seventh, our noise threads and tenants are unpinned; a Performance-cluster-pinned adversary is untested. Eighth, all energy claims implied by ``Efficient core'' terminology are motivational rather than measured --- we collected no power telemetry, and quantifying the energy cost of hard-pinning versus CFS/EAS is left entirely to future work, which matters here because EAS is an \emph{energy}-aware policy that we have evaluated only on latency. Ninth, we did not benchmark frame-level parallelism (a \texttt{parallel for} over independent frames) as an alternative to stage pipelining; the pipeline is motivated by bounded in-flight memory and applicability to streaming inputs, but we cannot claim it is faster. Finally, no artifact or code package accompanies this submission; we intend to release one in a revision.
 
 % === VII. CONCLUSION ===
 \section{Conclusion}
-We presented SyncPilot, a lightweight pipeline scheduling framework for asymmetric multicore architectures, built around Initial Calibration Runtime Cost Estimation (IC-RCE): a one-time, first-frame calibration that measures per-stage cost and empirically justifies relying on a static, hardware-topology-based Performance/Efficient core mapping rather than a continuously-monitored one. Our evaluation on ASUS GX10 using FSRCNN for low-to-high resolution video reconstruction (176$\times$144 $\rightarrow$ 352$\times$288, Suzie sequence) shows that SyncPilot-20W achieves a 9.16$\times$ speedup (133.57 FPS, 1.123~s) over the serial baseline (14.58 FPS, 10.288~s), at roughly 46\% parallel efficiency. The IC-RCE Cost Table confirms Layer 8 (deconvolution) as the dominant per-frame cost, consistent with prior findings on a more classically heterogeneous platform \cite{annisa2025fsrcnn}. Every configuration produced bit-exact outputs against the ground truth across all 150 frames, confirming that the framework maintains correctness while improving throughput. Notably, on an idle system the default CFS scheduler with Energy Aware Scheduling can match or even exceed SyncPilot's raw throughput, as it is able to passively learn a near-optimal thread-to-core mapping in the absence of competing workloads; however, under synthetic system noise representative of real, non-idle edge deployments, SyncPilot's hard-pinned static mapping yields both higher throughput and a substantially smaller worst-case latency increase than the unpinned CFS baseline, a direct consequence of CFS's Energy Aware Scheduling being disabled under CPU overutilization. We consider this noise-robustness result, rather than the idle-system throughput numbers, the paper's central finding: for edge AI workloads that must share the CPU with other processes, a cheap one-time calibration that licenses a fixed mapping can be a more reliable design choice than an OS scheduler that continuously re-optimizes but loses that reliability precisely when the system is busiest. Future work includes an ablation isolating IC-RCE's contribution from static pinning, true per-frame jitter instrumentation, on-board energy measurement, and dynamic recalibration triggers for variable-resolution workloads.
+We asked whether an application should override Linux CFS/EAS with explicit static core pinning for pipeline-parallel DNN inference on an asymmetric multicore, and we answered it across a contention sweep rather than at the idle operating point where the question is usually settled. On an idle ASUS GX10, the OS wins: unpinned CFS/EAS completes our 8-stage FSRCNN pipeline in 1050~ms against static pinning's 1136~ms, 8.2\% faster. At every load condition we tested, the ordering inverts --- static pinning leads by 3.1\% at 4 background threads, 19.8\% at 10, and 8.2--12.0\% with 2--5 co-running inference tenants, all at $p<10^{-4}$ --- and it degrades far more predictably, with run-to-run standard deviation of 13.0~ms against 46.7~ms and worst-case run latency growing 23.1\% from idle against 71.4\%. The mechanism is the kernel's documented disabling of EAS once the root domain is overutilized, after which a fairness-driven balancer with no model of the critical path may migrate the deconvolution stage --- 54.8\% of per-frame cost --- onto a 1.83--1.90$\times$ slower core.
+
+A second result narrows the claim usefully. Layering cost-based stage routing on top of pinning, using a one-time per-stage cost calibration, is slower than plain pinning at all seven contention levels by 3.6--8.3\%. The reason is instructive. Measured in isolation the per-stage cost model is near-deterministic --- 1\% run-to-run spread across ten runs --- but the table the framework actually builds is calibrated inside the running pipeline, and its spread grows monotonically with concurrency to 2.52$\times$ at twenty workers, flipping the heavy/light partition outright in 4 of 60 runs. Even when it does not flip, the threshold hands 74--78\% of measured cost to the Performance cluster against the 65.5\% a capacity-proportional split would justify. A cost threshold fixes the load partition from the workload alone; emergent pulling under plain pinning lets it settle at the hardware's actual capacity ratio instead. The win belongs to topology-aware static placement, which needs no runtime measurement at all. Correctness is unaffected throughout: 27 of the 28 distinct configurations reported produced bit-exact output, the exception being a naive OpenMP control that corrupts 40.1\% of output bytes.
+
+The practical reading is that scheduler comparisons on quiesced machines answer a question that deployed edge devices do not ask. It also suggests where runtime calibration does belong. Nominal frequency understates this platform's cluster capacity ratio by 32--37\% (1.39$\times$ nominal against 1.83--1.90$\times$ measured), so any policy that needs a capacity ratio cannot read one from \texttt{cpufreq}; measuring one scalar per cluster is cheap, stable, and exactly what per-stage cost measurement failed to be. Future work should confirm the crossover on a conventional big.LITTLE platform where the cluster capacity gap is wider, instrument scheduler tracepoints to observe the migrations we currently infer, and measure the energy side of the trade-off --- since the policy we recommend against is, by design, the energy-aware one.
 
 % === REFERENCES ===
 \begin{thebibliography}{00}
@@ -501,7 +518,7 @@ Z. Yuan, X. Wang, Y. Nie, Y. Tao, Y. Li, Z. Shao, X. Liao, B. Li, and H. Jin, ``
 \bibitem{annisa2025fsrcnn}
 A. Annisa and Adnan, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \textit{Proc. IEEE Int. Conf. Artificial Intelligence and Mechatronics Systems (AIMS)}, 2025, pp. 1--8, doi: 10.1109/AIMS66189.2025.11229650.
 
-\bibitem{chronaki2017task} 
+\bibitem{chronaki2017task}
 K. Chronaki, A. Rico, M. Casas, M. Moretó, R. M. Badia, E. Ayguadé, J. Labarta, and M. Valero, ``Task Scheduling Techniques for Asymmetric Multi-core Systems,'' \textit{IEEE Transactions on Parallel and Distributed Systems}, vol. 28, no. 7, pp. 2074--2087, 2017.
 
 \bibitem{saad2026qlsa}
@@ -510,3 +527,5 @@ A. Saad, O. Abd el-Raouf, M. Hadhoud, and A. Kafafy, ``QLSA-MOEAD integration fo
 \end{thebibliography}
 
 \end{document}
+
+
