@@ -146,11 +146,6 @@ compute_psnr() {
         echo "N/A"
     fi
 }
-               -lavfi psnr -f null - 2>&1 | grep "average" | tail -1 | sed 's/.*average://' | awk '{print $1}'
-    else
-        echo "N/A"
-    fi
-}
 
 get_file_size() {
     stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo "0"
