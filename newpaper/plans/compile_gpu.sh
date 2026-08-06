@@ -25,6 +25,8 @@ nvcc \
     -O3 \
     -std=c++11 \
     -Xcompiler -fno-tree-vectorize \
+    -Xcompiler -U__ARM_NEON \
+    -Xcompiler -U__ARM_SVE \
     -o fsrcnn_gpu \
     fsrcnn_gpu.cu \
     fsrcnn_gpu_main.cu \

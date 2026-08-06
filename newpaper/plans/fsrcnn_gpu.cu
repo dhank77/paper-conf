@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <string.h>
-#include <cmath>
 
 // Weight arrays (shared with CPU code, defined in main compilation unit)
 extern double weights_layer8[4536];
 extern double biases_layer8;
+extern void pad_image(double *img, double *img_pad, int rows, int cols, int padsize);
 
 // CUDA error checking
 #define CHECK_CUDA(call) \

@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <string.h>
-#include <cmath>
 
 // Weight arrays
 double weights_layer1[1400];
