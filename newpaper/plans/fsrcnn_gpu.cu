@@ -1,7 +1,13 @@
 // CUDA implementation of FSRCNN Layer 8 with spatial reduction
 // Targets: ASUS Ascent GX10 (GB10, ARM64, CUDA 12.1+, sm_90)
-// This file replaces Layer 8 in fsrcnn_parallel_spatial_reduction.c with GPU version
 // Layers 1-7 remain on CPU
+
+#if defined(__ARM_NEON)
+#undef __ARM_NEON
+#endif
+#if defined(__ARM_SVE)
+#undef __ARM_SVE
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
