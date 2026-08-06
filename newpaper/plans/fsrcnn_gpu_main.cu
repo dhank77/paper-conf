@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <string.h>
-#include <math.h>
+#include <cmath>
 
 // Weight arrays
 double weights_layer1[1400];
@@ -37,6 +37,7 @@ double Min(double a, double b);
 void imadd(double *img_fltr_sum, double *img_fltr_crnt, int cols, int rows);
 void deconv(double *img_input, double *img_output, double *kernel, int cols, int rows, int stride);
 void double_2_uint8(double *double_img, unsigned char *uint8_img, int cols, int rows);
+void print_cuda_device_info(void);
 
 // CUDA error checking
 #define CHECK_CUDA(call) \

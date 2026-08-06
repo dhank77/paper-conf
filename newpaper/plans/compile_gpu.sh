@@ -18,13 +18,15 @@ echo "nvcc version:"
 nvcc --version | grep "release"
 echo ""
 
-# Compile
-echo "Compiling fsrcnn_gpu_main.cu..."
+# Compile both .cu files together
+echo "Compiling fsrcnn_gpu.cu + fsrcnn_gpu_main.cu..."
 nvcc \
     -arch=sm_90 \
     -O3 \
     -std=c++11 \
+    -Xcompiler -fno-tree-vectorize \
     -o fsrcnn_gpu \
+    fsrcnn_gpu.cu \
     fsrcnn_gpu_main.cu \
     -lm \
     -lcudart

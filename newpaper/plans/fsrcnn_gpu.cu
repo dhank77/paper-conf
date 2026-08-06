@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <string.h>
-#include <math.h>
+#include <cmath>
 
 // Weight arrays (shared with CPU code, defined in main compilation unit)
 extern double weights_layer8[4536];

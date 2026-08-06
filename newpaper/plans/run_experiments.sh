@@ -34,7 +34,7 @@ INPUT_YUV="suzie.yuv"
 GROUND_TRUTH="ground_truth.yuv"
 CPU_SOURCE="fsrcnn_parallel_spatial_reduction.c"
 CPU_BINARY="./fsrcnn_cpu"
-GPU_SOURCE="fsrcnn_gpu_main.cu"
+GPU_SOURCE="fsrcnn_gpu.cu fsrcnn_gpu_main.cu"
 GPU_BINARY="./fsrcnn_gpu"
 OUTPUT_CPU="out_cpu.yuv"
 OUTPUT_GPU="out_gpu.yuv"
@@ -73,10 +73,10 @@ build_cpu() {
 }
 
 build_gpu() {
-    log_info "Building GPU binary: $GPU_BINARY from $GPU_SOURCE"
+    log_info "Building GPU binary: $GPU_BINARY"
     
-    if [ ! -f "$GPU_SOURCE" ]; then
-        log_error "GPU source not found: $GPU_SOURCE"
+    if [ ! -f "fsrcnn_gpu.cu" ] || [ ! -f "fsrcnn_gpu_main.cu" ]; then
+        log_error "GPU source not found: fsrcnn_gpu.cu or fsrcnn_gpu_main.cu"
         exit 1
     fi
     
@@ -85,8 +85,8 @@ build_gpu() {
         exit 1
     fi
     
-    nvcc -arch=sm_90 -O3 -std=c++11 -o "$GPU_BINARY" "$GPU_SOURCE" -lm -lcudart
-    log_info "GPU binary built successfully: $GPU_BINARY"
+    nvcc -arch=sm_90 -O3 -std=c++11 -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu.cu fsrcnn_gpu_main.cu -lm -lcudart
+    log_info "GPU binary ready: $GPU_BINARY"
 }
 
 # Auto-build binaries before any phase
