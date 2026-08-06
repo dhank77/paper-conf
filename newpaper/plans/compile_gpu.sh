@@ -25,6 +25,11 @@ nvcc \
     -O3 \
     -std=c++11 \
     -D_BITS_MATH_VECTOR_H \
+    -D__Float32x4_t=void* \
+    -D__Float64x2_t=void* \
+    -D__SVFloat32_t=void* \
+    -D__SVFloat64_t=void* \
+    -D__SVBool_t=void* \
     -Xcompiler -fno-tree-vectorize \
     -o fsrcnn_gpu \
     fsrcnn_gpu.cu \

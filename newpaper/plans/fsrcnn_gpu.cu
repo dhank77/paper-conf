@@ -2,6 +2,25 @@
 // Pure device code - no system headers that cause ARM64 math-vector.h conflicts
 // Targets: ASUS Ascent GX10 (GB10, ARM64, CUDA 12.1+, sm_90)
 
+// Workaround for glibc bits/math-vector.h on ARM64 NVCC compilation
+#if defined(__aarch64__)
+  #ifndef __Float32x4_t
+    typedef void* __Float32x4_t;
+  #endif
+  #ifndef __Float64x2_t
+    typedef void* __Float64x2_t;
+  #endif
+  #ifndef __SVFloat32_t
+    typedef void* __SVFloat32_t;
+  #endif
+  #ifndef __SVFloat64_t
+    typedef void* __SVFloat64_t;
+  #endif
+  #ifndef __SVBool_t
+    typedef void* __SVBool_t;
+  #endif
+#endif
+
 #ifndef __FSRCNN_GPU_KERNELS_CU__
 #define __FSRCNN_GPU_KERNELS_CU__
 
