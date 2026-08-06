@@ -29,6 +29,24 @@
 #include <stdlib.h>
 #include <cuda_runtime_api.h>
 #include <string.h>
+#include <time.h>
+
+// Global grid search and profiling parameters
+int g_block_x = 16;
+int g_block_y = 16;
+int g_threads_reduce = 256;
+
+double g_cpu_l17_ms = 0.0;
+double g_h2d_ms = 0.0;
+double g_gpu_l8_ms = 0.0;
+double g_d2h_ms = 0.0;
+size_t g_vram_bytes = 0;
+
+static inline double get_time_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1000000.0;
+}
 
 // Weight arrays
 double weights_layer1[1400];
@@ -197,6 +215,10 @@ void FSRCNN_Layer8_GPU(double* img_hr, double* img_fltr_7, int rows, int cols, i
     int rows_out = rows * scale;
     int cols_out = cols * scale;
     
+    g_vram_bytes = (rows_pad * cols_pad + (size_t)num_channels8 * hr_pixels + (size_t)num_channels8 * filtersize8 + hr_pixels) * sizeof(double);
+    
+    double t_h2d_start = get_time_ms();
+    
     double *d_input_padded = NULL;
     double *d_all_tmp = NULL;
     double *d_kernel8 = NULL;
@@ -209,17 +231,26 @@ void FSRCNN_Layer8_GPU(double* img_hr, double* img_fltr_7, int rows, int cols, i
     
     CHECK_CUDA(cudaMemcpy(d_kernel8, weights_layer8, num_channels8 * filtersize8 * sizeof(double), cudaMemcpyHostToDevice));
     
-    dim3 block_deconv(16, 16);
+    g_h2d_ms += (get_time_ms() - t_h2d_start);
+    
+    dim3 block_deconv(g_block_x, g_block_y);
     dim3 grid_deconv((cols_out + block_deconv.x - 1) / block_deconv.x,
                      (rows_out + block_deconv.y - 1) / block_deconv.y);
+    
+    cudaEvent_t ev_start, ev_stop;
+    CHECK_CUDA(cudaEventCreate(&ev_start));
+    CHECK_CUDA(cudaEventCreate(&ev_stop));
+    CHECK_CUDA(cudaEventRecord(ev_start));
     
     for (int j = 0; j < num_channels8; j++) {
         double* h_input_padded = (double*)malloc(rows_pad * cols_pad * sizeof(double));
         pad_image(img_fltr_7 + j * rows * cols, h_input_padded, rows, cols, border);
         
+        double t_copy_start = get_time_ms();
         CHECK_CUDA(cudaMemcpy(d_input_padded, h_input_padded, 
                               rows_pad * cols_pad * sizeof(double), 
                               cudaMemcpyHostToDevice));
+        g_h2d_ms += (get_time_ms() - t_copy_start);
         free(h_input_padded);
         
         deconv_kernel<<<grid_deconv, block_deconv>>>(
@@ -233,17 +264,26 @@ void FSRCNN_Layer8_GPU(double* img_hr, double* img_fltr_7, int rows, int cols, i
         CHECK_CUDA(cudaGetLastError());
     }
     
-    CHECK_CUDA(cudaDeviceSynchronize());
-    
-    int threads_reduce = 256;
+    int threads_reduce = g_threads_reduce;
     int blocks_reduce = (hr_pixels + threads_reduce - 1) / threads_reduce;
     spatial_reduction_kernel<<<blocks_reduce, threads_reduce>>>(
         d_all_tmp, d_img_hr, biases_layer8, num_channels8, hr_pixels
     );
     CHECK_CUDA(cudaGetLastError());
-    CHECK_CUDA(cudaDeviceSynchronize());
     
+    CHECK_CUDA(cudaEventRecord(ev_stop));
+    CHECK_CUDA(cudaEventSynchronize(ev_stop));
+    
+    float kernel_ms = 0.0f;
+    CHECK_CUDA(cudaEventElapsedTime(&kernel_ms, ev_start, ev_stop));
+    g_gpu_l8_ms += kernel_ms;
+    
+    CHECK_CUDA(cudaEventDestroy(ev_start));
+    CHECK_CUDA(cudaEventDestroy(ev_stop));
+    
+    double t_d2h_start = get_time_ms();
     CHECK_CUDA(cudaMemcpy(img_hr, d_img_hr, hr_pixels * sizeof(double), cudaMemcpyDeviceToHost));
+    g_d2h_ms += (get_time_ms() - t_d2h_start);
     
     CHECK_CUDA(cudaFree(d_input_padded));
     CHECK_CUDA(cudaFree(d_all_tmp));
@@ -421,6 +461,8 @@ void double_2_uint8(double *double_img, unsigned char *uint8_img, int cols, int 
 void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     (void)scale; // mark used if needed
     
+    double t_cpu_start = get_time_ms();
+    
     // Layer 1
     int filtersize = 25;
     int patchsize = 5;
@@ -582,6 +624,8 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     free(img_fltr_6); img_fltr_6 = NULL;
     free(kernel7); kernel7 = NULL;
     
+    g_cpu_l17_ms += (get_time_ms() - t_cpu_start);
+    
     // Layer 8: GPU version with spatial reduction
     FSRCNN_Layer8_GPU(img_hr, img_fltr_p7, rows, cols, scale);
     
@@ -592,13 +636,17 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
 // Main
 // ============================================================================
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        printf("Usage: %s <input.yuv> <output.yuv>\n", argv[0]);
+    if (argc < 3) {
+        printf("Usage: %s <input.yuv> <output.yuv> [block_x] [block_y] [threads_reduce]\n", argv[0]);
         return 1;
     }
     
     char *inFile = argv[1];
     char *outFile = argv[2];
+    
+    if (argc >= 4) g_block_x = atoi(argv[3]);
+    if (argc >= 5) g_block_y = atoi(argv[4]);
+    if (argc >= 6) g_threads_reduce = atoi(argv[5]);
     
     int scale = 2;
     int num = 150;
@@ -777,6 +825,11 @@ int main(int argc, char *argv[]) {
     
     free(inBuf); free(inBuf_tmp); free(outBuf); free(outBuf_tmp);
     fclose(inFp); fclose(outFp);
+    
+    double total_wall = g_cpu_l17_ms + g_h2d_ms + g_gpu_l8_ms + g_d2h_ms;
+    printf("[PROFILING] cpu_l17_ms=%.2f h2d_ms=%.2f gpu_l8_ms=%.2f d2h_ms=%.2f total_ms=%.2f vram_kb=%zu block_x=%d block_y=%d threads_reduce=%d\n",
+           g_cpu_l17_ms, g_h2d_ms, g_gpu_l8_ms, g_d2h_ms, total_wall, g_vram_bytes / 1024,
+           g_block_x, g_block_y, g_threads_reduce);
     
     return 0;
 }

@@ -123,11 +123,11 @@ echo "Diff bytes: $DIFF"
 
 **Checklist Fase 0**
 
-- [ ] `double_2_uint8` disamakan, V0 dan V1 di-rebuild
-- [ ] Ground truth serial dibuat dan di-hash
-- [ ] CSV logging siap dan diuji pada 1 run per varian
-- [ ] Lingkungan GPU terverifikasi
-- [ ] V2 diimplementasikan dan menghasilkan output identik dengan ground truth
+- [x] `double_2_uint8` disamakan, V0 dan V1 di-rebuild
+- [x] Ground truth serial dibuat dan di-hash
+- [x] CSV logging siap (termasuk 7-run repetition Mean ± SD & breakdown profiling)
+- [x] Lingkungan GPU terverifikasi (NVIDIA GB10 sm_90)
+- [x] V2 diimplementasikan dan menghasilkan output identik dengan ground truth (100% bit-exact)
 
 ---
 

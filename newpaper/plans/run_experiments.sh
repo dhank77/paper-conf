@@ -219,9 +219,9 @@ phase1_validate() {
     fi
 }
 
-# ===================== PHASE 3: PERFORMANCE SCALING =====================
+# ===================== PHASE 3: PERFORMANCE SCALING & GRID SEARCH =====================
 phase3_benchmark() {
-    log_info "=== Phase 3: Performance scaling ==="
+    log_info "=== Phase 3: Performance scaling & GPU Grid Search ==="
     
     if [ ! -f "$GROUND_TRUTH" ]; then
         log_error "$GROUND_TRUTH not found. Run --phase0 first."
@@ -238,51 +238,102 @@ phase3_benchmark() {
         build_gpu
     fi
     
-    echo "run_id,variant,threads,device,wall_ms,diff_bytes,total_bytes,pct_diff,psnr_db,peak_rss_kb" > "$CSV_FILE"
+    echo "run_id,variant,threads,device,block_x,block_y,threads_reduce,wall_ms_mean,wall_ms_sd,cpu_l17_ms,h2d_ms,gpu_l8_ms,d2h_ms,diff_bytes,total_bytes,pct_diff,psnr_db,peak_rss_kb,vram_kb" > "$CSV_FILE"
     
     local run_id=1
-    local baseline_wall=""
+    local baseline_mean=""
+    local TOTAL_REPS=7
+    
+    # Helper to calculate Mean and Standard Deviation
+    calc_stats() {
+        awk 'BEGIN {sum=0; sq=0; n=0} {val=$1; sum+=val; sq+=val*val; n++} END {if (n>0) {m=sum/n; sd=(n>1 && (sq-(sum*sum)/n)>0)?sqrt((sq-(sum*sum)/n)/(n-1)):0; printf "%.2f,%.2f", m, sd} else {printf "0.00,0.00"}}'
+    }
     
     # CPU configurations
     for threads in 1 2 4 8 16; do
-        log_info "--- CPU with $threads threads ---"
+        log_info "--- CPU with $threads threads ($TOTAL_REPS runs: 1 warmup + 6 measured) ---"
         
         export OMP_NUM_THREADS=$threads
         
-        local cpu_wall=$(run_and_time "CPU-${threads}t" "$CPU_BINARY $INPUT_YUV $OUTPUT_CPU")
+        local run_times=()
+        for r in $(seq 1 $TOTAL_REPS); do
+            local wall=$(run_and_time "CPU-${threads}t [run $r/$TOTAL_REPS]" "$CPU_BINARY $INPUT_YUV $OUTPUT_CPU")
+            if [ "$r" -gt 1 ]; then
+                run_times+=("$wall")
+            fi
+        done
         
-        if [ -f "$OUTPUT_CPU" ]; then
-            local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_CPU")
-            local total=$(get_file_size "$OUTPUT_CPU")
-            local pct_diff=0
-            if [ "$total" -gt 0 ]; then
-                pct_diff=$((diff * 100 / total))
-            fi
-            local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_CPU")
-            
-            local peak_rss="N/A"
-            if command -v /usr/bin/time &> /dev/null; then
-                local time_output=$(/usr/bin/time -v "$CPU_BINARY" "$INPUT_YUV" "$OUTPUT_CPU" 2>&1 | grep "Maximum resident" | awk '{print $6}')
-                if [ -n "$time_output" ]; then
-                    peak_rss="$time_output"
-                fi
-            fi
-            
-            echo "$run_id,CPU,$threads,CPU,$cpu_wall,$diff,$total,$pct_diff,$psnr,$peak_rss" >> "$CSV_FILE"
-            
-            if [ "$threads" -eq 1 ]; then
-                baseline_wall="$cpu_wall"
-            fi
-            
-            run_id=$((run_id + 1))
+        local stats=$(printf "%s\n" "${run_times[@]}" | calc_stats)
+        local mean_ms=$(echo "$stats" | cut -d',' -f1)
+        local sd_ms=$(echo "$stats" | cut -d',' -f2)
+        
+        if [ "$threads" -eq 1 ]; then
+            baseline_mean="$mean_ms"
         fi
+        
+        local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_CPU")
+        local total=$(get_file_size "$OUTPUT_CPU")
+        local pct_diff=0
+        if [ "$total" -gt 0 ]; then
+            pct_diff=$((diff * 100 / total))
+        fi
+        local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_CPU")
+        
+        local peak_rss="N/A"
+        if command -v /usr/bin/time &> /dev/null; then
+            local time_output=$(/usr/bin/time -v "$CPU_BINARY" "$INPUT_YUV" "$OUTPUT_CPU" 2>&1 | grep "Maximum resident" | awk '{print $6}')
+            if [ -n "$time_output" ]; then
+                peak_rss="$time_output"
+            fi
+        fi
+        
+        echo "$run_id,CPU,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,$peak_rss,0" >> "$CSV_FILE"
+        run_id=$((run_id + 1))
     done
     
-    # GPU configuration
-    log_info "--- GPU ---"
-    local gpu_wall=$(run_and_time "GPU" "$GPU_BINARY $INPUT_YUV $OUTPUT_GPU")
+    # GPU Grid Search configurations (block_x block_y threads_reduce)
+    local gpu_configs=(
+        "16 16 256"
+        "8 8 256"
+        "32 8 256"
+        "16 16 128"
+        "16 16 512"
+    )
     
-    if [ -f "$OUTPUT_GPU" ]; then
+    for cfg in "${gpu_configs[@]}"; do
+        read bx by tr <<< "$cfg"
+        log_info "--- GPU (Block: ${bx}x${by}, Reduce: ${tr}) ---"
+        
+        local run_times=()
+        local last_prof=""
+        
+        for r in $(seq 1 $TOTAL_REPS); do
+            local prof_log=$(mktemp)
+            local wall=$(run_and_time "GPU (${bx}x${by}_${tr}) [run $r/$TOTAL_REPS]" "$GPU_BINARY $INPUT_YUV $OUTPUT_GPU $bx $by $tr 2>$prof_log")
+            
+            local prof_line=$(grep "\[PROFILING\]" "$prof_log" | tail -1 || true)
+            rm -f "$prof_log"
+            
+            if [ "$r" -gt 1 ]; then
+                run_times+=("$wall")
+                last_prof="$prof_line"
+            fi
+        done
+        
+        local stats=$(printf "%s\n" "${run_times[@]}" | calc_stats)
+        local mean_ms=$(echo "$stats" | cut -d',' -f1)
+        local sd_ms=$(echo "$stats" | cut -d',' -f2)
+        
+        # Parse breakdown from last profiling line
+        local cpu_l17="N/A" h2d="N/A" gpu_l8="N/A" d2h="N/A" vram_kb="0"
+        if [ -n "$last_prof" ]; then
+            cpu_l17=$(echo "$last_prof" | sed -n 's/.*cpu_l17_ms=\([^ ]*\).*/\1/p')
+            h2d=$(echo "$last_prof" | sed -n 's/.*h2d_ms=\([^ ]*\).*/\1/p')
+            gpu_l8=$(echo "$last_prof" | sed -n 's/.*gpu_l8_ms=\([^ ]*\).*/\1/p')
+            d2h=$(echo "$last_prof" | sed -n 's/.*d2h_ms=\([^ ]*\).*/\1/p')
+            vram_kb=$(echo "$last_prof" | sed -n 's/.*vram_kb=\([^ ]*\).*/\1/p')
+        fi
+        
         local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_GPU")
         local total=$(get_file_size "$OUTPUT_GPU")
         local pct_diff=0
@@ -299,27 +350,35 @@ phase3_benchmark() {
             fi
         fi
         
-        echo "$run_id,GPU,1,GPU,$gpu_wall,$diff,$total,$pct_diff,$psnr,$peak_rss" >> "$CSV_FILE"
-    fi
+        echo "$run_id,GPU,1,GPU,$bx,$by,$tr,$mean_ms,$sd_ms,$cpu_l17,$h2d,$gpu_l8,$d2h,$diff,$total,$pct_diff,$psnr,$peak_rss,$vram_kb" >> "$CSV_FILE"
+        run_id=$((run_id + 1))
+    done
     
     # Print summary
-    log_info "=== Summary ==="
-    printf "%-10s %-10s %-15s %-10s\n" "Variant" "Threads" "Wall (ms)" "Speedup"
-    printf "%-10s %-10s %-15s %-10s\n" "-------" "-------" "----------" "-------"
+    log_info "=== Summary (Wall Time Mean ± SD over 6 measured runs) ==="
+    printf "%-8s %-12s %-16s %-10s %-12s\n" "Variant" "Config/Th" "Wall (ms)" "Speedup" "GPU L8 (ms)"
+    printf "%-8s %-12s %-16s %-10s %-12s\n" "-------" "---------" "----------------" "-------" "-----------"
     
-    while IFS=, read -r run_id variant threads device wall_ms diff_bytes total_bytes pct_diff psnr_db peak_rss_kb; do
-        if [ "$run_id" = "run_id" ]; then
+    while IFS=, read -r r_id variant threads device bx by tr mean_ms sd_ms cpu_l17 h2d gpu_l8 d2h diff_b total_b pct_d psnr_db rss_kb vram_k; do
+        if [ "$r_id" = "run_id" ]; then
             continue
         fi
-        if [ -z "$baseline_wall" ] || [ "$baseline_wall" -eq 0 ]; then
-            speedup="—"
-        else
-            speedup=$(awk "BEGIN {printf \"%.2fx\", $baseline_wall / $wall_ms}")
+        
+        local cfg_label="$threads t"
+        if [ "$variant" = "GPU" ]; then
+            cfg_label="${bx}x${by}_${tr}"
         fi
-        printf "%-10s %-10s %-15s %-10s\n" "$variant" "$threads" "$wall_ms" "$speedup"
+        
+        local wall_str="${mean_ms} ± ${sd_ms}"
+        local speedup="—"
+        if [ -n "$baseline_mean" ] && [ "$(echo "$mean_ms > 0" | awk '{print ($1)?1:0}')" -eq 1 ]; then
+            speedup=$(awk "BEGIN {printf \"%.2fx\", $baseline_mean / $mean_ms}")
+        fi
+        
+        printf "%-8s %-12s %-16s %-10s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$gpu_l8"
     done < "$CSV_FILE"
     
-    log_info "Results saved to $CSV_FILE"
+    log_info "Detailed results saved to $CSV_FILE"
 }
 
 # ===================== USAGE =====================
