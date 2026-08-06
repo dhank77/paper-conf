@@ -9,7 +9,7 @@ echo ""
 
 # Check files exist
 echo "Checking file existence..."
-for f in fsrcnn_gpu.cu fsrcnn_gpu_main.cu compile_gpu.sh run_experiments.py; do
+for f in fsrcnn_gpu.cu fsrcnn_gpu_main.cu compile_gpu.sh run_experiments.sh; do
     if [ -f "$f" ]; then
         echo "  [OK] $f"
     else
@@ -41,4 +41,4 @@ echo "  chmod +x compile_gpu.sh"
 echo "  ./compile_gpu.sh"
 echo ""
 echo "To run validation:"
-echo "  python run_experiments.py --validate"
+echo "  bash run_experiments.sh --validate"
