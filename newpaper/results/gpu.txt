@@ -1,0 +1,237 @@
+[INFO] GPU binary ready: ./fsrcnn_gpu
+[INFO] === Phase 3: Performance scaling & GPU Grid Search ===
+[INFO] --- CPU with 1 threads (7 runs: 1 warmup + 6 measured) ---
+[INFO] Running CPU-1t [run 1/7]...
+    Wall time: 21155 ms
+[INFO] Running CPU-1t [run 2/7]...
+    Wall time: 21599 ms
+[INFO] Running CPU-1t [run 3/7]...
+    Wall time: 21362 ms
+[INFO] Running CPU-1t [run 4/7]...
+    Wall time: 21449 ms
+[INFO] Running CPU-1t [run 5/7]...
+    Wall time: 21159 ms
+[INFO] Running CPU-1t [run 6/7]...
+    Wall time: 21374 ms
+[INFO] Running CPU-1t [run 7/7]...
+    Wall time: 21406 ms
+[INFO] --- CPU with 2 threads (7 runs: 1 warmup + 6 measured) ---
+[INFO] Running CPU-2t [run 1/7]...
+    Wall time: 12915 ms
+[INFO] Running CPU-2t [run 2/7]...
+    Wall time: 12816 ms
+[INFO] Running CPU-2t [run 3/7]...
+    Wall time: 12811 ms
+[INFO] Running CPU-2t [run 4/7]...
+    Wall time: 12839 ms
+[INFO] Running CPU-2t [run 5/7]...
+    Wall time: 12813 ms
+[INFO] Running CPU-2t [run 6/7]...
+    Wall time: 12732 ms
+[INFO] Running CPU-2t [run 7/7]...
+    Wall time: 12811 ms
+[INFO] --- CPU with 4 threads (7 runs: 1 warmup + 6 measured) ---
+[INFO] Running CPU-4t [run 1/7]...
+    Wall time: 8224 ms
+[INFO] Running CPU-4t [run 2/7]...
+    Wall time: 8285 ms
+[INFO] Running CPU-4t [run 3/7]...
+    Wall time: 8275 ms
+[INFO] Running CPU-4t [run 4/7]...
+    Wall time: 8212 ms
+[INFO] Running CPU-4t [run 5/7]...
+    Wall time: 8021 ms
+[INFO] Running CPU-4t [run 6/7]...
+    Wall time: 8224 ms
+[INFO] Running CPU-4t [run 7/7]...
+    Wall time: 8153 ms
+[INFO] --- CPU with 8 threads (7 runs: 1 warmup + 6 measured) ---
+[INFO] Running CPU-8t [run 1/7]...
+    Wall time: 9661 ms
+[INFO] Running CPU-8t [run 2/7]...
+    Wall time: 8422 ms
+[INFO] Running CPU-8t [run 3/7]...
+    Wall time: 6155 ms
+[INFO] Running CPU-8t [run 4/7]...
+    Wall time: 7855 ms
+[INFO] Running CPU-8t [run 5/7]...
+    Wall time: 8725 ms
+[INFO] Running CPU-8t [run 6/7]...
+    Wall time: 8198 ms
+[INFO] Running CPU-8t [run 7/7]...
+    Wall time: 7991 ms
+[INFO] --- CPU with 16 threads (7 runs: 1 warmup + 6 measured) ---
+[INFO] Running CPU-16t [run 1/7]...
+    Wall time: 6928 ms
+[INFO] Running CPU-16t [run 2/7]...
+    Wall time: 7030 ms
+[INFO] Running CPU-16t [run 3/7]...
+    Wall time: 6891 ms
+[INFO] Running CPU-16t [run 4/7]...
+    Wall time: 6962 ms
+[INFO] Running CPU-16t [run 5/7]...
+    Wall time: 6866 ms
+[INFO] Running CPU-16t [run 6/7]...
+    Wall time: 6804 ms
+[INFO] Running CPU-16t [run 7/7]...
+    Wall time: 7034 ms
+[INFO] --- GPU (Block: 16x16, Reduce: 256) ---
+[INFO] Running GPU (16x16_256) [run 1/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6779.13 h2d_ms=648.33 gpu_l8_ms=689.36 d2h_ms=3.31 total_ms=8120.13 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8315 ms
+[INFO] Running GPU (16x16_256) [run 2/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6959.24 h2d_ms=676.70 gpu_l8_ms=691.40 d2h_ms=3.29 total_ms=8330.64 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8476 ms
+[INFO] Running GPU (16x16_256) [run 3/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6876.22 h2d_ms=677.78 gpu_l8_ms=693.05 d2h_ms=3.31 total_ms=8250.36 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8366 ms
+[INFO] Running GPU (16x16_256) [run 4/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6749.30 h2d_ms=652.67 gpu_l8_ms=690.03 d2h_ms=3.34 total_ms=8095.33 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8203 ms
+[INFO] Running GPU (16x16_256) [run 5/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6964.01 h2d_ms=679.73 gpu_l8_ms=694.03 d2h_ms=3.30 total_ms=8341.06 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8477 ms
+[INFO] Running GPU (16x16_256) [run 6/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6761.85 h2d_ms=649.24 gpu_l8_ms=685.16 d2h_ms=3.29 total_ms=8099.54 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8205 ms
+[INFO] Running GPU (16x16_256) [run 7/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6926.73 h2d_ms=672.28 gpu_l8_ms=691.64 d2h_ms=3.36 total_ms=8294.01 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+    Wall time: 8433 ms
+[INFO] --- GPU (Block: 8x8, Reduce: 256) ---
+[INFO] Running GPU (8x8_256) [run 1/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6927.29 h2d_ms=642.39 gpu_l8_ms=657.13 d2h_ms=3.32 total_ms=8230.13 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8413 ms
+[INFO] Running GPU (8x8_256) [run 2/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6868.70 h2d_ms=613.02 gpu_l8_ms=653.39 d2h_ms=3.27 total_ms=8138.38 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8295 ms
+[INFO] Running GPU (8x8_256) [run 3/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6833.50 h2d_ms=604.69 gpu_l8_ms=649.32 d2h_ms=3.31 total_ms=8090.82 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8259 ms
+[INFO] Running GPU (8x8_256) [run 4/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6775.44 h2d_ms=619.23 gpu_l8_ms=653.49 d2h_ms=3.33 total_ms=8051.49 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8209 ms
+[INFO] Running GPU (8x8_256) [run 5/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6949.19 h2d_ms=640.78 gpu_l8_ms=651.59 d2h_ms=3.40 total_ms=8244.95 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8396 ms
+[INFO] Running GPU (8x8_256) [run 6/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6983.21 h2d_ms=637.40 gpu_l8_ms=649.96 d2h_ms=3.41 total_ms=8273.97 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8478 ms
+[INFO] Running GPU (8x8_256) [run 7/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6954.17 h2d_ms=652.63 gpu_l8_ms=658.72 d2h_ms=3.34 total_ms=8268.87 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+    Wall time: 8454 ms
+[INFO] --- GPU (Block: 32x8, Reduce: 256) ---
+[INFO] Running GPU (32x8_256) [run 1/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6928.14 h2d_ms=515.62 gpu_l8_ms=524.66 d2h_ms=3.33 total_ms=7971.75 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 8245 ms
+[INFO] Running GPU (32x8_256) [run 2/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6966.18 h2d_ms=519.38 gpu_l8_ms=526.73 d2h_ms=3.39 total_ms=8015.69 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 8314 ms
+[INFO] Running GPU (32x8_256) [run 3/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6945.55 h2d_ms=495.50 gpu_l8_ms=521.83 d2h_ms=3.33 total_ms=7966.20 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 8273 ms
+[INFO] Running GPU (32x8_256) [run 4/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6669.56 h2d_ms=471.77 gpu_l8_ms=517.03 d2h_ms=3.32 total_ms=7661.67 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 7961 ms
+[INFO] Running GPU (32x8_256) [run 5/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6726.36 h2d_ms=471.58 gpu_l8_ms=515.70 d2h_ms=3.30 total_ms=7716.94 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 8017 ms
+[INFO] Running GPU (32x8_256) [run 6/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6909.94 h2d_ms=504.94 gpu_l8_ms=522.85 d2h_ms=3.30 total_ms=7941.04 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 8237 ms
+[INFO] Running GPU (32x8_256) [run 7/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6977.25 h2d_ms=490.62 gpu_l8_ms=515.69 d2h_ms=3.33 total_ms=7986.90 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+    Wall time: 8309 ms
+[INFO] --- GPU (Block: 16x16, Reduce: 128) ---
+[INFO] Running GPU (16x16_128) [run 1/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6961.20 h2d_ms=673.87 gpu_l8_ms=692.47 d2h_ms=3.37 total_ms=8330.91 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8486 ms
+[INFO] Running GPU (16x16_128) [run 2/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6955.88 h2d_ms=675.23 gpu_l8_ms=691.13 d2h_ms=3.33 total_ms=8325.58 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8437 ms
+[INFO] Running GPU (16x16_128) [run 3/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6939.25 h2d_ms=660.50 gpu_l8_ms=689.28 d2h_ms=3.31 total_ms=8292.34 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8444 ms
+[INFO] Running GPU (16x16_128) [run 4/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6972.23 h2d_ms=672.65 gpu_l8_ms=692.89 d2h_ms=3.35 total_ms=8341.11 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8456 ms
+[INFO] Running GPU (16x16_128) [run 5/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6867.87 h2d_ms=647.29 gpu_l8_ms=689.66 d2h_ms=3.28 total_ms=8208.10 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8320 ms
+[INFO] Running GPU (16x16_128) [run 6/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6935.23 h2d_ms=672.45 gpu_l8_ms=691.29 d2h_ms=3.29 total_ms=8302.26 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8454 ms
+[INFO] Running GPU (16x16_128) [run 7/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6711.57 h2d_ms=646.79 gpu_l8_ms=685.33 d2h_ms=3.30 total_ms=8046.98 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+    Wall time: 8147 ms
+[INFO] --- GPU (Block: 16x16, Reduce: 512) ---
+[INFO] Running GPU (16x16_512) [run 1/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6923.91 h2d_ms=677.75 gpu_l8_ms=692.80 d2h_ms=3.35 total_ms=8297.81 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8414 ms
+[INFO] Running GPU (16x16_512) [run 2/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6738.75 h2d_ms=651.07 gpu_l8_ms=689.17 d2h_ms=3.31 total_ms=8082.30 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8207 ms
+[INFO] Running GPU (16x16_512) [run 3/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6725.44 h2d_ms=650.71 gpu_l8_ms=683.23 d2h_ms=3.25 total_ms=8062.64 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8190 ms
+[INFO] Running GPU (16x16_512) [run 4/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6955.53 h2d_ms=673.87 gpu_l8_ms=694.25 d2h_ms=3.48 total_ms=8327.13 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8443 ms
+[INFO] Running GPU (16x16_512) [run 5/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6930.65 h2d_ms=664.84 gpu_l8_ms=687.02 d2h_ms=3.40 total_ms=8285.91 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8461 ms
+[INFO] Running GPU (16x16_512) [run 6/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6880.32 h2d_ms=671.94 gpu_l8_ms=690.99 d2h_ms=3.33 total_ms=8246.59 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8374 ms
+[INFO] Running GPU (16x16_512) [run 7/7]...
+[GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
+[PROFILING] cpu_l17_ms=6801.48 h2d_ms=646.46 gpu_l8_ms=689.81 d2h_ms=3.35 total_ms=8141.10 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+    Wall time: 8267 ms
+[INFO] === Summary (Wall Time Mean ± SD over 6 measured runs) ===
+Variant  Config/Th    Wall (ms)        Speedup    GPU L8 (ms) 
+-------  ---------    ---------------- -------    ----------- 
+CPU      1 t          21391.50 ± 142.69 1.00x      N/A         
+CPU      2 t          12803.67 ± 36.69 1.67x      N/A         
+CPU      4 t          8195.00 ± 97.64 2.61x      N/A         
+CPU      8 t          7891.00 ± 905.18 2.71x      N/A         
+CPU      16 t         6931.17 ± 93.09 3.09x      N/A         
+GPU      16x16_256    8360.00 ± 127.42 2.56x      N/A         
+GPU      8x8_256      8348.50 ± 109.99 2.56x      N/A         
+GPU      32x8_256     8185.17 ± 155.48 2.61x      N/A         
+GPU      16x16_128    8376.33 ± 123.62 2.55x      N/A         
+GPU      16x16_512    8323.67 ± 118.59 2.57x      N/A         
+[INFO] Detailed results saved to raw_results.csv
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# 

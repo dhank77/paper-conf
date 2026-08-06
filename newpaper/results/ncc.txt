@@ -26,3 +26,4 @@ Thu Aug  6 14:44:10 2026
 |  No running processes found                                                             |
 +-----------------------------------------------------------------------------------------+
 root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# bash ./run_experiments.sh --validate
+

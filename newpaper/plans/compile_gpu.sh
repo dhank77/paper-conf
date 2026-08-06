@@ -30,6 +30,7 @@ nvcc \
     -D__SVFloat32_t=void* \
     -D__SVFloat64_t=void* \
     -D__SVBool_t=void* \
+    -Xcompiler -fopenmp \
     -Xcompiler -fno-tree-vectorize \
     -o fsrcnn_gpu \
     fsrcnn_gpu_main.cu \

@@ -30,6 +30,7 @@
 #include <cuda_runtime_api.h>
 #include <string.h>
 #include <time.h>
+#include <omp.h>
 
 // Global grid search and profiling parameters
 int g_block_x = 16;
@@ -474,6 +475,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel = (double *)malloc(filtersize*sizeof(double));
     double *img_fltr_p1 = img_fltr_1;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters; i++) {
         imfilter(img_lr, weights_layer1+i*filtersize, img_fltr_p1+i*cols*rows, rows, cols, padsize);
         PReLU(img_fltr_p1+i*cols*rows, rows, cols, biases_layer1[i], prelu_coeff_layer1);
@@ -491,6 +493,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel2 = (double *)malloc(filtersize2*sizeof(double));
     double *img_fltr_p2 = img_fltr_2;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters2; i++) {
         double img_fltr_2_tmp[rows*cols];
         for (int j = 0; j < num_channels2; j++) {
@@ -515,6 +518,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel3 = (double *)malloc(filtersize3*sizeof(double));
     double *img_fltr_p3 = img_fltr_3;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters3; i++) {
         double img_fltr_3_tmp[rows*cols];
         for (int j = 0; j < num_channels3; j++) {
@@ -540,6 +544,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel4 = (double *)malloc(filtersize4*sizeof(double));
     double *img_fltr_p4 = img_fltr_4;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters4; i++) {
         double img_fltr_4_tmp[rows*cols];
         for (int j = 0; j < num_channels4; j++) {
@@ -564,6 +569,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel5 = (double *)malloc(filtersize5*sizeof(double));
     double *img_fltr_p5 = img_fltr_5;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters5; i++) {
         double img_fltr_5_tmp[rows*cols];
         for (int j = 0; j < num_channels5; j++) {
@@ -588,6 +594,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel6 = (double *)malloc(filtersize6*sizeof(double));
     double *img_fltr_p6 = img_fltr_6;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters6; i++) {
         double img_fltr_6_tmp[rows*cols];
         for (int j = 0; j < num_channels6; j++) {
@@ -612,6 +619,7 @@ void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
     double *kernel7 = (double *)malloc(filtersize7*sizeof(double));
     double *img_fltr_p7 = img_fltr_7;
     
+    #pragma omp parallel for
     for (int i = 0; i < num_filters7; i++) {
         double img_fltr_7_tmp[rows*cols];
         for (int j = 0; j < num_channels7; j++) {
@@ -827,9 +835,9 @@ int main(int argc, char *argv[]) {
     fclose(inFp); fclose(outFp);
     
     double total_wall = g_cpu_l17_ms + g_h2d_ms + g_gpu_l8_ms + g_d2h_ms;
-    printf("[PROFILING] cpu_l17_ms=%.2f h2d_ms=%.2f gpu_l8_ms=%.2f d2h_ms=%.2f total_ms=%.2f vram_kb=%zu block_x=%d block_y=%d threads_reduce=%d\n",
-           g_cpu_l17_ms, g_h2d_ms, g_gpu_l8_ms, g_d2h_ms, total_wall, g_vram_bytes / 1024,
-           g_block_x, g_block_y, g_threads_reduce);
+    fprintf(stderr, "[PROFILING] cpu_l17_ms=%.2f h2d_ms=%.2f gpu_l8_ms=%.2f d2h_ms=%.2f total_ms=%.2f vram_kb=%zu block_x=%d block_y=%d threads_reduce=%d\n",
+            g_cpu_l17_ms, g_h2d_ms, g_gpu_l8_ms, g_d2h_ms, total_wall, g_vram_bytes / 1024,
+            g_block_x, g_block_y, g_threads_reduce);
     
     return 0;
 }

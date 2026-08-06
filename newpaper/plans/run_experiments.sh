@@ -85,7 +85,7 @@ build_gpu() {
         exit 1
     fi
     
-    nvcc -arch=sm_90 -O3 -std=c++11 -D_BITS_MATH_VECTOR_H -D__Float32x4_t=void* -D__Float64x2_t=void* -D__SVFloat32_t=void* -D__SVFloat64_t=void* -D__SVBool_t=void* -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart
+    nvcc -arch=sm_90 -O3 -std=c++11 -D_BITS_MATH_VECTOR_H -D__Float32x4_t=void* -D__Float64x2_t=void* -D__SVFloat32_t=void* -D__SVFloat64_t=void* -D__SVBool_t=void* -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart
     log_info "GPU binary ready: $GPU_BINARY"
 }
 
@@ -249,8 +249,8 @@ phase3_benchmark() {
         awk 'BEGIN {sum=0; sq=0; n=0} {val=$1; sum+=val; sq+=val*val; n++} END {if (n>0) {m=sum/n; sd=(n>1 && (sq-(sum*sum)/n)>0)?sqrt((sq-(sum*sum)/n)/(n-1)):0; printf "%.2f,%.2f", m, sd} else {printf "0.00,0.00"}}'
     }
     
-    # CPU configurations
-    for threads in 1 2 4 8 16; do
+    # CPU configurations (testing 1, 2, 4, 8, 10 P-cores, 16, 20 P+E cores)
+    for threads in 1 2 4 8 10 16 20; do
         log_info "--- CPU with $threads threads ($TOTAL_REPS runs: 1 warmup + 6 measured) ---"
         
         export OMP_NUM_THREADS=$threads
@@ -292,6 +292,8 @@ phase3_benchmark() {
     done
     
     # GPU Grid Search configurations (block_x block_y threads_reduce)
+    # Uses OpenMP for CPU Layers 1-7 (20 cores) + GPU Layer 8
+    export OMP_NUM_THREADS=20
     local gpu_configs=(
         "16 16 256"
         "8 8 256"
@@ -365,8 +367,12 @@ phase3_benchmark() {
         fi
         
         local cfg_label="$threads t"
+        local gpu_l8_display="N/A"
         if [ "$variant" = "GPU" ]; then
             cfg_label="${bx}x${by}_${tr}"
+            if [ -n "$gpu_l8" ] && [ "$gpu_l8" != "N/A" ]; then
+                gpu_l8_display="${gpu_l8} ms"
+            fi
         fi
         
         local wall_str="${mean_ms} ± ${sd_ms}"
@@ -375,7 +381,7 @@ phase3_benchmark() {
             speedup=$(awk "BEGIN {printf \"%.2fx\", $baseline_mean / $mean_ms}")
         fi
         
-        printf "%-8s %-12s %-16s %-10s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$gpu_l8"
+        printf "%-8s %-12s %-16s %-10s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$gpu_l8_display"
     done < "$CSV_FILE"
     
     log_info "Detailed results saved to $CSV_FILE"
