@@ -32,10 +32,13 @@ cd "$SCRIPT_DIR"
 
 INPUT_YUV="suzie_qcif.yuv"
 GROUND_TRUTH="ground_truth.yuv"
+CPU_V0_SOURCE="fsrcnn_parallel.c"
+CPU_V0_BINARY="./fsrcnn_cpu_v0"
 CPU_SOURCE="fsrcnn_parallel_spatial_reduction.c"
 CPU_BINARY="./fsrcnn_cpu"
 GPU_SOURCE="fsrcnn_gpu.cu fsrcnn_gpu_main.cu"
 GPU_BINARY="./fsrcnn_gpu"
+OUTPUT_V0="out_v0.yuv"
 OUTPUT_CPU="out_cpu.yuv"
 OUTPUT_GPU="out_gpu.yuv"
 CSV_FILE="raw_results.csv"
@@ -60,8 +63,18 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # ===================== KOMPILASI =====================
+build_v0() {
+    log_info "Building CPU V0 (Naive OpenMP) binary: $CPU_V0_BINARY from $CPU_V0_SOURCE"
+    if [ ! -f "$CPU_V0_SOURCE" ]; then
+        log_warn "CPU V0 source not found: $CPU_V0_SOURCE, skipping V0 build."
+        return 0
+    fi
+    gcc -fopenmp -O3 -o "$CPU_V0_BINARY" "$CPU_V0_SOURCE" -lm
+    log_info "CPU V0 binary built successfully: $CPU_V0_BINARY"
+}
+
 build_cpu() {
-    log_info "Building CPU binary: $CPU_BINARY from $CPU_SOURCE"
+    log_info "Building CPU V1 (Spatial Reduction) binary: $CPU_BINARY from $CPU_SOURCE"
     
     if [ ! -f "$CPU_SOURCE" ]; then
         log_error "CPU source not found: $CPU_SOURCE"
@@ -92,6 +105,7 @@ build_gpu() {
 # Auto-build binaries before any phase
 build_all() {
     log_info "=== Building binaries ==="
+    build_v0
     build_cpu
     build_gpu
     log_info "=== Build complete ==="
@@ -110,9 +124,28 @@ count_diff_bytes() {
 compute_psnr() {
     local file1="$1"
     local file2="$2"
+    if [ ! -f "$file1" ] || [ ! -f "$file2" ]; then
+        echo "N/A"
+        return
+    fi
+    local diff=$(count_diff_bytes "$file1" "$file2")
+    if [ "$diff" -eq 0 ]; then
+        echo "inf (bit-exact)"
+        return
+    fi
     if command -v ffmpeg &> /dev/null; then
-        ffmpeg -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file1" \
+        local psnr_val=$(ffmpeg -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file1" \
                -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file2" \
+               -lavfi psnr -f null - 2>&1 | grep "average" | tail -1 | sed 's/.*average://' | awk '{print $1}')
+        if [ -n "$psnr_val" ]; then
+            echo "$psnr_val"
+        else
+            echo "N/A"
+        fi
+    else
+        echo "N/A"
+    fi
+}
                -lavfi psnr -f null - 2>&1 | grep "average" | tail -1 | sed 's/.*average://' | awk '{print $1}'
     else
         echo "N/A"
@@ -221,22 +254,16 @@ phase1_validate() {
 
 # ===================== PHASE 3: PERFORMANCE SCALING & GRID SEARCH =====================
 phase3_benchmark() {
-    log_info "=== Phase 3: Performance scaling & GPU Grid Search ==="
+    log_info "=== Phase 3: Performance scaling (V0 Naive CPU vs V1 Spatial CPU vs V2 GPU) ==="
     
     if [ ! -f "$GROUND_TRUTH" ]; then
         log_error "$GROUND_TRUTH not found. Run --phase0 first."
         exit 1
     fi
     
-    if [ ! -f "$CPU_BINARY" ]; then
-        log_info "CPU binary not found, building..."
-        build_cpu
-    fi
-    
-    if [ ! -f "$GPU_BINARY" ]; then
-        log_info "GPU binary not found, building..."
-        build_gpu
-    fi
+    build_v0
+    build_cpu
+    build_gpu
     
     echo "run_id,variant,threads,device,block_x,block_y,threads_reduce,wall_ms_mean,wall_ms_sd,cpu_l17_ms,h2d_ms,gpu_l8_ms,d2h_ms,diff_bytes,total_bytes,pct_diff,psnr_db,peak_rss_kb,vram_kb" > "$CSV_FILE"
     
@@ -249,50 +276,67 @@ phase3_benchmark() {
         awk 'BEGIN {sum=0; sq=0; n=0} {val=$1; sum+=val; sq+=val*val; n++} END {if (n>0) {m=sum/n; sd=(n>1 && (sq-(sum*sum)/n)>0)?sqrt((sq-(sum*sum)/n)/(n-1)):0; printf "%.2f,%.2f", m, sd} else {printf "0.00,0.00"}}'
     }
     
-    # CPU configurations (testing 1, 2, 4, 8, 10 P-cores, 16, 20 P+E cores)
+    # --- V0 CPU Naive OpenMP configurations ---
+    if [ -f "$CPU_V0_BINARY" ]; then
+        for threads in 1 2 4 8 10 16 20; do
+            log_info "--- CPU V0 (Naive) with $threads threads ($TOTAL_REPS runs) ---"
+            export OMP_NUM_THREADS=$threads
+            local run_times=()
+            for r in $(seq 1 $TOTAL_REPS); do
+                local wall=$(run_and_time "CPU-V0-${threads}t [run $r/$TOTAL_REPS]" "$CPU_V0_BINARY $INPUT_YUV $OUTPUT_V0")
+                if [ "$r" -gt 1 ]; then
+                    run_times+=("$wall")
+                fi
+            done
+            local stats=$(printf "%s\n" "${run_times[@]}" | calc_stats)
+            local mean_ms=$(echo "$stats" | cut -d',' -f1)
+            local sd_ms=$(echo "$stats" | cut -d',' -f2)
+            
+            if [ "$threads" -eq 1 ] && [ -z "$baseline_mean" ]; then
+                baseline_mean="$mean_ms"
+            fi
+            
+            local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_V0")
+            local total=$(get_file_size "$OUTPUT_V0")
+            local pct_diff=0
+            if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
+            local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_V0")
+            
+            echo "$run_id,CPU-V0,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,N/A,0" >> "$CSV_FILE"
+            run_id=$((run_id + 1))
+        done
+    fi
+    
+    # --- V1 CPU Spatial Reduction configurations ---
     for threads in 1 2 4 8 10 16 20; do
-        log_info "--- CPU with $threads threads ($TOTAL_REPS runs: 1 warmup + 6 measured) ---"
-        
+        log_info "--- CPU V1 (Spatial) with $threads threads ($TOTAL_REPS runs) ---"
         export OMP_NUM_THREADS=$threads
-        
         local run_times=()
         for r in $(seq 1 $TOTAL_REPS); do
-            local wall=$(run_and_time "CPU-${threads}t [run $r/$TOTAL_REPS]" "$CPU_BINARY $INPUT_YUV $OUTPUT_CPU")
+            local wall=$(run_and_time "CPU-V1-${threads}t [run $r/$TOTAL_REPS]" "$CPU_BINARY $INPUT_YUV $OUTPUT_CPU")
             if [ "$r" -gt 1 ]; then
                 run_times+=("$wall")
             fi
         done
-        
         local stats=$(printf "%s\n" "${run_times[@]}" | calc_stats)
         local mean_ms=$(echo "$stats" | cut -d',' -f1)
         local sd_ms=$(echo "$stats" | cut -d',' -f2)
         
-        if [ "$threads" -eq 1 ]; then
+        if [ "$threads" -eq 1 ] && [ -z "$baseline_mean" ]; then
             baseline_mean="$mean_ms"
         fi
         
         local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_CPU")
         local total=$(get_file_size "$OUTPUT_CPU")
         local pct_diff=0
-        if [ "$total" -gt 0 ]; then
-            pct_diff=$((diff * 100 / total))
-        fi
+        if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
         local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_CPU")
         
-        local peak_rss="N/A"
-        if command -v /usr/bin/time &> /dev/null; then
-            local time_output=$(/usr/bin/time -v "$CPU_BINARY" "$INPUT_YUV" "$OUTPUT_CPU" 2>&1 | grep "Maximum resident" | awk '{print $6}')
-            if [ -n "$time_output" ]; then
-                peak_rss="$time_output"
-            fi
-        fi
-        
-        echo "$run_id,CPU,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,$peak_rss,0" >> "$CSV_FILE"
+        echo "$run_id,CPU-V1,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,N/A,0" >> "$CSV_FILE"
         run_id=$((run_id + 1))
     done
     
-    # GPU Grid Search configurations (block_x block_y threads_reduce)
-    # Uses OpenMP for CPU Layers 1-7 (20 cores) + GPU Layer 8
+    # --- V2 GPU Grid Search configurations (block_x block_y threads_reduce) ---
     export OMP_NUM_THREADS=20
     local gpu_configs=(
         "16 16 256"
@@ -304,14 +348,14 @@ phase3_benchmark() {
     
     for cfg in "${gpu_configs[@]}"; do
         read bx by tr <<< "$cfg"
-        log_info "--- GPU (Block: ${bx}x${by}, Reduce: ${tr}) ---"
+        log_info "--- GPU V2 (Block: ${bx}x${by}, Reduce: ${tr}) ---"
         
         local run_times=()
         local last_prof=""
         
         for r in $(seq 1 $TOTAL_REPS); do
             local prof_log=$(mktemp)
-            local wall=$(run_and_time "GPU (${bx}x${by}_${tr}) [run $r/$TOTAL_REPS]" "$GPU_BINARY $INPUT_YUV $OUTPUT_GPU $bx $by $tr 2>$prof_log")
+            local wall=$(run_and_time "GPU-V2 (${bx}x${by}_${tr}) [run $r/$TOTAL_REPS]" "$GPU_BINARY $INPUT_YUV $OUTPUT_GPU $bx $by $tr 2>$prof_log")
             
             local prof_line=$(grep "\[PROFILING\]" "$prof_log" | tail -1 || true)
             rm -f "$prof_log"
@@ -339,27 +383,17 @@ phase3_benchmark() {
         local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_GPU")
         local total=$(get_file_size "$OUTPUT_GPU")
         local pct_diff=0
-        if [ "$total" -gt 0 ]; then
-            pct_diff=$((diff * 100 / total))
-        fi
+        if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
         local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_GPU")
         
-        local peak_rss="N/A"
-        if command -v nvidia-smi &> /dev/null; then
-            local mem_usage=$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits | head -1)
-            if [ -n "$mem_usage" ]; then
-                peak_rss=$(echo "$mem_usage" | cut -d',' -f1 | tr -d ' ')
-            fi
-        fi
-        
-        echo "$run_id,GPU,1,GPU,$bx,$by,$tr,$mean_ms,$sd_ms,$cpu_l17,$h2d,$gpu_l8,$d2h,$diff,$total,$pct_diff,$psnr,$peak_rss,$vram_kb" >> "$CSV_FILE"
+        echo "$run_id,GPU-V2,1,GPU,$bx,$by,$tr,$mean_ms,$sd_ms,$cpu_l17,$h2d,$gpu_l8,$d2h,$diff,$total,$pct_diff,$psnr,N/A,$vram_kb" >> "$CSV_FILE"
         run_id=$((run_id + 1))
     done
     
     # Print summary
-    log_info "=== Summary (Wall Time Mean ± SD over 6 measured runs) ==="
-    printf "%-8s %-12s %-16s %-10s %-12s\n" "Variant" "Config/Th" "Wall (ms)" "Speedup" "GPU L8 (ms)"
-    printf "%-8s %-12s %-16s %-10s %-12s\n" "-------" "---------" "----------------" "-------" "-----------"
+    log_info "=== Summary (Wall Time Mean ± SD over 6 measured runs & PSNR) ==="
+    printf "%-9s %-12s %-16s %-9s %-16s %-12s\n" "Variant" "Config/Th" "Wall (ms)" "Speedup" "PSNR (dB)" "GPU L8 (ms)"
+    printf "%-9s %-12s %-16s %-9s %-16s %-12s\n" "---------" "---------" "----------------" "-------" "----------------" "-----------"
     
     while IFS=, read -r r_id variant threads device bx by tr mean_ms sd_ms cpu_l17 h2d gpu_l8 d2h diff_b total_b pct_d psnr_db rss_kb vram_k; do
         if [ "$r_id" = "run_id" ]; then
@@ -368,7 +402,7 @@ phase3_benchmark() {
         
         local cfg_label="$threads t"
         local gpu_l8_display="N/A"
-        if [ "$variant" = "GPU" ]; then
+        if [ "$variant" = "GPU-V2" ]; then
             cfg_label="${bx}x${by}_${tr}"
             if [ -n "$gpu_l8" ] && [ "$gpu_l8" != "N/A" ]; then
                 gpu_l8_display="${gpu_l8} ms"
@@ -381,7 +415,7 @@ phase3_benchmark() {
             speedup=$(awk "BEGIN {printf \"%.2fx\", $baseline_mean / $mean_ms}")
         fi
         
-        printf "%-8s %-12s %-16s %-10s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$gpu_l8_display"
+        printf "%-9s %-12s %-16s %-9s %-16s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$psnr_db" "$gpu_l8_display"
     done < "$CSV_FILE"
     
     log_info "Detailed results saved to $CSV_FILE"
