@@ -59,7 +59,17 @@ double Min(double a, double b);
 void imadd(double *img_fltr_sum, double *img_fltr_crnt, int cols, int rows);
 void deconv(double *img_input, double *img_output, double *kernel, int cols, int rows, int stride);
 void double_2_uint8(double *double_img, unsigned char *uint8_img, int cols, int rows);
-void print_cuda_device_info(void);
+inline void print_cuda_device_info(void) {
+    int device = 0;
+    if (cudaGetDevice(&device) == cudaSuccess) {
+        cudaDeviceProp prop;
+        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess) {
+            printf("[GPU] Device %d: %s (Compute %d.%d, %.2f GB VRAM)\n",
+                   device, prop.name, prop.major, prop.minor,
+                   (double)prop.totalGlobalMem / (1024.0 * 1024.0 * 1024.0));
+        }
+    }
+}
 
 // CUDA error checking
 #define CHECK_CUDA(call) \
@@ -408,7 +418,7 @@ void double_2_uint8(double *double_img, unsigned char *uint8_img, int cols, int 
 // FSRCNN main function (CPU Layers 1-7, GPU Layer 8)
 // ============================================================================
 void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
-    int num_layers = 8;
+    (void)scale; // mark used if needed
     
     // Layer 1
     int filtersize = 25;
@@ -601,7 +611,6 @@ int main(int argc, char *argv[]) {
     print_cuda_device_info();
     
     // Read weights (same as CPU version)
-    FILE *fp;
     // Read weights (identical to CPU version)
     FILE *weights_layer1_ptr;
     weights_layer1_ptr = fopen("weights_layer1.txt", "r");

@@ -19,7 +19,7 @@ nvcc --version | grep "release"
 echo ""
 
 # Compile both .cu files together
-echo "Compiling fsrcnn_gpu.cu + fsrcnn_gpu_main.cu..."
+echo "Compiling fsrcnn_gpu_main.cu..."
 nvcc \
     -arch=sm_90 \
     -O3 \
@@ -32,7 +32,6 @@ nvcc \
     -D__SVBool_t=void* \
     -Xcompiler -fno-tree-vectorize \
     -o fsrcnn_gpu \
-    fsrcnn_gpu.cu \
     fsrcnn_gpu_main.cu \
     -lm \
     -lcudart
