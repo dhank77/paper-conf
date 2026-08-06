@@ -2,11 +2,9 @@
 // Layers 1-7 run on CPU, Layer 8 runs on GPU (ASUS GX10 / GB10)
 // Compile with: nvcc -arch=sm_90 -O3 -o fsrcnn_gpu fsrcnn_gpu_main.cu -lm
 
-#if defined(__ARM_NEON)
-#undef __ARM_NEON
-#endif
-#if defined(__ARM_SVE)
-#undef __ARM_SVE
+// Bypass glibc bits/math-vector.h ARM SVE/NEON vector math declarations for NVCC on ARM64
+#ifndef _BITS_MATH_VECTOR_H
+#define _BITS_MATH_VECTOR_H 1
 #endif
 
 #include <stdio.h>

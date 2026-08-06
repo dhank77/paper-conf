@@ -85,7 +85,7 @@ build_gpu() {
         exit 1
     fi
     
-    nvcc -arch=sm_90 -O3 -std=c++11 -Xcompiler -fno-tree-vectorize -Xcompiler -U__ARM_NEON -Xcompiler -U__ARM_SVE -o "$GPU_BINARY" fsrcnn_gpu.cu fsrcnn_gpu_main.cu -lm -lcudart
+    nvcc -arch=sm_90 -O3 -std=c++11 -D_BITS_MATH_VECTOR_H -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu.cu fsrcnn_gpu_main.cu -lm -lcudart
     log_info "GPU binary ready: $GPU_BINARY"
 }
 
