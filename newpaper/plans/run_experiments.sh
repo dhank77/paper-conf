@@ -147,6 +147,32 @@ compute_psnr() {
     fi
 }
 
+compute_ssim() {
+    local file1="$1"
+    local file2="$2"
+    if [ ! -f "$file1" ] || [ ! -f "$file2" ]; then
+        echo "N/A"
+        return
+    fi
+    local diff=$(count_diff_bytes "$file1" "$file2")
+    if [ "$diff" -eq 0 ]; then
+        echo "1.000000"
+        return
+    fi
+    if command -v ffmpeg &> /dev/null; then
+        local ssim_val=$(ffmpeg -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file1" \
+               -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file2" \
+               -lavfi ssim -f null - 2>&1 | grep "All:" | tail -1 | sed 's/.*All://' | awk '{print $1}')
+        if [ -n "$ssim_val" ]; then
+            echo "$ssim_val"
+        else
+            echo "N/A"
+        fi
+    else
+        echo "N/A"
+    fi
+}
+
 get_file_size() {
     stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo "0"
 }
@@ -260,7 +286,7 @@ phase3_benchmark() {
     build_cpu
     build_gpu
     
-    echo "run_id,variant,threads,device,block_x,block_y,threads_reduce,wall_ms_mean,wall_ms_sd,cpu_l17_ms,h2d_ms,gpu_l8_ms,d2h_ms,diff_bytes,total_bytes,pct_diff,psnr_db,peak_rss_kb,vram_kb" > "$CSV_FILE"
+    echo "run_id,variant,threads,device,block_x,block_y,threads_reduce,wall_ms_mean,wall_ms_sd,cpu_l17_ms,h2d_ms,gpu_l8_ms,d2h_ms,diff_bytes,total_bytes,pct_diff,psnr_db,ssim,peak_rss_kb,vram_kb" > "$CSV_FILE"
     
     local run_id=1
     local baseline_mean=""
@@ -296,8 +322,9 @@ phase3_benchmark() {
             local pct_diff=0
             if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
             local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_V0")
+            local ssim=$(compute_ssim "$GROUND_TRUTH" "$OUTPUT_V0")
             
-            echo "$run_id,CPU-V0,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,N/A,0" >> "$CSV_FILE"
+            echo "$run_id,CPU-V0,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,$ssim,N/A,0" >> "$CSV_FILE"
             run_id=$((run_id + 1))
         done
     fi
@@ -326,8 +353,9 @@ phase3_benchmark() {
         local pct_diff=0
         if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
         local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_CPU")
+        local ssim=$(compute_ssim "$GROUND_TRUTH" "$OUTPUT_CPU")
         
-        echo "$run_id,CPU-V1,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,N/A,0" >> "$CSV_FILE"
+        echo "$run_id,CPU-V1,$threads,CPU,N/A,N/A,N/A,$mean_ms,$sd_ms,N/A,N/A,N/A,N/A,$diff,$total,$pct_diff,$psnr,$ssim,N/A,0" >> "$CSV_FILE"
         run_id=$((run_id + 1))
     done
     
@@ -380,17 +408,18 @@ phase3_benchmark() {
         local pct_diff=0
         if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
         local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_GPU")
+        local ssim=$(compute_ssim "$GROUND_TRUTH" "$OUTPUT_GPU")
         
-        echo "$run_id,GPU-V2,1,GPU,$bx,$by,$tr,$mean_ms,$sd_ms,$cpu_l17,$h2d,$gpu_l8,$d2h,$diff,$total,$pct_diff,$psnr,N/A,$vram_kb" >> "$CSV_FILE"
+        echo "$run_id,GPU-V2,1,GPU,$bx,$by,$tr,$mean_ms,$sd_ms,$cpu_l17,$h2d,$gpu_l8,$d2h,$diff,$total,$pct_diff,$psnr,$ssim,N/A,$vram_kb" >> "$CSV_FILE"
         run_id=$((run_id + 1))
     done
     
     # Print summary
-    log_info "=== Summary (Wall Time Mean ± SD over 6 measured runs & PSNR) ==="
-    printf "%-9s %-12s %-16s %-9s %-16s %-12s\n" "Variant" "Config/Th" "Wall (ms)" "Speedup" "PSNR (dB)" "GPU L8 (ms)"
-    printf "%-9s %-12s %-16s %-9s %-16s %-12s\n" "---------" "---------" "----------------" "-------" "----------------" "-----------"
+    log_info "=== Summary (Wall Time Mean ± SD over 6 measured runs, PSNR & SSIM) ==="
+    printf "%-9s %-12s %-16s %-9s %-16s %-10s %-12s\n" "Variant" "Config/Th" "Wall (ms)" "Speedup" "PSNR (dB)" "SSIM" "GPU L8 (ms)"
+    printf "%-9s %-12s %-16s %-9s %-16s %-10s %-12s\n" "---------" "---------" "----------------" "-------" "----------------" "----------" "-----------"
     
-    while IFS=, read -r r_id variant threads device bx by tr mean_ms sd_ms cpu_l17 h2d gpu_l8 d2h diff_b total_b pct_d psnr_db rss_kb vram_k; do
+    while IFS=, read -r r_id variant threads device bx by tr mean_ms sd_ms cpu_l17 h2d gpu_l8 d2h diff_b total_b pct_d psnr_db ssim_val rss_kb vram_k; do
         if [ "$r_id" = "run_id" ]; then
             continue
         fi
@@ -410,7 +439,7 @@ phase3_benchmark() {
             speedup=$(awk "BEGIN {printf \"%.2fx\", $baseline_mean / $mean_ms}")
         fi
         
-        printf "%-9s %-12s %-16s %-9s %-16s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$psnr_db" "$gpu_l8_display"
+        printf "%-9s %-12s %-16s %-9s %-16s %-10s %-12s\n" "$variant" "$cfg_label" "$wall_str" "$speedup" "$psnr_db" "$ssim_val" "$gpu_l8_display"
     done < "$CSV_FILE"
     
     log_info "Detailed results saved to $CSV_FILE"

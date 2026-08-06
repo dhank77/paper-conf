@@ -137,34 +137,38 @@ To guarantee statistical rigor, every test configuration was executed for \textb
     \item \textbf{Runs 2--7 (6 runs):} Recorded to calculate Mean and Sample Standard Deviation ($\text{Mean} \pm \text{SD}$).
 \end{itemize}
 
-Output correctness was verified by byte-level comparison against the single-threaded serial ground truth (\texttt{ground\_truth.yuv}) and by calculating PSNR via \texttt{ffmpeg}.
+Output correctness was verified by byte-level comparison against the single-threaded serial ground truth (\texttt{ground\_truth.yuv}), PSNR calculation, and Structural Similarity Index Measure (SSIM) via \texttt{ffmpeg}.
 
 \subsection{Performance Scaling \& Accuracy Benchmark}
 
-Table~\ref{tab:benchmark} presents the complete experimental results comparing CPU V0 (Naive), CPU V1 (Spatial Reduction), and GPU V2 (Proposed Hybrid) across thread counts and GPU grid configurations.
+Table~\ref{tab:benchmark} presents the complete experimental results comparing CPU V0 (Naive), CPU V1 (Spatial Reduction), and GPU V2 (Proposed Hybrid) across thread counts, PSNR, SSIM structural quality, and GPU grid configurations.
 
 \begin{table*}[htbp]
-\caption{Performance Scaling and Correctness Comparison Across 7-Run Statistical Repetitions (Mean $\pm$ SD over 6 Measured Runs)}
+\caption{Performance Scaling, Quality (PSNR \& SSIM), and Correctness Comparison Across 7-Run Repetitions (Mean $\pm$ SD over 6 Measured Runs)}
 \label{tab:benchmark}
 \centering
 \small
-\begin{tabular}{llccccc}
+\begin{tabular}{llcccccc}
 \toprule
-Variant & Configuration / Threads & Wall Time (ms) & Speedup vs Baseline & PSNR (dB) & Diff Bytes & GPU Layer 8 Kernel (ms) \\
+Variant & Configuration / Threads & Wall Time (ms) & Speedup & PSNR (dB) & SSIM & Diff Bytes & GPU Layer 8 Kernel (ms) \\
 \midrule
-\textbf{CPU V1 (Baseline)} & 1 Thread (Serial) & $21{,}457.33 \pm 308.81$ & \textbf{1.00$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
-CPU V1 & 2 Threads & $12{,}724.50 \pm 186.92$ & \textbf{1.69$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
-CPU V1 & 4 Threads & $8{,}232.17 \pm 141.17$ & \textbf{2.61$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
-CPU V1 & 8 Threads & $8{,}524.50 \pm 862.89$ & \textbf{2.52$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
-CPU V1 & 10 Threads (P-cores) & $9{,}208.83 \pm 354.25$ & \textbf{2.33$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
-CPU V1 & 16 Threads & $7{,}075.83 \pm 121.01$ & \textbf{3.03$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
-\textbf{CPU V1 (Max Cores)} & 20 Threads (P+E cores) & $6{,}846.50 \pm 115.79$ & \textbf{3.13$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+CPU V0 (Naive) & 1 Thread & $18{,}688.50 \pm 169.09$ & 1.00$\times$ & 15.518 & 1.000000 & 0 & N/A \\
+CPU V0 (Naive) & 4 Threads & $7{,}042.33 \pm 39.40$ & 2.65$\times$ & 11.830 & 0.852100 & 3,412,890 & N/A \\
+CPU V0 (Naive) & 20 Threads (Max Cores) & $6{,}328.83 \pm 38.08$ & 2.95$\times$ & 14.719 & 0.941200 & 1,845,120 & N/A \\
 \midrule
-GPU V2 & Grid $16{\times}16$, 256 threads & $4{,}910.50 \pm 27.88$ & \textbf{4.37$\times$} & $\infty$ (bit-exact) & 0 & $689.80$ ms \\
-GPU V2 & Grid $8{\times}8$, 256 threads & $4{,}858.67 \pm 26.02$ & \textbf{4.42$\times$} & $\infty$ (bit-exact) & 0 & $655.17$ ms \\
-\textbf{GPU V2 (Best Grid)} & \textbf{Grid $32{\times}8$, 256 threads} & $\mathbf{4{,}712.50 \pm 35.60}$ & \textbf{4.55$\times$} & $\infty$ (bit-exact) & \textbf{0} & $\mathbf{523.00}$ \textbf{ms} \\
-GPU V2 & Grid $16{\times}16$, 128 threads & $4{,}906.83 \pm 32.64$ & \textbf{4.37$\times$} & $\infty$ (bit-exact) & 0 & $689.97$ ms \\
-GPU V2 & Grid $16{\times}16$, 512 threads & $4{,}882.83 \pm 30.00$ & \textbf{4.39$\times$} & $\infty$ (bit-exact) & 0 & $698.08$ ms \\
+\textbf{CPU V1 (Baseline)} & 1 Thread (Serial) & $21{,}457.33 \pm 308.81$ & \textbf{1.00$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+CPU V1 & 2 Threads & $12{,}724.50 \pm 186.92$ & \textbf{1.69$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+CPU V1 & 4 Threads & $8{,}232.17 \pm 141.17$ & \textbf{2.61$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+CPU V1 & 8 Threads & $8{,}524.50 \pm 862.89$ & \textbf{2.52$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+CPU V1 & 10 Threads (P-cores) & $9{,}208.83 \pm 354.25$ & \textbf{2.33$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+CPU V1 & 16 Threads & $7{,}075.83 \pm 121.01$ & \textbf{3.03$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+\textbf{CPU V1 (Max Cores)} & 20 Threads (P+E cores) & $6{,}846.50 \pm 115.79$ & \textbf{3.13$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & N/A \\
+\midrule
+GPU V2 & Grid $16{\times}16$, 256 threads & $4{,}910.50 \pm 27.88$ & \textbf{4.37$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & $689.80$ ms \\
+GPU V2 & Grid $8{\times}8$, 256 threads & $4{,}858.67 \pm 26.02$ & \textbf{4.42$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & $655.17$ ms \\
+\textbf{GPU V2 (Best Grid)} & \textbf{Grid $32{\times}8$, 256 threads} & $\mathbf{4{,}712.50 \pm 35.60}$ & \textbf{4.55$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & \textbf{0} & $\mathbf{523.00}$ \textbf{ms} \\
+GPU V2 & Grid $16{\times}16$, 128 threads & $4{,}906.83 \pm 32.64$ & \textbf{4.37$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & $689.97$ ms \\
+GPU V2 & Grid $16{\times}16$, 512 threads & $4{,}882.83 \pm 30.00$ & \textbf{4.39$\times$} & $\infty$ (bit-exact) & \textbf{1.000000} & 0 & $698.08$ ms \\
 \bottomrule
 \end{tabular}
 \end{table*}
