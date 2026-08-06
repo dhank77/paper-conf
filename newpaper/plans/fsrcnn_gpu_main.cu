@@ -109,15 +109,16 @@ __global__ void deconv_kernel(
             int i_candidate = tmp_y - kr;
             int j_candidate = tmp_x - kc;
             
-            if (i_candidate >= 0 && i_candidate < rows_pad &&
-                j_candidate >= 0 && j_candidate < cols_pad &&
+            if (i_candidate >= 0 && j_candidate >= 0 &&
                 i_candidate % stride == 0 && j_candidate % stride == 0) {
                 
                 int i = i_candidate / stride;
                 int j = j_candidate / stride;
-                int in_idx = i * cols_pad + j;
-                int k_idx = kr * fsize + kc;
-                sum += d_input_padded[in_idx] * d_kernel[k_idx];
+                if (i < rows_pad && j < cols_pad) {
+                    int in_idx = i * cols_pad + j;
+                    int k_idx = kr * fsize + kc;
+                    sum += d_input_padded[in_idx] * d_kernel[k_idx];
+                }
             }
         }
     }
@@ -203,10 +204,10 @@ void FSRCNN_Layer8_GPU(double* img_hr, double* img_fltr_7, int rows, int cols, i
     
     CHECK_CUDA(cudaMalloc(&d_input_padded, rows_pad * cols_pad * sizeof(double)));
     CHECK_CUDA(cudaMalloc(&d_all_tmp, num_channels8 * hr_pixels * sizeof(double)));
-    CHECK_CUDA(cudaMalloc(&d_kernel8, filtersize8 * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_kernel8, num_channels8 * filtersize8 * sizeof(double)));
     CHECK_CUDA(cudaMalloc(&d_img_hr, hr_pixels * sizeof(double)));
     
-    CHECK_CUDA(cudaMemcpy(d_kernel8, weights_layer8, filtersize8 * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_kernel8, weights_layer8, num_channels8 * filtersize8 * sizeof(double), cudaMemcpyHostToDevice));
     
     dim3 block_deconv(16, 16);
     dim3 grid_deconv((cols_out + block_deconv.x - 1) / block_deconv.x,
@@ -224,7 +225,7 @@ void FSRCNN_Layer8_GPU(double* img_hr, double* img_fltr_7, int rows, int cols, i
         deconv_kernel<<<grid_deconv, block_deconv>>>(
             d_input_padded,
             d_all_tmp + j * hr_pixels,
-            d_kernel8,
+            d_kernel8 + j * filtersize8,
             rows_pad, cols_pad,
             rows_out, cols_out,
             scale, border, fsize

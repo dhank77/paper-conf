@@ -50,15 +50,16 @@ __global__ void deconv_kernel(
             int i_candidate = tmp_y - kr;
             int j_candidate = tmp_x - kc;
 
-            if (i_candidate >= 0 && i_candidate < rows_pad &&
-                j_candidate >= 0 && j_candidate < cols_pad &&
+            if (i_candidate >= 0 && j_candidate >= 0 &&
                 i_candidate % stride == 0 && j_candidate % stride == 0) {
 
                 int i = i_candidate / stride;
                 int j = j_candidate / stride;
-                int in_idx = i * cols_pad + j;
-                int k_idx = kr * fsize + kc;
-                sum += d_input_padded[in_idx] * d_kernel[k_idx];
+                if (i < rows_pad && j < cols_pad) {
+                    int in_idx = i * cols_pad + j;
+                    int k_idx = kr * fsize + kc;
+                    sum += d_input_padded[in_idx] * d_kernel[k_idx];
+                }
             }
         }
     }
