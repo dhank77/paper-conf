@@ -12,7 +12,7 @@
 #   ./run_experiments.sh --build     # Build binaries only, no execution
 #
 # Prerequisites:
-#   - suzie.yuv, weights_layer*.txt, biasess_layer*.txt in current directory
+#   - suzie_qcif.yuv, weights_layer*.txt, biasess_layer*.txt in current directory
 #   - gcc with OpenMP support
 #   - CUDA toolkit with nvcc (for GPU build)
 #   - ffmpeg (for PSNR calculation)
@@ -30,7 +30,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-INPUT_YUV="suzie.yuv"
+INPUT_YUV="suzie_qcif.yuv"
 GROUND_TRUTH="ground_truth.yuv"
 CPU_SOURCE="fsrcnn_parallel_spatial_reduction.c"
 CPU_BINARY="./fsrcnn_cpu"
@@ -404,7 +404,7 @@ usage() {
     echo "  $0 --benchmark               # Run performance comparison"
     echo ""
     echo "Input files required in current directory:"
-    echo "  - suzie.yuv"
+    echo "  - suzie_qcif.yuv"
     echo "  - weights_layer1.txt .. weights_layer8.txt"
     echo "  - biasess_layer1.txt .. biasess_layer8.txt"
 }
