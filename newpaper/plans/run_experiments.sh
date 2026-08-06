@@ -128,17 +128,17 @@ run_and_time() {
     shift
     local cmd="$@"
     
-    log_info "Running $label..."
+    log_info "Running $label..." >&2
     local start=$(date +%s%N)
-    eval "$cmd"
+    eval "$cmd" >&2
     local status=$?
     local end=$(date +%s%N)
     
     local wall_ms=$(( (end - start) / 1000000 ))
-    echo "    Wall time: ${wall_ms} ms"
+    echo "    Wall time: ${wall_ms} ms" >&2
     
     if [ $status -ne 0 ]; then
-        log_error "Command failed: $cmd"
+        log_error "Command failed: $cmd" >&2
         return 1
     fi
     
