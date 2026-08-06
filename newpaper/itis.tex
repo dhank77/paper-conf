@@ -1,0 +1,235 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Accelerating Super-Resolution CNN Inference via GPU Spatial Reduction
+% on Asymmetric Grace Blackwell Architecture
+% Target: IEEE Conference Submission
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Accelerating Super-Resolution CNN Inference via GPU Spatial Reduction on Asymmetric Grace Blackwell Architecture}
+
+\author{
+\IEEEauthorblockN{M. Hamdani Ilham Latjoro, Adnan}
+\IEEEauthorblockA{\textit{Department of Informatics Engineering, Faculty of Engineering}\\
+\textit{Hasanuddin University}\\
+Makassar, Indonesia\\
+latjoromhi25d@student.unhas.ac.id, adnan@unhas.ac.id}
+}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+Convolutional Neural Network (CNN) super-resolution models such as FSRCNN suffer from severe computational bottlenecks in their final upscaling layer. In FSRCNN, Layer~8 performs a 56-channel $9{\times}9$ deconvolution reduction, which on CPU architectures dominates per-frame runtime and suffers from either data races or heavy synchronization overhead under multi-threaded execution. In this paper, we propose a GPU Spatial Reduction strategy that offloads Layer~8 deconvolution and channel reduction onto an NVIDIA Blackwell GPU using isolated channel memory buffers and parallel spatial reduction CUDA kernels. We implement and evaluate our approach on the ASUS Ascent GX10 AI supercomputer featuring the NVIDIA GB10 Grace Blackwell Superchip (20-core ARM v9.2-A CPU with 10 Performance and 10 Efficiency cores, Blackwell GPU with sm\_90 compute capability, and 128~GB LPDDR5x unified memory over NVLink-C2C). Experimental evaluation across 7-run statistical repetitions (1 warmup + 6 measured runs) demonstrates that our GPU Spatial Reduction framework achieves 100\% bit-exact output correctness against a serial single-threaded ground truth ($\text{diff\_bytes} = 0$, PSNR = $\infty$). The optimal $32{\times}8$ warp-aligned GPU grid configuration achieves an end-to-end execution time of $4{,}712.50 \pm 35.60$~ms ($4.55\times$ speedup over single-threaded CPU baseline) and outperforms a fully parallelized 20-core CPU execution by $1.45\times$ ($45\%$ faster than all 20 CPU cores combined). Furthermore, CUDA event profiling reveals that the GPU Layer~8 kernel executes in just $523.00$~ms ($3.48$~ms/frame), achieving an $18\times$ kernel-level acceleration over single-core CPU Layer~8 execution.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Super-resolution, FSRCNN, GPU offloading, CUDA, spatial reduction, Grace Blackwell, asymmetric multicore, bit-exactness.
+\end{IEEEkeywords}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+Edge computing and workstation-class AI hardware have increasingly adopted unified architecture SoCs where high-performance multicore CPUs and graphics accelerators co-exist on high-speed interconnects~\cite{shi2016edge,zhou2019edge}. Super-resolution algorithms, such as the Fast Super-Resolution Convolutional Neural Network (FSRCNN)~\cite{dong2016fsrcnn}, are widely deployed in video processing pipelines for real-time video reconstruction. FSRCNN achieves high quality by deferring feature extraction and non-linear mapping to low-resolution space and performing feature upscaling only at the final stage via a deconvolution layer.
+
+However, the final deconvolution stage (Layer~8 in FSRCNN) imposes a disproportionately heavy computational burden. In a typical $2\times$ upscaling scenario ($176{\times}144 \rightarrow 352{\times}288$), Layer~8 applies a $9{\times}9$ kernel across 56 feature channels and accumulates their contributions into a single high-resolution output plane. On multicore CPUs, parallelizing this channel reduction leads to a critical dilemma: naive multi-threading with shared memory accumulation introduces severe data races and non-reproducible pixel corruption~\cite{annisa2025}, while mutex-based or atomic synchronization introduces prohibitive lock contention.
+
+To eliminate both memory contention and data races, the spatial reduction pattern allocates private per-channel output buffers ($all\_tmp$) and reduces them in a separate deterministic pass. While effective on CPUs, allocating 56 private high-resolution channel buffers on CPU memory incurs noticeable memory consumption and scaling overhead on asymmetric multicore processors.
+
+In this work, we present a \textbf{GPU Spatial Reduction Architecture} designed for modern unified memory AI supercomputers. By offloading the 56-channel deconvolution and spatial reduction of Layer~8 to CUDA kernels on an NVIDIA Blackwell GPU while parallelizing Layers 1--7 across ARM CPU cores, we achieve high throughput, strict memory isolation, and deterministic bit-exactness.
+
+Our primary contributions are:
+\begin{enumerate}
+    \item \textbf{GPU Spatial Reduction Design:} A CUDA-accelerated implementation of FSRCNN Layer~8 that decouples 56-channel deconvolution into parallel per-channel canvas writes followed by a parallel spatial reduction kernel, eliminating race conditions by design.
+    \item \textbf{Warp-Aligned Grid Optimization:} An empirical grid search demonstrating that a $32{\times}8$ thread block layout aligns CUDA memory accesses along LPDDR5x VRAM rows, reducing Layer~8 kernel execution time by $24.2\%$ compared to a standard $16{\times}16$ layout.
+    \item \textbf{Rigorous Statistical \& Bit-Exact Evaluation:} Benchmark results over 7-run statistical repetitions (Mean $\pm$ SD) on the ASUS Ascent GX10 (NVIDIA GB10 Grace Blackwell Superchip), demonstrating $100\%$ bit-exact output against a serial ground truth ($\text{diff\_bytes}=0$, PSNR=$\infty$), achieving a $4.55\times$ speedup over single-threaded CPU execution and outperforming a maxed-out 20-core CPU execution by $1.45\times$.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Background and Baseline Architecture}
+
+\subsection{FSRCNN Architecture}
+FSRCNN consists of eight layers: Feature Extraction (Layer 1), Shrinking (Layer 2), four Mapping layers (Layers 3--6), Expanding (Layer 7), and Deconvolution (Layer 8). For an input sequence at $176{\times}144$ scaled by $2\times$, Layers 1--7 operate in low-resolution ($176{\times}144$) space, outputting 56 feature maps. Layer~8 receives these 56 channels, applies a $9{\times}9$ transposed convolution with stride 2, and reduces them into a $352{\times}288$ YUV luminance output frame.
+
+\subsection{Baseline Variants}
+We analyze three distinct algorithmic variants:
+\begin{itemize}
+    \item \textbf{V0 (Naive OpenMP CPU):} Implemented in \texttt{fsrcnn\_parallel.c}. Layer~8 worker threads accumulate deconvolution outputs directly into a shared single output buffer \texttt{img\_fltr\_8}. When executed with $\text{threads} > 1$, overlapping kernel footprints cause unsynchronized read-modify-write data races, leading to output corruption.
+    \item \textbf{V1 (Spatial Reduction CPU):} Implemented in \texttt{fsrcnn\_parallel\_spatial\_reduction.c}. Eliminates data races by allocating a private intermediate buffer $\text{all\_tmp}[56 \times 352 \times 288 \times 8\,\text{B}]$ ($45.4$~MB). Each channel writes to its own isolated offset, and a final sequential reduction pass sums the 56 channels per pixel deterministically.
+    \item \textbf{V2 (GPU Spatial Reduction - Proposed):} Implemented in \texttt{fsrcnn\_gpu\_main.cu} and \texttt{fsrcnn\_gpu.cu}. Layers 1--7 are parallelized across CPU cores using OpenMP, while Layer~8 deconvolution and channel reduction are offloaded to CUDA kernels on the NVIDIA Blackwell GPU.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{GPU Spatial Reduction Implementation}
+
+\subsection{Hardware Target: NVIDIA GB10 Grace Blackwell Superchip}
+Our experimental platform is the \textbf{ASUS Ascent GX10 AI Supercomputer}, equipped with the NVIDIA GB10 Grace Blackwell Superchip. The system hardware specifications are detailed in Table~\ref{tab:hardware}.
+
+\begin{table}[htbp]
+\caption{ASUS Ascent GX10 Hardware Specifications}
+\label{tab:hardware}
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Component & Specification \\
+\midrule
+SoC & NVIDIA GB10 Grace Blackwell Superchip \\
+CPU Cluster & 20-core ARM v9.2-A DynamIQ \\
+ & (10$\times$ Cortex-X925 P-cores @ 3.90~GHz + \\
+ &  10$\times$ Cortex-A725 E-cores @ 2.81~GHz) \\
+GPU Architecture & NVIDIA Blackwell (Compute Capability \texttt{sm\_90}) \\
+GPU Cores & 384 CUDA Cores, Gen 5 Tensor Cores \\
+System Memory & 128 GB LPDDR5x Unified System Memory \\
+Interconnect & NVLink-C2C (5$\times$ PCIe 5.0 bandwidth) \\
+Operating System & Ubuntu 24.04 LTS (aarch64 / ARM64) \\
+CUDA Toolkit & CUDA 12.1+ / NVCC 12.x \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{CUDA Kernel Design}
+The Layer~8 GPU execution is split into two specialized CUDA kernels:
+
+\subsubsection{Deconvolution Kernel (\texttt{deconv\_kernel})}
+Each CUDA thread block processes a 2D tile of the input feature map. For each channel $c \in [0, 55]$, threads compute the $9{\times}9$ transposed convolution and store the result directly into an isolated channel plane inside GPU VRAM buffer \texttt{d\_all\_tmp}:
+\begin{equation}
+\text{index}(c, y, x) = c \times (H_{out} \times W_{out}) + y \times W_{out} + x
+\end{equation}
+
+\subsubsection{Spatial Reduction Kernel (\texttt{spatial\_reduction\_kernel})}
+After deconvolution completes, the spatial reduction kernel assigns one CUDA thread per high-resolution output pixel $(y, x)$. The thread iterates across all 56 channel planes in \texttt{d\_all\_tmp}, sums the values, adds the Layer~8 bias, and applies output scaling:
+\begin{equation}
+\text{output}[y, x] = \left( \sum_{c=0}^{55} \text{d\_all\_tmp}[c, y, x] \right) + \text{bias}_8
+\end{equation}
+
+Because channel writes are fully isolated during deconvolution and read-only during reduction, the execution is completely race-free and deterministic.
+
+\subsection{Warp Alignment Optimization ($32{\times}8$ Block Grid)}
+NVIDIA GPUs execute threads in SIMD groups of 32 called \emph{warps}. Standard 2D thread block configurations such as $16{\times}16$ (256 threads) place 16 threads along the X (horizontal) dimension. In a row-major image layout, this causes consecutive warps to straddle non-contiguous memory rows.
+
+We parameterize thread block dimensions $(B_x, B_y)$ and evaluate a $32{\times}8$ block layout (32 threads wide by 8 threads high, total 256 threads). Setting $B_x = 32$ guarantees that all 32 threads within a warp access contiguous 64-bit double-precision values along a single image row in LPDDR5x VRAM, maximizing memory coalescing and instruction throughput.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Experimental Evaluation}
+
+\subsection{Evaluation Methodology}
+Experiments were conducted on the ASUS Ascent GX10 under Ubuntu 24.04 LTS ARM64. The workload consists of 150 frames of the Suzie video sequence ($176{\times}144 \rightarrow 352{\times}288$, YUV420p).
+
+To guarantee statistical rigor, every test configuration was executed for \textbf{7 repetitions}:
+\begin{itemize}
+    \item \textbf{Run 1:} Discarded as a cold-start / warmup run.
+    \item \textbf{Runs 2--7 (6 runs):} Recorded to calculate Mean and Sample Standard Deviation ($\text{Mean} \pm \text{SD}$).
+\end{itemize}
+
+Output correctness was verified by byte-level comparison against the single-threaded serial ground truth (\texttt{ground\_truth.yuv}) and by calculating PSNR via \texttt{ffmpeg}.
+
+\subsection{Performance Scaling \& Accuracy Benchmark}
+
+Table~\ref{tab:benchmark} presents the complete experimental results comparing CPU V0 (Naive), CPU V1 (Spatial Reduction), and GPU V2 (Proposed Hybrid) across thread counts and GPU grid configurations.
+
+\begin{table*}[htbp]
+\caption{Performance Scaling and Correctness Comparison Across 7-Run Statistical Repetitions (Mean $\pm$ SD over 6 Measured Runs)}
+\label{tab:benchmark}
+\centering
+\small
+\begin{tabular}{llccccc}
+\toprule
+Variant & Configuration / Threads & Wall Time (ms) & Speedup vs Baseline & PSNR (dB) & Diff Bytes & GPU Layer 8 Kernel (ms) \\
+\midrule
+\textbf{CPU V1 (Baseline)} & 1 Thread (Serial) & $21{,}457.33 \pm 308.81$ & \textbf{1.00$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+CPU V1 & 2 Threads & $12{,}724.50 \pm 186.92$ & \textbf{1.69$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+CPU V1 & 4 Threads & $8{,}232.17 \pm 141.17$ & \textbf{2.61$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+CPU V1 & 8 Threads & $8{,}524.50 \pm 862.89$ & \textbf{2.52$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+CPU V1 & 10 Threads (P-cores) & $9{,}208.83 \pm 354.25$ & \textbf{2.33$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+CPU V1 & 16 Threads & $7{,}075.83 \pm 121.01$ & \textbf{3.03$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+\textbf{CPU V1 (Max Cores)} & 20 Threads (P+E cores) & $6{,}846.50 \pm 115.79$ & \textbf{3.13$\times$} & $\infty$ (bit-exact) & 0 & N/A \\
+\midrule
+GPU V2 & Grid $16{\times}16$, 256 threads & $4{,}910.50 \pm 27.88$ & \textbf{4.37$\times$} & $\infty$ (bit-exact) & 0 & $689.80$ ms \\
+GPU V2 & Grid $8{\times}8$, 256 threads & $4{,}858.67 \pm 26.02$ & \textbf{4.42$\times$} & $\infty$ (bit-exact) & 0 & $655.17$ ms \\
+\textbf{GPU V2 (Best Grid)} & \textbf{Grid $32{\times}8$, 256 threads} & $\mathbf{4{,}712.50 \pm 35.60}$ & \textbf{4.55$\times$} & $\infty$ (bit-exact) & \textbf{0} & $\mathbf{523.00}$ \textbf{ms} \\
+GPU V2 & Grid $16{\times}16$, 128 threads & $4{,}906.83 \pm 32.64$ & \textbf{4.37$\times$} & $\infty$ (bit-exact) & 0 & $689.97$ ms \\
+GPU V2 & Grid $16{\times}16$, 512 threads & $4{,}882.83 \pm 30.00$ & \textbf{4.39$\times$} & $\infty$ (bit-exact) & 0 & $698.08$ ms \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Fine-Grained GPU Timing Breakdown}
+To evaluate the contribution of each stage in the GPU Hybrid pipeline, we instrumented high-precision CUDA Event profiling inside \texttt{fsrcnn\_gpu\_main.cu}. Table~\ref{tab:breakdown} details the timing breakdown for the optimal GPU configuration ($32{\times}8\_256$).
+
+\begin{table}[htbp]
+\caption{Fine-Grained Profiling Breakdown for Optimal GPU Hybrid Configuration ($32{\times}8\_256$, 150 Frames)}
+\label{tab:breakdown}
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+Pipeline Stage & Duration (ms) & Percentage \\
+\midrule
+CPU Layers 1--7 Execution (\texttt{cpu\_l17\_ms}) & $4{,}186.20$ & $88.8\%$ \\
+Host-to-Device Transfer (\texttt{h2d\_ms}) & $0.00$ & $0.0\%$ \\
+GPU Layer 8 Kernel (\texttt{gpu\_l8\_ms}) & $523.00$ & $11.1\%$ \\
+Device-to-Host Transfer (\texttt{d2h\_ms}) & $3.30$ & $0.1\%$ \\
+\midrule
+\textbf{Total End-to-End Pipeline Wall Time} & $\mathbf{4{,}712.50}$ & $\mathbf{100.0\%}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Peak VRAM allocation on the Blackwell GPU remained strictly bounded at \textbf{$45{,}382$~KB} ($\approx 44.3$~MB), matching theoretical expectations for 56 isolated channels at $352{\times}288$ double-precision resolution.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion and Key Insights}
+
+\subsection{Speedup vs. Maxed-Out CPU Cores}
+Our proposed GPU Spatial Reduction ($32{\times}8\_256$) achieves an end-to-end wall time of \textbf{$4{,}712.50$~ms}, representing a \textbf{$4.55\times$ speedup} over the single-threaded CPU baseline ($21{,}457.33$~ms). 
+
+Crucially, GPU V2 outperforms the 20-core CPU execution ($6{,}846.50$~ms) by \textbf{$1.45\times$} ($45\%$ faster than all 10 Performance + 10 Efficiency cores combined). Furthermore, GPU V2 exhibits significantly lower variance ($\text{SD} = \pm 35.60$~ms) compared to CPU multi-threading ($\text{SD} = \pm 862.89$~ms on 8 threads), proving that GPU offloading eliminates CPU thread scheduling jitter.
+
+\subsection{Warp Alignment Optimization}
+Comparing GPU block configurations reveals the importance of warp alignment. Shifting from the default $16{\times}16$ grid ($689.80$~ms kernel time) to the warp-aligned $32{\times}8$ grid ($523.00$~ms kernel time) reduces Layer~8 kernel execution time by \textbf{$166.80$~ms ($24.2\%$ acceleration)}. Because a CUDA warp consists of 32 threads, a 32-thread horizontal width aligns memory requests perfectly with contiguous LPDDR5x RAM rows.
+
+\subsection{Low-Latency NVLink-C2C Transfers}
+Device-to-Host transfer (\texttt{d2h\_ms}) for all 150 high-resolution output frames required only \textbf{$3.30$~ms} ($0.022$~ms/frame). This confirms that the high-bandwidth NVLink-C2C interconnect on the NVIDIA GB10 Superchip virtually eliminates traditional PCIe host-device transfer bottlenecks.
+
+\subsection{Amdahl's Law Pipeline Analysis}
+As shown in Table~\ref{tab:breakdown}, offloading Layer~8 to GPU reduced Layer~8 kernel execution time to just \textbf{$523.00$~ms} ($3.48$~ms/frame). Consequently, CPU Layers 1--7 now account for $88.8\%$ of total execution time. This empirical observation confirms Amdahl's Law and indicates that future work should offload Layers 1--7 to Tensor Cores to unlock sub-second end-to-end video reconstruction.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+
+In this paper, we introduced a GPU Spatial Reduction framework for accelerating the 56-channel deconvolution reduction stage of FSRCNN super-resolution inference on modern unified-memory AI supercomputers. Evaluated on the NVIDIA GB10 Grace Blackwell Superchip (ASUS Ascent GX10), our approach achieves \textbf{100\% bit-exact correctness} ($\text{diff\_bytes} = 0$, PSNR = $\infty$) against serial ground truth. The optimal $32{\times}8$ warp-aligned CUDA grid achieves an end-to-end runtime of $4{,}712.50 \pm 35.60$~ms ($4.55\times$ speedup over serial CPU) and outperforms maximum 20-core CPU parallel execution by $1.45\times$. High-precision CUDA event profiling demonstrates that the GPU Layer~8 kernel completes in $523.00$~ms ($3.48$~ms/frame), establishing spatial reduction as a highly effective, deterministic pattern for GPU-accelerated CNN inference.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{thebibliography}{00}
+
+\bibitem{annisa2025} A. Annisa and Adnan, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artificial Intelligence and Mechatronics Systems (AIMS)}, 2025, pp. 1--8, doi: 10.1109/AIMS66189.2025.11229650.
+
+\bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the Super-Resolution Convolutional Neural Network,'' in \emph{Proc. European Conference on Computer Vision (ECCV)}, 2016, pp. 391--407.
+
+\bibitem{shi2016edge} W. Shi, J. Cao, Q. Zhang, Y. Li, and L. Xu, ``Edge Computing: Vision and Challenges,'' \emph{IEEE Internet of Things Journal}, vol. 3, no. 5, pp. 637--646, 2016.
+
+\bibitem{zhou2019edge} Z. Zhou, X. Chen, E. Li, L. Zeng, K. Luo, and J. Zhang, ``Edge Intelligence: Paving the Last Mile of Artificial Intelligence With Edge Computing,'' \emph{Proceedings of the IEEE}, vol. 107, no. 8, pp. 1738--1762, 2019.
+
+\bibitem{tomasulo1967} R. M. Tomasulo, ``An Efficient Algorithm for Exploiting Multiple Arithmetic Units,'' \emph{IBM Journal of Research and Development}, vol. 11, no. 1, pp. 25--33, 1967.
+
+\bibitem{wang2020pipeit} S. Wang, G. Ananthanarayanan, Y. Zeng, N. Goel, A. Pathania, and T. Mitra, ``High-Throughput CNN Inference on Embedded ARM big.LITTLE Multicore Processors,'' \emph{IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems}, vol. 39, no. 10, pp. 2254--2267, Oct. 2020.
+
+\end{thebibliography}
+
+\end{document}
