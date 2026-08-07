@@ -45,35 +45,40 @@ for i in 1 2 3 4 5 6 7 8; do
     done
 done
 
-# ---- 3. Build GPU binary (winning-config run only, no grid sweep needed) ----
+# ---- 3. Build GPU binary from source, always fresh ----
+# Never reuse a pre-existing ./fsrcnn_gpu: this repo's plans/ directory is
+# shared/synced across machines with different architectures, and a stale
+# binary built elsewhere will fail with "Exec format error" (or worse,
+# silently be the wrong build). Rebuilding is a few seconds; a silent
+# arch mismatch would invalidate the whole comparison.
+echo "Building fsrcnn_gpu from source (forcing fresh build)..."
+rm -f ./fsrcnn_gpu
+if [ -x ./compile_gpu.sh ]; then
+    ./compile_gpu.sh
+else
+    nvcc -arch=native -O3 -std=c++11 -Xcompiler -fopenmp \
+        -o fsrcnn_gpu fsrcnn_gpu_main.cu -lm -lcudart
+fi
 if [ ! -x ./fsrcnn_gpu ]; then
-    echo "Building fsrcnn_gpu..."
-    if [ -x ./compile_gpu.sh ]; then
-        ./compile_gpu.sh
-    else
-        nvcc -arch=native -O3 -std=c++11 -Xcompiler -fopenmp \
-            -o fsrcnn_gpu fsrcnn_gpu_main.cu -lm -lcudart
-    fi
-else
-    echo "fsrcnn_gpu already built, reusing existing binary."
+    echo "ERROR: fsrcnn_gpu build failed."
+    exit 1
 fi
+file ./fsrcnn_gpu 2>/dev/null || true
 
-# ---- 4. Build CPU V1 (race-free) binary for the in-platform reference ----
+# ---- 4. Build CPU V1 (race-free) binary from source, always fresh ----
+echo "Building CPU V1 reference binary from source (forcing fresh build)..."
+rm -f ./fsrcnn_cpu_v1_ref
+gcc -fopenmp -O3 -o fsrcnn_cpu_v1_ref fsrcnn_parallel_spatial_reduction.c -lm
 if [ ! -x ./fsrcnn_cpu_v1_ref ]; then
-    echo "Building CPU V1 reference binary..."
-    gcc -fopenmp -O3 -o fsrcnn_cpu_v1_ref fsrcnn_parallel_spatial_reduction.c -lm
-else
-    echo "fsrcnn_cpu_v1_ref already built, reusing existing binary."
+    echo "ERROR: fsrcnn_cpu_v1_ref build failed."
+    exit 1
 fi
 
-# ---- 5. Generate (or reuse) the in-platform deterministic reference ----
+# ---- 5. Generate the in-platform deterministic reference, always fresh ----
 REF_FILE="${TAG}_reference.yuv"
-if [ ! -f "$REF_FILE" ]; then
-    echo "Generating in-platform reference ($REF_FILE)..."
-    OMP_NUM_THREADS=1 ./fsrcnn_cpu_v1_ref suzie_qcif.yuv "$REF_FILE"
-else
-    echo "Reusing existing $REF_FILE"
-fi
+echo "Generating in-platform reference ($REF_FILE), forcing fresh regeneration..."
+rm -f "$REF_FILE"
+OMP_NUM_THREADS=1 ./fsrcnn_cpu_v1_ref suzie_qcif.yuv "$REF_FILE"
 
 # ---- 6. Run GPU V2 with the winning grid config (32x8, reduce=256) ----
 OUT_FILE="${TAG}_v2_output.yuv"
