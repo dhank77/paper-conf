@@ -180,7 +180,7 @@ compute_psnr() {
     if command -v ffmpeg &> /dev/null; then
         local psnr_val=$(ffmpeg -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file1" \
                -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file2" \
-               -lavfi psnr -f null - 2>&1 | grep "average" | tail -1 | sed 's/.*average://' | awk '{print $1}')
+               -lavfi psnr -f null - 2>&1 | grep -i "average" | tail -1 | sed -E 's/.*average: *([0-9\.]+).*/\1/')
         if [ -n "$psnr_val" ]; then
             echo "$psnr_val"
         else
@@ -206,7 +206,7 @@ compute_ssim() {
     if command -v ffmpeg &> /dev/null; then
         local ssim_val=$(ffmpeg -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file1" \
                -s "${OUTPUT_W}x${OUTPUT_H}" -pix_fmt yuv420p -i "$file2" \
-               -lavfi ssim -f null - 2>&1 | grep "All:" | tail -1 | sed 's/.*All://' | awk '{print $1}')
+               -lavfi ssim -f null - 2>&1 | grep -i "All:" | tail -1 | sed -E 's/.*All: *([0-9\.]+).*/\1/')
         if [ -n "$ssim_val" ]; then
             echo "$ssim_val"
         else
@@ -422,14 +422,18 @@ phase3_benchmark() {
         
         for r in $(seq 1 $TOTAL_REPS); do
             local prof_log=$(mktemp)
-            local wall=$(run_and_time "GPU-V2 (${bx}x${by}_${tr}) [run $r/$TOTAL_REPS]" "$GPU_BINARY $INPUT_YUV $OUTPUT_GPU $bx $by $tr 2>$prof_log")
-            
-            local prof_line=$(grep "\[PROFILING\]" "$prof_log" | tail -1 || true)
-            rm -f "$prof_log"
-            
-            if [ "$r" -gt 1 ]; then
-                run_times+=("$wall")
-                last_prof="$prof_line"
+            local wall=""
+            if wall=$(run_and_time "GPU-V2 (${bx}x${by}_${tr}) [run $r/$TOTAL_REPS]" "$GPU_BINARY $INPUT_YUV $OUTPUT_GPU $bx $by $tr 2>$prof_log"); then
+                local prof_line=$(grep "\[PROFILING\]" "$prof_log" | tail -1 || true)
+                rm -f "$prof_log"
+                if [ "$r" -gt 1 ]; then
+                    run_times+=("$wall")
+                    last_prof="$prof_line"
+                fi
+            else
+                log_error "GPU-V2 execution error output:"
+                cat "$prof_log" >&2
+                rm -f "$prof_log"
             fi
         done
         
