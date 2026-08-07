@@ -98,6 +98,22 @@ papers.
 
 ---
 
+lengkapnya
+APUNet: Revitalizing GPU
+as Packet Processing Accelerator
+Younghwan Go, Muhammad Asim Jamshed, YoungGyoun Moon, Changho Hwang,
+and KyoungSoo Park, Korea Advanced Institute of Science and Technology (KAIST)
+https://www.usenix.org/conference/nsdi17/technical-sessions/presentation/go
+This paper is included in the Proceedings of the
+14th USENIX Symposium on Networked Systems
+Design and Implementation (NSDI ’17).
+March 27–29, 2017 • Boston, MA, USA
+ISBN 978-1-931971-37-9
+Open access to the Proceedings of the
+14th USENIX Symposium on Networked
+Systems Design and Implementation
+is sponsored by USENIX.
+
 ## 5. APUNet (discrete-GPU PCIe/DMA overhead)
 
 **Cite key:** `go2017apunet`
@@ -350,6 +366,11 @@ for the general unified-vs-discrete-memory architectural point, not as
 NVIDIA-specific evidence. Worth double-checking the surrounding sentence
 in the paper doesn't imply otherwise.
 
+**UPDATE:** Per your note, this is now published at IISWC 2025 (IEEE DOI
+10.1109/IISWC66894.2025.00038), not just an arXiv preprint. itis.tex's
+bibitem is updated to cite the published IISWC 2025 venue instead of the
+arXiv-only version.
+
 Lengkapnya:
 Dynamic Warp Resizing in High-Performance SIMT
 Ahmad Lashgar, Amirali Baniasadi, Ahmad Khonsari
@@ -427,3 +448,21 @@ each yourself before final submission.
 Two bibliography entries were already present and already unused before
 I touched this file: `tomasulo1967` and `wang2020pipeit`. Not something I
 added — flagging in case you want them cited somewhere or removed.
+
+## Fixes applied from your manual verification pass
+
+- `annisa2025`: you found the real paper has **three** authors (Annisa,
+  Adnan, Zahir Zainuddin) — itis.tex was missing the third author. Fixed
+  in both the bibliography entry and the in-text mention (now "Annisa et
+  al." instead of "Annisa and Adnan").
+- `wahlgren2025upm`: you found this is now published at IISWC 2025 with a
+  real IEEE DOI, not just an arXiv preprint — bibitem updated to cite the
+  published venue (see note above).
+- `intelhybrid2021`: removed per your earlier note (inaccessible).
+- Everything else you marked `#aman` / confirmed with full source text
+  (bilbao2023pmcsched, eichenberger2012ompaffinity, nvidiacudaguide,
+  go2017apunet, wang2004ssim, dong2014srcnn, amdahl1967,
+  serebryany2009threadsanitizer, williams2009roofline, chetlur2014cudnn,
+  dumoulin2016convolution, nvidiagb10_2025, armdynamiq, nvidiaada2022,
+  nvidiagracehopper2022, lashgar2012warpresize) matched what's already in
+  itis.tex — no changes needed for those.

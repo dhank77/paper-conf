@@ -61,7 +61,7 @@ We offload this deconvolution and spatial reduction to CUDA kernels on an NVIDIA
 \section{Background and Baseline Architecture}
 
 \subsection{Related Work}
-CNN super-resolution progressed from early formulations~\cite{dong2014srcnn} to FSRCNN~\cite{dong2016fsrcnn}, increasingly deployed on heterogeneous CPU+GPU SoCs~\cite{shi2016edge,zhou2019edge}. Closest to ours, Annisa and Adnan~\cite{annisa2025} address FSRCNN Layer~8's data-race dilemma entirely on the CPU via the privatize-then-reduce pattern we adopt as V1; our contribution is orthogonal — moving that pattern to the GPU changes its cost profile qualitatively while staying bit-exact with the CPU reference. CNN inference on ARM big.LITTLE clusters scales well under proper scheduling~\cite{wang2020pipeit}, supporting our GB10 CPU baseline as non-trivial (Section~\ref{sec:gb10-speedup}). General-purpose libraries like cuDNN~\cite{chetlur2014cudnn} target convolution broadly but not this specific race-free layout (Section~III-B); we do not claim to outperform them, only to control the memory layout. Discrete-GPU PCIe transfer overhead is well documented~\cite{go2017apunet}, motivating our unified-vs-discrete memory comparison (Section~\ref{sec:rtx4090}); recent work characterizes unified physical memory for CPU-GPU accelerators directly~\cite{wahlgren2025upm}. Our RTX 4090 thread-scheduling collapse (Section~\ref{sec:rtx4090}) relates to prior work on asymmetric-CPU scheduling~\cite{bilbao2023pmcsched,eichenberger2012ompaffinity} — our contribution is an empirical observation, not a new mechanism.
+CNN super-resolution progressed from early formulations~\cite{dong2014srcnn} to FSRCNN~\cite{dong2016fsrcnn}, increasingly deployed on heterogeneous CPU+GPU SoCs~\cite{shi2016edge,zhou2019edge}. Closest to ours, Annisa et al.~\cite{annisa2025} address FSRCNN Layer~8's data-race dilemma entirely on the CPU via the privatize-then-reduce pattern we adopt as V1; our contribution is orthogonal — moving that pattern to the GPU changes its cost profile qualitatively while staying bit-exact with the CPU reference. CNN inference on ARM big.LITTLE clusters scales well under proper scheduling~\cite{wang2020pipeit}, supporting our GB10 CPU baseline as non-trivial (Section~\ref{sec:gb10-speedup}). General-purpose libraries like cuDNN~\cite{chetlur2014cudnn} target convolution broadly but not this specific race-free layout (Section~III-B); we do not claim to outperform them, only to control the memory layout. Discrete-GPU PCIe transfer overhead is well documented~\cite{go2017apunet}, motivating our unified-vs-discrete memory comparison (Section~\ref{sec:rtx4090}); recent work characterizes unified physical memory for CPU-GPU accelerators directly~\cite{wahlgren2025upm}. Our RTX 4090 thread-scheduling collapse (Section~\ref{sec:rtx4090}) relates to prior work on asymmetric-CPU scheduling~\cite{bilbao2023pmcsched,eichenberger2012ompaffinity} — our contribution is an empirical observation, not a new mechanism.
 
 \subsection{FSRCNN Architecture}
 FSRCNN consists of eight layers: Feature Extraction (Layer 1), Shrinking (Layer 2), four Mapping layers (Layers 3--6), Expanding (Layer 7), and Deconvolution (Layer 8). For an input sequence at $176{\times}144$ scaled by $2\times$, Layers 1--7 operate in low-resolution ($176{\times}144$) space, outputting 56 feature maps. Layer~8 receives these 56 channels, applies a $9{\times}9$ transposed convolution~\cite{dumoulin2016convolution} with stride 2, and reduces them into a $352{\times}288$ YUV luminance output frame.
@@ -311,7 +311,7 @@ In this paper, we introduced a GPU Spatial Reduction framework for accelerating 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{thebibliography}{00}
 
-\bibitem{annisa2025} A. Annisa and Adnan, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artificial Intelligence and Mechatronics Systems (AIMS)}, 2025, pp. 1--8, doi: 10.1109/AIMS66189.2025.11229650.
+\bibitem{annisa2025} Annisa, Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artificial Intelligence and Mechatronics Systems (AIMS)}, 2025, pp. 1--8, doi: 10.1109/AIMS66189.2025.11229650.
 
 \bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the Super-Resolution Convolutional Neural Network,'' in \emph{Proc. European Conference on Computer Vision (ECCV)}, 2016, pp. 391--407.
 
@@ -351,9 +351,9 @@ In this paper, we introduced a GPU Spatial Reduction framework for accelerating 
 
 \bibitem{nvidiagracehopper2022} NVIDIA Corporation, ``NVIDIA Grace Hopper Superchip Architecture In-Depth,'' NVIDIA Developer Technical Blog, Nov. 2022. [Online]. Available: https://developer.nvidia.com/blog/nvidia-grace-hopper-superchip-architecture-in-depth/.
 
-\bibitem{wahlgren2025upm} J. Wahlgren, G. Schieffer, R. Shi, E. A. Le\'on, R. Pearce, M. Gokhale, and I. Peng, ``Dissecting CPU-GPU Unified Physical Memory on AMD MI300A APUs,'' arXiv:2508.12743, 2025.
+\bibitem{wahlgren2025upm} J. Wahlgren, G. Schieffer, R. Shi, E. A. Le\'on, R. Pearce, M. Gokhale, and I. Peng, ``Dissecting CPU-GPU Unified Physical Memory on AMD MI300A APUs,'' in \emph{Proc. IEEE Int. Symp. Workload Characterization (IISWC)}, 2025, doi: 10.1109/IISWC66894.2025.00038.
 
-\bibitem{lashgar2012warpresize} A. Lashgar, A. Baniasadi, and A. Khonsari, ``Dynamic Warp Resizing in High-Performance SIMT,'' arXiv:1208.2374, 2012.
+\bibitem{lashgar2012warpresize} A. Lashgar, A. Baniasadi, and A. Khonsari, ``Dynamic Warp Resizing in High-Performance SIMT,'' arXiv:1208.2374, 2012, doi: 10.48550/arXiv.1208.2374.
 
 \end{thebibliography}
 
