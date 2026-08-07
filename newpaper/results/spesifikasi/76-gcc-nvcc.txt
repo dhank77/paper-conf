@@ -1,0 +1,16 @@
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# gcc --version
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# 
+
+
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# nvcc --version
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Wed_Jul_16_07:30:01_PM_PDT_2025
+Cuda compilation tools, release 13.0, V13.0.48
+Build cuda_13.0.r13.0/compiler.36260728_0
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# 
