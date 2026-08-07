@@ -50,10 +50,17 @@ CSV_FILE="raw_results.csv"
 
 # Thread sweep and GPU backdrop are platform-dependent (core topology differs
 # across GX10 / RTX4090 desktop / Jetson). Override via env var, e.g.:
-#   THREAD_LADDER="1 2 4 8 16 24 32" GPU_BACKDROP_THREADS=4 bash run_experiments.sh --phase3
-# Defaults below match the GX10 (20 physical cores, no SMT).
+#   THREAD_LADDER="1 2 4 8 16 24 32" GPU_BACKDROP_THREADS=4 bash run_experiments.sh --benchmark
 THREAD_LADDER="${THREAD_LADDER:-1 2 4 8 10 16 20}"
-GPU_BACKDROP_THREADS="${GPU_BACKDROP_THREADS:-20}"
+
+# Auto-detect GPU backdrop threads: Intel x86_64 P-cores (4t/8t) vs ARM64 GX10 (20t)
+if [ -z "$GPU_BACKDROP_THREADS" ]; then
+    if [ "$(uname -m)" = "x86_64" ]; then
+        GPU_BACKDROP_THREADS=4
+    else
+        GPU_BACKDROP_THREADS=20
+    fi
+fi
 
 # Video parameters (CIF, scale=2)
 WIDTH=176
