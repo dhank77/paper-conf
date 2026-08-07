@@ -27,8 +27,13 @@ if [ "${1:-}" = "--build" ] || [ "${1:-}" = "build-only" ]; then
 fi
 
 # ===================== KONFIGURASI =====================
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+# Auto-set Tegra CUDA library paths for Jetson Orin non-root execution
+if [ -d "/usr/lib/aarch64-linux-gnu/tegra" ]; then
+    export LD_LIBRARY_PATH="/usr/lib/aarch64-linux-gnu/tegra:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
+fi
+if [ -d "/usr/local/cuda/bin" ]; then
+    export PATH="/usr/local/cuda/bin:${PATH}"
+fi
 
 INPUT_YUV="suzie_qcif.yuv"
 GROUND_TRUTH="ground_truth.yuv"

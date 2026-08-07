@@ -13,6 +13,14 @@ if ! command -v nvcc &> /dev/null; then
     exit 1
 fi
 
+# Check and set CUDA & Jetson Tegra library paths automatically
+if [ -d "/usr/lib/aarch64-linux-gnu/tegra" ]; then
+    export LD_LIBRARY_PATH="/usr/lib/aarch64-linux-gnu/tegra:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
+fi
+if [ -d "/usr/local/cuda/bin" ]; then
+    export PATH="/usr/local/cuda/bin:${PATH}"
+fi
+
 echo "nvcc version:"
 nvcc --version | grep "release"
 echo ""
