@@ -110,12 +110,39 @@ build_gpu() {
         arm_flags="-D_BITS_MATH_VECTOR_H -D__Float32x4_t=void* -D__Float64x2_t=void* -D__SVFloat32_t=void* -D__SVFloat64_t=void* -D__SVBool_t=void*"
     fi
     
+    local compiled=0
+    
+    # Step 1: Try -arch=native
     if nvcc -arch=native $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart 2>/dev/null; then
         log_info "GPU binary ready (-arch=native): $GPU_BINARY"
-    else
-        log_info "Compiling with multi-arch fallback..."
-        nvcc -gencode arch=compute_87,code=sm_87 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_90,code=sm_90 $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart
-        log_info "GPU binary ready (multi-arch): $GPU_BINARY"
+        compiled=1
+    fi
+    
+    # Step 2: Try compute cap from nvidia-smi
+    if [ "$compiled" -eq 0 ] && command -v nvidia-smi &>/dev/null; then
+        local cap=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '.' || true)
+        if [ -n "$cap" ]; then
+            if nvcc -arch="sm_$cap" $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart 2>/dev/null; then
+                log_info "GPU binary ready (-arch=sm_$cap): $GPU_BINARY"
+                compiled=1
+            fi
+        fi
+    fi
+    
+    # Step 3: Loop through common architectures
+    if [ "$compiled" -eq 0 ]; then
+        for arch in sm_87 sm_89 sm_90 sm_80 sm_75 sm_70 sm_61 sm_53; do
+            if nvcc -arch="$arch" $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart 2>/dev/null; then
+                log_info "GPU binary ready (-arch=$arch): $GPU_BINARY"
+                compiled=1
+                break
+            fi
+        done
+    fi
+    
+    if [ "$compiled" -eq 0 ]; then
+        log_error "Failed to compile CUDA binary with any architecture option."
+        exit 1
     fi
 }
 

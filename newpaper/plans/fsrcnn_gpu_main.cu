@@ -774,7 +774,16 @@ int main(int argc, char *argv[]) {
     double *outBuf_tmp = (double *)malloc(outCols*outRows*sizeof(double));
     
     FILE *inFp = fopen(inFile, "rb");
+    if (inFp == NULL) {
+        fprintf(stderr, "Error opening input file: %s\n", inFile);
+        return 1;
+    }
     FILE *outFp = fopen(outFile, "wb");
+    if (outFp == NULL) {
+        fprintf(stderr, "Error opening output file: %s\n", outFile);
+        fclose(inFp);
+        return 1;
+    }
     
     for (int fcnt = 0; fcnt < num; fcnt++) {
         unsigned char *inP = inBuf;
