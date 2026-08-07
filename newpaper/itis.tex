@@ -96,8 +96,9 @@ GPU & NVIDIA Blackwell, \texttt{sm\_121} & NVIDIA Ada Lovelace, \texttt{sm\_89} 
 GPU Cores & 6{,}144 CUDA, 48 SMs, Gen5 Tensor & --- \\
 Memory & 128~GB LPDDR5x, \emph{unified} & 63~GB DDR + 24~GB GDDR6X, \emph{discrete} \\
 Interconnect & NVLink-C2C (5$\times$ PCIe 5.0) & PCIe (CPU $\leftrightarrow$ GPU) \\
-CUDA & 13.0, NVCC \texttt{-arch=sm\_121} & 13.0, Driver 580.65.06, \texttt{sm\_89} \\
-OS & Ubuntu 24.04 LTS (aarch64) & --- \\
+CUDA & 12.0, NVCC \texttt{V12.0.140} & 13.0, Driver 580.65.06, \texttt{V13.0.48} \\
+GCC & 13.3.0 (Ubuntu 24.04) & 13.3.0 (Ubuntu 24.04) \\
+OS & Ubuntu 24.04 LTS (aarch64) & Ubuntu 24.04 LTS (x86\_64) \\
 \bottomrule
 \end{tabular}%
 }
@@ -128,7 +129,7 @@ Experiments were conducted on the ASUS Ascent GX10 under Ubuntu 24.04 LTS ARM64.
 
 To guarantee statistical rigor, every configuration was executed for 7 repetitions: run 1 discarded as cold-start/warmup, runs 2--7 (6 runs) recorded as Mean $\pm$ SD.
 
-\emph{Reproducibility:} CPU binaries are compiled with \texttt{gcc -fopenmp -O3} (no \texttt{-march=native}/\texttt{-ffast-math}); parallel loops use plain \texttt{\#pragma omp parallel for} with no explicit \texttt{schedule()}, so thread placement follows the OpenMP runtime's default (GNU \texttt{libgomp}: static). The GPU binary is compiled with \texttt{nvcc -O3 -std=c++11 -arch=native} (\texttt{sm\_121} on GB10, \texttt{sm\_89} on RTX 4090). CUDA Toolkit 13.0 was used on both platforms (Table~\ref{tab:hardware}); exact GCC/NVCC point releases were not logged.
+\emph{Reproducibility:} CPU binaries are compiled with \texttt{gcc -fopenmp -O3} (no \texttt{-march=native}/\texttt{-ffast-math}); parallel loops use plain \texttt{\#pragma omp parallel for} with no explicit \texttt{schedule()}, so thread placement follows the OpenMP runtime's default (GNU \texttt{libgomp}: static). The GPU binary is compiled with \texttt{nvcc -O3 -std=c++11 -arch=native} (\texttt{sm\_121} on GB10, \texttt{sm\_89} on RTX 4090). GCC 13.3.0 (Ubuntu 24.04) was used on both platforms, but the CUDA toolkits differ: NVCC release 12.0, V12.0.140 on the GB10 vs. release 13.0, V13.0.48 on the RTX 4090 (Table~\ref{tab:hardware}).
 
 Correctness was assessed two ways: a direct byte comparison (\texttt{cmp -l}) between V1 and V2 output ($\text{diff\_bytes}=0$ across all grid configurations), and scoring against \texttt{ground\_truth.yuv} via byte diff, PSNR, and SSIM~\cite{wang2004ssim} (\texttt{ffmpeg}). V1 and V2 are bit-exact against ground truth at every configuration tested, on both platforms ($\text{PSNR}=\infty$, $\text{SSIM}=1.0$; Tables~\ref{tab:benchmark}, \ref{tab:rtx-benchmark}). V0, in contrast, shows real, non-monotonic degradation from its data race, dropping as low as $13.8$~dB/$0.518$ (GB10, 4 threads) and $23.0$~dB/$0.845$ (RTX 4090, 32 threads). Fig.~\ref{fig:correctness} shows this directly (ground truth, V1, V2 visually identical; V0 shows clear scanline corruption from unsynchronized writes to \texttt{img\_fltr\_8}). On both platforms V0 is bit-exact only while genuinely single-threaded, then drops sharply once concurrent writes begin, with no consistent recovery as thread count rises further (Tables~\ref{tab:benchmark}, \ref{tab:rtx-benchmark}).
 
