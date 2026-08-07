@@ -31,7 +31,7 @@ grep -c "cudaMemcpy" fsrcnn_gpu_main.cu || echo "  0 cudaMemcpy calls"
 
 echo ""
 echo "Checking compilation flags in compile_gpu.sh..."
-grep "sm_90" compile_gpu.sh || echo "  WARNING: sm_90 not found in compile script"
+grep -E "native|sm_90|compute_" compile_gpu.sh || echo "  WARNING: arch flags not found in compile script"
 
 echo ""
 echo "=== Verification complete ==="

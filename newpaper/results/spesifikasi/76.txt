@@ -1,0 +1,87 @@
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ l
+sync-pilot/
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ git clone https://github.com/dhank77/paper-conf.git
+fatal: could not create work tree dir 'paper-conf': Permission denied
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ git clone https://github.com/dhank77/paper-conf.git
+fatal: could not create work tree dir 'paper-conf': Permission denied
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ nvidia-smi
+Fri Aug  7 11:52:21 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.65.06              Driver Version: 580.65.06      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        On  |   00000000:01:00.0  On |                  Off |
+|  0%   34C    P8             13W /  450W |     127MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            2201      G   /usr/lib/xorg/Xorg                       67MiB |
+|    0   N/A  N/A            2652      G   /usr/bin/gnome-shell                     29MiB |
++-----------------------------------------------------------------------------------------+
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ lspci | grep -i nvidia
+0000:01:00.0 VGA compatible controller: NVIDIA Corporation AD102 [GeForce RTX 4090] (rev a1)
+0000:01:00.1 Audio device: NVIDIA Corporation AD102 High Definition Audio Controller (rev a1)
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ lscpu
+Architecture:                x86_64
+  CPU op-mode(s):            32-bit, 64-bit
+  Address sizes:             46 bits physical, 48 bits virtual
+  Byte Order:                Little Endian
+CPU(s):                      32
+  On-line CPU(s) list:       0-31
+Vendor ID:                   GenuineIntel
+  Model name:                Intel(R) Core(TM) i9-14900K
+    CPU family:              6
+    Model:                   183
+    Thread(s) per core:      2
+    Core(s) per socket:      24
+    Socket(s):               1
+    Stepping:                1
+    CPU(s) scaling MHz:      16%
+    CPU max MHz:             6000.0000
+    CPU min MHz:             800.0000
+    BogoMIPS:                6374.40
+    Flags:                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm co
+                             nstant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx es
+                             t tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid
+                             _fault ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap 
+                             clflushopt clwb intel_pt sha_ni xsaveopt xsavec xgetbv1 xsaves split_lock_detect user_shstk avx_vnni dtherm ida arat pln pts hwp hwp_notify hwp_act_win
+                             dow hwp_epp hwp_pkg_req hfi vnmi umip pku ospke waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear serialize pconfig arch_lbr ibt flush
+                             _l1d arch_capabilities
+Virtualization features:     
+  Virtualization:            VT-x
+Caches (sum of all):         
+  L1d:                       896 KiB (24 instances)
+  L1i:                       1.3 MiB (24 instances)
+  L2:                        32 MiB (12 instances)
+  L3:                        36 MiB (1 instance)
+NUMA:                        
+  NUMA node(s):              1
+  NUMA node0 CPU(s):         0-31
+Vulnerabilities:             
+  Gather data sampling:      Not affected
+  Ghostwrite:                Not affected
+  Indirect target selection: Not affected
+  Itlb multihit:             Not affected
+  L1tf:                      Not affected
+  Mds:                       Not affected
+  Meltdown:                  Not affected
+  Mmio stale data:           Not affected
+  Reg file data sampling:    Vulnerable: No microcode
+  Retbleed:                  Not affected
+  Spec rstack overflow:      Not affected
+  Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+  Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+  Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S
+  Srbds:                     Not affected
+  Tsa:                       Not affected
+  Tsx async abort:           Not affected
+  Vmscape:                   Mitigation; IBPB before exit to userspace
+lab-iot@lab-iot-MS-7E06:~/FSRCNN$ 

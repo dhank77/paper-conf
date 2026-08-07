@@ -98,8 +98,18 @@ build_gpu() {
         exit 1
     fi
     
-    nvcc -arch=sm_90 -O3 -std=c++11 -D_BITS_MATH_VECTOR_H -D__Float32x4_t=void* -D__Float64x2_t=void* -D__SVFloat32_t=void* -D__SVFloat64_t=void* -D__SVBool_t=void* -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart
-    log_info "GPU binary ready: $GPU_BINARY"
+    local arm_flags=""
+    if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
+        arm_flags="-D_BITS_MATH_VECTOR_H -D__Float32x4_t=void* -D__Float64x2_t=void* -D__SVFloat32_t=void* -D__SVFloat64_t=void* -D__SVBool_t=void*"
+    fi
+    
+    if nvcc -arch=native $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart 2>/dev/null; then
+        log_info "GPU binary ready (-arch=native): $GPU_BINARY"
+    else
+        log_info "Compiling with multi-arch fallback..."
+        nvcc -gencode arch=compute_87,code=sm_87 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_90,code=sm_90 $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp -Xcompiler -fno-tree-vectorize -o "$GPU_BINARY" fsrcnn_gpu_main.cu -lm -lcudart
+        log_info "GPU binary ready (multi-arch): $GPU_BINARY"
+    fi
 }
 
 # Auto-build binaries before any phase
@@ -427,7 +437,7 @@ phase3_benchmark() {
         local cfg_label="$threads t"
         local gpu_l8_display="N/A"
         if [ "$variant" = "GPU-V2" ]; then
-            cfg_label="${bx}x${by}_${tr}"
+            cfg_label="20t_${bx}x${by}_${tr}"
             if [ -n "$gpu_l8" ] && [ "$gpu_l8" != "N/A" ]; then
                 gpu_l8_display="${gpu_l8} ms"
             fi
