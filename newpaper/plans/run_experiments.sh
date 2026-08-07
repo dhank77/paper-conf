@@ -43,6 +43,13 @@ OUTPUT_CPU="out_cpu.yuv"
 OUTPUT_GPU="out_gpu.yuv"
 CSV_FILE="raw_results.csv"
 
+# Thread sweep and GPU backdrop are platform-dependent (core topology differs
+# across GX10 / RTX4090 desktop / Jetson). Override via env var, e.g.:
+#   THREAD_LADDER="1 2 4 8 16 24 32" GPU_BACKDROP_THREADS=4 bash run_experiments.sh --phase3
+# Defaults below match the GX10 (20 physical cores, no SMT).
+THREAD_LADDER="${THREAD_LADDER:-1 2 4 8 10 16 20}"
+GPU_BACKDROP_THREADS="${GPU_BACKDROP_THREADS:-20}"
+
 # Video parameters (CIF, scale=2)
 WIDTH=176
 HEIGHT=144
@@ -309,7 +316,7 @@ phase3_benchmark() {
     
     # --- V0 CPU Naive OpenMP configurations ---
     if [ -f "$CPU_V0_BINARY" ]; then
-        for threads in 1 2 4 8 10 16 20; do
+        for threads in $THREAD_LADDER; do
             log_info "--- CPU V0 (Naive) with $threads threads ($TOTAL_REPS runs) ---"
             export OMP_NUM_THREADS=$threads
             local run_times=()
@@ -340,7 +347,7 @@ phase3_benchmark() {
     fi
     
     # --- V1 CPU Spatial Reduction configurations ---
-    for threads in 1 2 4 8 10 16 20; do
+    for threads in $THREAD_LADDER; do
         log_info "--- CPU V1 (Spatial) with $threads threads ($TOTAL_REPS runs) ---"
         export OMP_NUM_THREADS=$threads
         local run_times=()
@@ -370,7 +377,7 @@ phase3_benchmark() {
     done
     
     # --- V2 GPU Grid Search configurations (block_x block_y threads_reduce) ---
-    export OMP_NUM_THREADS=20
+    export OMP_NUM_THREADS=$GPU_BACKDROP_THREADS
     local gpu_configs=(
         "16 16 256"
         "8 8 256"
@@ -437,7 +444,7 @@ phase3_benchmark() {
         local cfg_label="$threads t"
         local gpu_l8_display="N/A"
         if [ "$variant" = "GPU-V2" ]; then
-            cfg_label="20t_${bx}x${by}_${tr}"
+            cfg_label="${GPU_BACKDROP_THREADS}t_${bx}x${by}_${tr}"
             if [ -n "$gpu_l8" ] && [ "$gpu_l8" != "N/A" ]; then
                 gpu_l8_display="${gpu_l8} ms"
             fi
