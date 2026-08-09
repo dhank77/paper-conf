@@ -35,14 +35,11 @@
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Evaluation}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Evaluation Methodology}{2}{}\protected@file@percent }
 \newlabel{sec:methodology}{{\mbox  {IV-A}}{2}{}{subsection.4.1}{}}
-\citation{dong2016fsrcnn}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Performance Scaling \& Accuracy Benchmark}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Reconstruction Quality Against a High-Resolution Reference}{3}{}\protected@file@percent }
-\newlabel{sec:quality}{{\mbox  {IV-C}}{3}{}{subsection.4.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}The Cost of Determinism, Quantified}{3}{}\protected@file@percent }
-\newlabel{sec:cost-of-determinism}{{\mbox  {IV-D}}{3}{}{subsection.4.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Fine-Grained GPU Timing Breakdown}{3}{}\protected@file@percent }
-\newlabel{sec:breakdown}{{\mbox  {IV-E}}{3}{}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}The Cost of Determinism, Quantified}{3}{}\protected@file@percent }
+\newlabel{sec:cost-of-determinism}{{\mbox  {IV-C}}{3}{}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Fine-Grained GPU Timing Breakdown}{3}{}\protected@file@percent }
+\newlabel{sec:breakdown}{{\mbox  {IV-D}}{3}{}{subsection.4.4}{}}
 \citation{wang2020pipeit}
 \@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Key Configurations on Both Platforms: Performance and Deviation from Each Platform's Verified Deterministic Reference. Wall times are mean $\pm $ SD over the 6 measured runs of a 7-run repetition.}}{4}{}\protected@file@percent }
 \newlabel{tab:benchmark}{{II}{4}{}{table.2}{}}
@@ -51,12 +48,14 @@
 \@writefile{toc}{\contentsline {section}{\numberline {V}Discussion and Key Insights}{4}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Speedup vs. Maxed-Out CPU Cores, and Warp Alignment}{4}{}\protected@file@percent }
 \newlabel{sec:gb10-speedup}{{\mbox  {V-A}}{4}{}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Transfer Cost and Amdahl's Law}{4}{}\protected@file@percent }
+\newlabel{sec:nvlink}{{\mbox  {V-B}}{4}{}{subsection.5.2}{}}
 \citation{amdahl1967}
 \citation{williams2009roofline}
 \citation{eichenberger2012ompaffinity}
 \citation{nvidiacudaguide}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Transfer Cost and Amdahl's Law}{5}{}\protected@file@percent }
-\newlabel{sec:nvlink}{{\mbox  {V-B}}{5}{}{subsection.5.2}{}}
+\citation{nvidiagracehopper2022,wahlgren2025upm}
+\citation{go2017apunet}
 \@writefile{toc}{\contentsline {section}{\numberline {VI}Cross-Platform Validation on Discrete-GPU Hardware}{5}{}\protected@file@percent }
 \newlabel{sec:rtx4090}{{VI}{5}{}{section.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Methodology Adjustment and GPU Speedup}{5}{}\protected@file@percent }
@@ -64,8 +63,9 @@
 \newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{5}{}{subsection.6.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Warp Alignment Generalizes Across GPU Architectures}{5}{}\protected@file@percent }
 \newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{5}{}{subsection.6.3}{}}
-\citation{nvidiagracehopper2022,wahlgren2025upm}
-\citation{go2017apunet}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces GPU Layer~8 kernel time by grid configuration on both GPUs, mean $\pm $ SD over 6 runs. The warp-aligned $32{\times }8$ grid (outlined) is fastest on both architectures, and the advantage is many standard deviations wide on each.}}{5}{}\protected@file@percent }
+\newlabel{fig:warp-cross}{{1}{5}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{5}{}\protected@file@percent }
 \bibcite{annisa2025}{1}
 \bibcite{dong2016fsrcnn}{2}
 \bibcite{shi2016edge}{3}
@@ -87,7 +87,6 @@
 \bibcite{nvidiaada2022}{19}
 \bibcite{nvidiagracehopper2022}{20}
 \bibcite{wahlgren2025upm}{21}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{6}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{6}{}\protected@file@percent }
 \newlabel{sec:limitations}{{VII}{6}{}{section.7}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{6}{}\protected@file@percent }

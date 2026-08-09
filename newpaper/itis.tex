@@ -22,24 +22,6 @@
 % Install with: tlmgr install courier
 \usepackage{courier}
 
-% Layout note for the IEEE conference format. IEEEtran prescribes margins,
-% column widths, line spacing and fonts; none of those are touched here.
-% Two minimal adjustments keep a table-heavy paper inside the 6-page limit:
-%   (1) textfloatsep 18.6pt -> 14pt, the gap between a float and body text.
-%       This is the only prescribed length altered, by 4.6pt.
-%   (2) float placement fractions, which govern only where LaTeX is willing
-%       to put a float and change no visible spacing at all.
-% Without (1) the paper sets to 7 pages with the extra space stranded as
-% whitespace around tables rather than used for content.
-\setlength{\textfloatsep}{12pt plus 2pt minus 4pt}
-\setlength{\dbltextfloatsep}{12pt plus 2pt minus 4pt}
-\renewcommand{\topfraction}{0.92}
-\renewcommand{\bottomfraction}{0.85}
-\renewcommand{\textfraction}{0.06}
-\renewcommand{\floatpagefraction}{0.75}
-\renewcommand{\dbltopfraction}{0.92}
-\renewcommand{\dblfloatpagefraction}{0.75}
-
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -140,7 +122,7 @@ NVIDIA GPUs execute threads in SIMD groups of 32 called \emph{warps}~\cite{nvidi
 \label{sec:methodology}
 The workload is 150 frames of the Suzie sequence ($176{\times}144 \rightarrow 352{\times}288$, YUV420p). Every configuration ran 7 times: run 1 discarded as warmup, runs 2--7 recorded as mean $\pm$ SD. CPU binaries use \texttt{gcc -fopenmp -O3} (no \texttt{-march=native} or \texttt{-ffast-math}) with plain \texttt{\#pragma omp parallel for}, so placement follows \texttt{libgomp}'s static default; the GPU binary uses \texttt{nvcc -O3 -arch=native}, resolving to \texttt{sm\_121} and \texttt{sm\_89}. Both platforms run GCC 13.3.0 and CUDA 13.0, differing only in patch level. All arithmetic is double precision, matching the CPU baseline so the bit-exact comparison is as strict as possible; FP32 would admit rounding divergence even for a logically equivalent computation (throughput consequence in Section~\ref{sec:rtx4090}).
 
-\emph{Reference file:} we run V1 single-threaded once to generate a deterministic reference. Since all three variants implement the identical algorithm and differ only in execution strategy, this is an internal determinism check, not a high-resolution ground truth; Section~\ref{sec:quality} addresses reconstruction quality separately. Correctness is assessed by byte comparison (\texttt{cmp -l}, $\text{diff\_bytes}=0$ for V1 against V2 at every grid configuration) and by PSNR/SSIM~\cite{wang2004ssim} computed with \texttt{ffmpeg}; V1/V2's PSNR$=\infty$ is logically equivalent to the byte comparison, so we report it as \emph{bit-exact}. PSNR/SSIM in Table~\ref{tab:benchmark} are all-component averages, and because only the Y plane passes through the network the untouched chroma pulls them upward. The RTX 4090's worst V0 case reads $23.0$~dB/$0.845$ all-component but $21.5$~dB/$0.767$ on luminance alone, so those figures \emph{understate} the corruption. We give luminance-only numbers wherever its magnitude matters.
+\emph{Reference file:} we run V1 single-threaded once to generate a deterministic reference. Since all three variants implement the identical algorithm and differ only in execution strategy, this is an internal determinism check rather than a high-resolution ground truth. Correctness is assessed by byte comparison (\texttt{cmp -l}, $\text{diff\_bytes}=0$ for V1 against V2 at every grid configuration) and by PSNR/SSIM~\cite{wang2004ssim} computed with \texttt{ffmpeg}; V1/V2's PSNR$=\infty$ is logically equivalent to the byte comparison, so we report it as \emph{bit-exact}. PSNR/SSIM in Table~\ref{tab:benchmark} are all-component averages, and because only the Y plane passes through the network the untouched chroma pulls them upward. The RTX 4090's worst V0 case reads $23.0$~dB/$0.845$ all-component but $21.5$~dB/$0.767$ on luminance alone, so those figures \emph{understate} the corruption. We give luminance-only numbers wherever its magnitude matters.
 
 V0 degrades non-monotonically from its data race: $13.8$~dB on the GB10 (4 threads), and $68.6$~dB/$0.99996$ on the RTX 4090 (4 threads) before collapsing to $23.0$~dB at 32 threads. The RTX case is the instructive one. A race costing only $68.6$~dB is invisible to casual inspection or to a coarse PSNR threshold, yet it is just as non-deterministic as the $13.8$~dB case. That argues for determinism by construction rather than for trusting that runs ``look fine.'' Three consecutive V0 runs at 32 threads corrupted $4.75$, $5.01$ and $5.04$ million of $22.8$ million bytes ($21.34$, $21.46$, $21.63$~dB PSNR-Y): never the same output twice.
 
@@ -186,10 +168,6 @@ GPU V2 (Best Grid) & Grid $32{\times}8\_256$ & $5{,}435.50 \pm 148.01$ & 4.21$\t
 \vspace{2mm}
 \footnotesize{\emph{Speedup vs. Serial}: CPU rows against their own variant's 1-thread time; GPU V2 has none of its own, so its denominator is CPU V1's serial time on that platform (Section~\ref{sec:gb10-speedup} also reports it against the faster bit-exact V0 serial time). \emph{Speedup vs. Best CPU}: GPU V2 only, against CPU V1's fastest correctness-verified configuration. \emph{Dev./SSIM} are against each platform's own deterministic reference; ``bit-exact'' is logically equivalent to \texttt{cmp -l}, not an independent quality measurement, and figures are all-component averages (Section~\ref{sec:methodology}). \emph{GPU L8 Kernel}: mean $\pm$ SD over 6 runs of the profiling sweep (Section~\ref{sec:breakdown}); kernel times for the three remaining grid configurations are given in Section~\ref{sec:warp-generalize}.}
 \end{table*}
-
-\subsection{Reconstruction Quality Against a High-Resolution Reference}
-\label{sec:quality}
-Every correctness figure so far is a self-consistency check of V2 against V1. That establishes the GPU port is faithful, but it says nothing about whether FSRCNN reconstructs anything, since no high-resolution ground truth exists in the pipeline. We therefore constructed one: Suzie was bicubic-downsampled to $88{\times}72$, fed to the same pipeline at scale 2 to reconstruct $176{\times}144$, and scored against the original, with bicubic upscaling of that same input as the comparator. We report luminance only, since only Y passes through the network and an all-component average would credit FSRCNN for a chroma replication it does not perform. FSRCNN reaches $37.86$~dB PSNR-Y and $0.9665$ SSIM-Y against bicubic's $35.69$~dB and $0.9532$: $+2.17$~dB over 150 frames, so the network earns its cost. Two caveats apply. This is one sequence at one scale factor, a sanity check rather than a claim about FSRCNN generally~\cite{dong2016fsrcnn}. And on chroma bicubic is in fact \emph{better} ($50.45$/$49.71$ against $48.56$/$47.48$~dB), because it interpolates U and V while our pipeline replicates them, a limitation of this implementation rather than of spatial reduction.
 
 \subsection{The Cost of Determinism, Quantified}
 \label{sec:cost-of-determinism}
@@ -270,7 +248,15 @@ Section~\ref{sec:methodology} establishes bit-exactness \emph{within} each platf
 
 \subsection{Warp Alignment Generalizes Across GPU Architectures}
 \label{sec:warp-generalize}
-At the kernel level $32{\times}8$ remains fastest on this Ada Lovelace GPU ($360.92 \pm 7.22$~ms), $17.4\%$ faster than $16{\times}16$ ($437.06 \pm 3.86$~ms), confirming that the coalescing argument of Section~III-B, a consequence of CUDA's 32-thread warp granularity~\cite{nvidiacudaguide}, is a property of CUDA rather than of the GB10. The localization holds too: \texttt{deconv\_kernel} falls $15.6\%$ ($310.32$ to $261.90$~ms) while the reduction is unchanged at $2.62$~ms. Across all five configurations ($16{\times}16\_256$, $8{\times}8\_256$, $32{\times}8\_256$, $16{\times}16\_128$, $16{\times}16\_512$) kernel times are $437.06\pm3.86$, $411.63\pm1.87$, $360.92\pm7.22$, $437.49\pm3.46$ and $433.91\pm3.88$~ms here, against $696.51\pm1.78$, $669.36\pm3.06$, $533.19\pm2.58$, $699.07\pm2.79$ and $697.84\pm4.61$~ms on the GB10. At the \emph{wall-clock} level the five are statistically hard to distinguish ($5{,}435$--$5{,}579$~ms, overlapping error bars) even though $32{\times}8$ nominally wins both metrics; the kernel-level advantage is visible only through CUDA-event profiling, which is why that instrumentation matters.
+At the kernel level $32{\times}8$ remains fastest on this Ada Lovelace GPU ($360.92 \pm 7.22$~ms), $17.4\%$ faster than $16{\times}16$ ($437.06 \pm 3.86$~ms), confirming that the coalescing argument of Section~III-B, a consequence of CUDA's 32-thread warp granularity~\cite{nvidiacudaguide}, is a property of CUDA rather than of the GB10. The localization holds too: \texttt{deconv\_kernel} falls $15.6\%$ ($310.32$ to $261.90$~ms) while the reduction is unchanged at $2.62$~ms. Fig.~\ref{fig:warp-cross} compares all five grid configurations on both GPUs, with error bars over the six runs. At the \emph{wall-clock} level the five are statistically hard to distinguish ($5{,}435$--$5{,}579$~ms, overlapping error bars) even though $32{\times}8$ nominally wins both metrics; the kernel-level advantage is visible only through CUDA-event profiling, which is why that instrumentation matters.
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/warp_alignment_cross_platform.pdf}
+\caption{GPU Layer~8 kernel time by grid configuration on both GPUs, mean $\pm$ SD over 6 runs. The warp-aligned $32{\times}8$ grid (outlined) is fastest on both architectures, and the advantage is many standard deviations wide on each.}
+\label{fig:warp-cross}
+\end{figure}
 
 \subsection{Non-Unified Memory and FP64 Precision}
 CPU and GPU memory here are physically separate over PCIe, unlike the GB10's unified pool~\cite{nvidiagracehopper2022,wahlgren2025upm}. Even so, this platform's Layer~8 kernel is the faster of the two. Table~\ref{tab:breakdown} attributes that to the compute and cache advantages of Section~\ref{sec:breakdown} rather than to any absence of transfer cost: PCIe/DMA overhead~\cite{go2017apunet} is plainly visible in the residual and the D2H figure, but it is outweighed. We therefore expect the balance to shift once the working set overflows this card's L2. Double precision also costs here. Its FP64 throughput is architecturally $1/64$ of its FP32, so the kernel time above is achieved with the dominant compute resource idle, and an FP32 port would plausibly be much faster at the price of weakening bit-exactness to a numerical tolerance.
@@ -279,7 +265,7 @@ CPU and GPU memory here are physically separate over PCIe, unlike the GB10's uni
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Limitations and Future Work}
 \label{sec:limitations}
-The largest gap is the absence of a competitive GPU baseline: V2 is compared only against CPU implementations, not \texttt{atomicAdd}, an output-stationary gather kernel, or cuDNN. Two of our explanations are inferences from timing rather than direct measurements. The cache account of the $10\times$ reduction gap would be settled by L2 hit-rate counters and a working-set sweep across the L2 boundary; the coalescing account, though localized to \texttt{deconv\_kernel} as predicted, would be settled by load-efficiency counters and non-aligned block widths. Our host-to-device figure also remains an upper bound containing launch overhead and host padding, separable with pinned memory or multiple streams, though D2H is unaffected. No FP32 ablation quantifies the speedup-versus-bit-exactness trade-off, and no \texttt{OMP\_PROC\_BIND} control isolates the RTX 4090 collapse from bandwidth saturation or thermal throttling. Finally, all results use one 150-frame QCIF-to-CIF sequence, with reconstruction quality measured at a single scale factor and chroma replicated rather than reconstructed. Higher resolutions would shift the compute-to-transfer ratio and push the private buffer past the RTX 4090's L2, the regime in which our design rule is most testable.
+The largest gap is the absence of a competitive GPU baseline: V2 is compared only against CPU implementations, not \texttt{atomicAdd}, an output-stationary gather kernel, or cuDNN. Two of our explanations are inferences from timing rather than direct measurements. The cache account of the $10\times$ reduction gap would be settled by L2 hit-rate counters and a working-set sweep across the L2 boundary; the coalescing account, though localized to \texttt{deconv\_kernel} as predicted, would be settled by load-efficiency counters and non-aligned block widths. Our host-to-device figure also remains an upper bound containing launch overhead and host padding, separable with pinned memory or multiple streams, though D2H is unaffected. No FP32 ablation quantifies the speedup-versus-bit-exactness trade-off, and no \texttt{OMP\_PROC\_BIND} control isolates the RTX 4090 collapse from bandwidth saturation or thermal throttling. Our correctness evidence is also internal: every PSNR/SSIM figure compares variants against one another, so it validates cross-variant determinism rather than FSRCNN's reconstruction quality against an independently sourced high-resolution reference. Finally, all results use one 150-frame QCIF-to-CIF sequence. Higher resolutions would shift the compute-to-transfer ratio and push the private buffer past the RTX 4090's L2, the regime in which our design rule is most testable.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
