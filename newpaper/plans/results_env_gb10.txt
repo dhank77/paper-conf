@@ -1,0 +1,85 @@
+==============================================================
+ FSRCNN paper -- environment capture
+ tag:       gb10
+ hostname:  node6
+ date:      2026-08-09T22:33:20+08:00
+ cwd:       /home/lab_iot/FSRCNN/paper-conf/newpaper/plans
+==============================================================
+
+---------- [1] nvcc (THE ANSWER TO REVIEW ITEM #1) ----------
+which nvcc: /usr/local/cuda/bin/nvcc
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Wed_Aug_20_01:57:39_PM_PDT_2025
+Cuda compilation tools, release 13.0, V13.0.88
+Build cuda_13.0.r13.0/compiler.36424714_0
+
+---------- [2] driver / runtime as the GPU reports it ----------
+Sun Aug  9 22:33:20 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.03             Driver Version: 580.159.03     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GB10                    On  |   0000000F:01:00.0 Off |                  N/A |
+| N/A   37C    P8              4W /  N/A  | Not Supported          |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+-- query form (easier to quote in the table) --
+name, compute_cap, driver_version, memory.total [MiB]
+NVIDIA GB10, 12.1, 580.159.03, [N/A]
+
+---------- [3] what the runtime API actually sees ----------
+(probe not built -- no nvcc)
+
+---------- [4] host compiler ----------
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+OpenMP: 1 (1 = supported)
+
+---------- [5] CPU / memory / OS ----------
+Architecture:                            aarch64
+CPU(s):                                  20
+Model name:                              Cortex-X925
+Thread(s) per core:                      1
+Core(s) per socket:                      10
+Socket(s):                               1
+CPU(s) scaling MHz:                      100%
+CPU max MHz:                             3900.0000
+CPU min MHz:                             1378.0000
+Model name:                              Cortex-A725
+Thread(s) per core:                      1
+Core(s) per socket:                      10
+Socket(s):                               1
+CPU(s) scaling MHz:                      100%
+CPU max MHz:                             2808.0000
+CPU min MHz:                             338.0000
+L1d cache:                               1.3 MiB (20 instances)
+L1i cache:                               1.3 MiB (20 instances)
+L2 cache:                                25 MiB (20 instances)
+L3 cache:                                24 MiB (2 instances)
+NUMA node(s):                            1
+
+               total        used        free      shared  buff/cache   available
+Mem:           121Gi       2.6Gi       112Gi       2.9Mi       7.2Gi       118Gi
+Swap:           15Gi          0B        15Gi
+
+Linux node6 6.17.0-1018-nvidia #18-Ubuntu SMP PREEMPT_DYNAMIC Tue May  5 21:28:33 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+
+NAME="Ubuntu"
+VERSION="24.04.4 LTS (Noble Numbat)"
+
+==============================================================
+ Done. Send back: /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_env_gb10.txt
+==============================================================

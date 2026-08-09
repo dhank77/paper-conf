@@ -1,0 +1,45 @@
+==============================================================
+ FSRCNN GPU profile -- gb10
+ gpu:       NVIDIA GB10
+ hostname:  node6
+ date:      2026-08-09T22:38:44+08:00
+ arch used: -arch=native
+ backdrop:  OMP_NUM_THREADS=20 (layers 1-7)
+ reps:      6 per configuration
+ frames:    150, 176x144 -> 352x288
+==============================================================
+
+PHASE A -- production binary. Use these for the paper.
+All figures are mean +/- sample SD over 6 reps, milliseconds,
+totalled across all 150 frames.
+
+config         wall                | gpu_l8              | h2d                 | d2h                 | cpu_l17             | vram_kb
+----------------------------------------------------------------------------------------------------------------------------------
+16x16_256       4953.67 +/- 32.87  |   696.51 +/- 1.78   |   681.05 +/- 7.65   |     3.49 +/- 0.09   |  3417.50 +/- 32.10  | 45382
+8x8_256         4888.50 +/- 59.34  |   669.36 +/- 3.06   |   653.85 +/- 8.38   |     3.48 +/- 0.09   |  3395.23 +/- 47.08  | 45382
+32x8_256        4750.67 +/- 30.40  |   533.19 +/- 2.58   |   514.16 +/- 12.12  |     3.46 +/- 0.06   |  3392.82 +/- 21.62  | 45382
+16x16_128       4932.67 +/- 42.59  |   699.07 +/- 2.79   |   685.59 +/- 13.57  |     3.51 +/- 0.06   |  3400.40 +/- 33.23  | 45382
+16x16_512       4930.50 +/- 36.81  |   697.84 +/- 4.61   |   672.54 +/- 13.45  |     3.49 +/- 0.04   |  3417.61 +/- 46.84  | 45382
+
+PHASE B -- instrumented binary. Decomposition of gpu_l8 only;
+do not quote these as standalone timings.
+
+config         deconv (56x)        | reduction (1x)      | in-window other     | gpu_l8 (instr.)
+--------------------------------------------------------------------------------------
+16x16_256        564.74 +/- 0.75   |    26.08 +/- 1.07   |   114.71 +/- 4.51   |   705.54 +/- 5.50  
+8x8_256          546.27 +/- 0.27   |    24.73 +/- 0.61   |   117.29 +/- 1.75   |   688.29 +/- 2.22  
+32x8_256         424.07 +/- 0.76   |    26.32 +/- 1.02   |   127.65 +/- 4.10   |   578.03 +/- 5.02  
+16x16_128        565.93 +/- 0.50   |    25.92 +/- 0.61   |   115.77 +/- 3.18   |   707.62 +/- 3.86  
+16x16_512        565.17 +/- 0.32   |    25.95 +/- 0.94   |   114.83 +/- 4.40   |   705.94 +/- 5.41  
+
+Reading Phase B: 'in-window other' is the 56 per-channel H2D copies
+issued inside the event bracket, plus launch gaps. deconv + reduction +
+in-window other = gpu_l8. If Phase B's gpu_l8 differs noticeably from
+Phase A's, the instrumentation is perturbing the run and the split
+should be reported as indicative rather than exact.
+
+Files to send back:
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_gb10.txt
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_gb10.csv
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_gb10.rawlog
+==============================================================
