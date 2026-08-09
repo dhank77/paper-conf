@@ -1,0 +1,210 @@
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# bash ./collect_env.sh
+==============================================================
+ FSRCNN paper -- environment capture
+ tag:       gb10
+ hostname:  node6
+ date:      2026-08-09T22:33:20+08:00
+ cwd:       /home/lab_iot/FSRCNN/paper-conf/newpaper/plans
+==============================================================
+
+---------- [1] nvcc (THE ANSWER TO REVIEW ITEM #1) ----------
+which nvcc: /usr/local/cuda/bin/nvcc
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Wed_Aug_20_01:57:39_PM_PDT_2025
+Cuda compilation tools, release 13.0, V13.0.88
+Build cuda_13.0.r13.0/compiler.36424714_0
+
+---------- [2] driver / runtime as the GPU reports it ----------
+Sun Aug  9 22:33:20 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.03             Driver Version: 580.159.03     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GB10                    On  |   0000000F:01:00.0 Off |                  N/A |
+| N/A   37C    P8              4W /  N/A  | Not Supported          |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+-- query form (easier to quote in the table) --
+name, compute_cap, driver_version, memory.total [MiB]
+NVIDIA GB10, 12.1, 580.159.03, [N/A]
+
+---------- [3] what the runtime API actually sees ----------
+(probe not built -- no nvcc)
+
+---------- [4] host compiler ----------
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+OpenMP: 1 (1 = supported)
+
+---------- [5] CPU / memory / OS ----------
+Architecture:                            aarch64
+CPU(s):                                  20
+Model name:                              Cortex-X925
+Thread(s) per core:                      1
+Core(s) per socket:                      10
+Socket(s):                               1
+CPU(s) scaling MHz:                      100%
+CPU max MHz:                             3900.0000
+CPU min MHz:                             1378.0000
+Model name:                              Cortex-A725
+Thread(s) per core:                      1
+Core(s) per socket:                      10
+Socket(s):                               1
+CPU(s) scaling MHz:                      100%
+CPU max MHz:                             2808.0000
+CPU min MHz:                             338.0000
+L1d cache:                               1.3 MiB (20 instances)
+L1i cache:                               1.3 MiB (20 instances)
+L2 cache:                                25 MiB (20 instances)
+L3 cache:                                24 MiB (2 instances)
+NUMA node(s):                            1
+
+               total        used        free      shared  buff/cache   available
+Mem:           121Gi       2.6Gi       112Gi       2.9Mi       7.2Gi       118Gi
+Swap:           15Gi          0B        15Gi
+
+Linux node6 6.17.0-1018-nvidia #18-Ubuntu SMP PREEMPT_DYNAMIC Tue May  5 21:28:33 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+
+NAME="Ubuntu"
+VERSION="24.04.4 LTS (Noble Numbat)"
+
+==============================================================
+ Done. Send back: /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_env_gb10.txt
+==============================================================
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# 
+
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# bash ./collect_gpu_profile.sh
+[INFO] Platform: NVIDIA GB10  tag=gb10  backdrop threads=20  reps=6
+[INFO] built ./fsrcnn_gpu_prof from fsrcnn_gpu_main.cu (-arch=native)
+[INFO] built ./fsrcnn_gpu_instr from fsrcnn_gpu_instrumented.cu (-arch=native)
+[INFO] === Phase A: production binary (fsrcnn_gpu_main.cu) ===
+[INFO] --- config 16x16, reduce=256 : 6 reps ---
+    rep 1/6  wall=4961 ms  gpu_l8=693.94 ms  h2d=683.47 ms  d2h=3.58 ms
+    rep 2/6  wall=4958 ms  gpu_l8=698.19 ms  h2d=689.27 ms  d2h=3.61 ms
+    rep 3/6  wall=4964 ms  gpu_l8=697.11 ms  h2d=683.15 ms  d2h=3.46 ms
+    rep 4/6  wall=5001 ms  gpu_l8=697.06 ms  h2d=682.27 ms  d2h=3.52 ms
+    rep 5/6  wall=4902 ms  gpu_l8=694.70 ms  h2d=666.45 ms  d2h=3.39 ms
+    rep 6/6  wall=4936 ms  gpu_l8=698.08 ms  h2d=681.67 ms  d2h=3.40 ms
+[INFO] --- config 8x8, reduce=256 : 6 reps ---
+    rep 1/6  wall=4889 ms  gpu_l8=667.50 ms  h2d=662.56 ms  d2h=3.56 ms
+    rep 2/6  wall=4875 ms  gpu_l8=665.30 ms  h2d=651.55 ms  d2h=3.57 ms
+    rep 3/6  wall=4831 ms  gpu_l8=668.53 ms  h2d=642.62 ms  d2h=3.34 ms
+    rep 4/6  wall=4999 ms  gpu_l8=670.83 ms  h2d=662.06 ms  d2h=3.52 ms
+    rep 5/6  wall=4892 ms  gpu_l8=669.78 ms  h2d=658.11 ms  d2h=3.41 ms
+    rep 6/6  wall=4845 ms  gpu_l8=674.23 ms  h2d=646.21 ms  d2h=3.50 ms
+[INFO] --- config 32x8, reduce=256 : 6 reps ---
+    rep 1/6  wall=4791 ms  gpu_l8=534.35 ms  h2d=520.45 ms  d2h=3.50 ms
+    rep 2/6  wall=4714 ms  gpu_l8=530.87 ms  h2d=497.13 ms  d2h=3.39 ms
+    rep 3/6  wall=4716 ms  gpu_l8=532.42 ms  h2d=510.49 ms  d2h=3.45 ms
+    rep 4/6  wall=4753 ms  gpu_l8=536.78 ms  h2d=528.40 ms  d2h=3.52 ms
+    rep 5/6  wall=4761 ms  gpu_l8=529.93 ms  h2d=504.52 ms  d2h=3.41 ms
+    rep 6/6  wall=4769 ms  gpu_l8=534.79 ms  h2d=523.95 ms  d2h=3.51 ms
+[INFO] --- config 16x16, reduce=128 : 6 reps ---
+    rep 1/6  wall=4928 ms  gpu_l8=699.32 ms  h2d=687.32 ms  d2h=3.51 ms
+    rep 2/6  wall=5008 ms  gpu_l8=699.39 ms  h2d=696.92 ms  d2h=3.54 ms
+    rep 3/6  wall=4945 ms  gpu_l8=700.53 ms  h2d=696.52 ms  d2h=3.53 ms
+    rep 4/6  wall=4883 ms  gpu_l8=696.50 ms  h2d=668.43 ms  d2h=3.41 ms
+    rep 5/6  wall=4926 ms  gpu_l8=703.21 ms  h2d=695.47 ms  d2h=3.59 ms
+    rep 6/6  wall=4906 ms  gpu_l8=695.49 ms  h2d=668.91 ms  d2h=3.46 ms
+[INFO] --- config 16x16, reduce=512 : 6 reps ---
+    rep 1/6  wall=4931 ms  gpu_l8=691.82 ms  h2d=661.14 ms  d2h=3.44 ms
+    rep 2/6  wall=4888 ms  gpu_l8=694.76 ms  h2d=663.58 ms  d2h=3.49 ms
+    rep 3/6  wall=4928 ms  gpu_l8=704.75 ms  h2d=691.05 ms  d2h=3.56 ms
+    rep 4/6  wall=4905 ms  gpu_l8=701.30 ms  h2d=687.97 ms  d2h=3.49 ms
+    rep 5/6  wall=4935 ms  gpu_l8=697.00 ms  h2d=669.02 ms  d2h=3.44 ms
+    rep 6/6  wall=4996 ms  gpu_l8=697.39 ms  h2d=662.46 ms  d2h=3.49 ms
+[INFO] === Phase B: instrumented binary (per-kernel split) ===
+[INFO] --- config 16x16, reduce=256 : 6 reps ---
+    rep 1/6  deconv=565.01 ms  reduce=24.97 ms  in-window other=107.56 ms  (gpu_l8=697.53 ms)
+    rep 2/6  deconv=564.92 ms  reduce=27.02 ms  in-window other=120.06 ms  (gpu_l8=712.00 ms)
+    rep 3/6  deconv=563.96 ms  reduce=27.10 ms  in-window other=118.39 ms  (gpu_l8=709.44 ms)
+    rep 4/6  deconv=563.97 ms  reduce=25.27 ms  in-window other=113.94 ms  (gpu_l8=703.19 ms)
+    rep 5/6  deconv=565.95 ms  reduce=27.04 ms  in-window other=116.06 ms  (gpu_l8=709.05 ms)
+    rep 6/6  deconv=564.62 ms  reduce=25.10 ms  in-window other=112.28 ms  (gpu_l8=702.01 ms)
+[INFO] --- config 8x8, reduce=256 : 6 reps ---
+    rep 1/6  deconv=546.67 ms  reduce=24.76 ms  in-window other=118.53 ms  (gpu_l8=689.95 ms)
+    rep 2/6  deconv=546.10 ms  reduce=24.60 ms  in-window other=115.35 ms  (gpu_l8=686.05 ms)
+    rep 3/6  deconv=546.09 ms  reduce=25.62 ms  in-window other=119.75 ms  (gpu_l8=691.46 ms)
+    rep 4/6  deconv=546.09 ms  reduce=25.02 ms  in-window other=116.91 ms  (gpu_l8=688.02 ms)
+    rep 5/6  deconv=546.55 ms  reduce=23.74 ms  in-window other=115.42 ms  (gpu_l8=685.71 ms)
+    rep 6/6  deconv=546.12 ms  reduce=24.63 ms  in-window other=117.79 ms  (gpu_l8=688.54 ms)
+[INFO] --- config 32x8, reduce=256 : 6 reps ---
+    rep 1/6  deconv=424.87 ms  reduce=27.18 ms  in-window other=128.46 ms  (gpu_l8=580.50 ms)
+    rep 2/6  deconv=423.46 ms  reduce=26.78 ms  in-window other=130.29 ms  (gpu_l8=580.52 ms)
+    rep 3/6  deconv=423.17 ms  reduce=24.89 ms  in-window other=128.47 ms  (gpu_l8=576.52 ms)
+    rep 4/6  deconv=423.82 ms  reduce=25.14 ms  in-window other=119.50 ms  (gpu_l8=568.45 ms)
+    rep 5/6  deconv=425.06 ms  reduce=26.91 ms  in-window other=128.59 ms  (gpu_l8=580.57 ms)
+    rep 6/6  deconv=424.03 ms  reduce=27.03 ms  in-window other=130.57 ms  (gpu_l8=581.63 ms)
+[INFO] --- config 16x16, reduce=128 : 6 reps ---
+    rep 1/6  deconv=566.72 ms  reduce=25.51 ms  in-window other=115.23 ms  (gpu_l8=707.46 ms)
+    rep 2/6  deconv=566.10 ms  reduce=26.04 ms  in-window other=119.41 ms  (gpu_l8=711.54 ms)
+    rep 3/6  deconv=565.51 ms  reduce=26.44 ms  in-window other=115.65 ms  (gpu_l8=707.61 ms)
+    rep 4/6  deconv=566.08 ms  reduce=25.61 ms  in-window other=115.77 ms  (gpu_l8=707.45 ms)
+    rep 5/6  deconv=565.30 ms  reduce=25.14 ms  in-window other=110.26 ms  (gpu_l8=700.70 ms)
+    rep 6/6  deconv=565.89 ms  reduce=26.75 ms  in-window other=118.32 ms  (gpu_l8=710.95 ms)
+[INFO] --- config 16x16, reduce=512 : 6 reps ---
+    rep 1/6  deconv=565.57 ms  reduce=27.11 ms  in-window other=119.60 ms  (gpu_l8=712.27 ms)
+    rep 2/6  deconv=564.95 ms  reduce=27.06 ms  in-window other=120.72 ms  (gpu_l8=712.73 ms)
+    rep 3/6  deconv=565.53 ms  reduce=25.17 ms  in-window other=113.52 ms  (gpu_l8=704.22 ms)
+    rep 4/6  deconv=565.22 ms  reduce=26.03 ms  in-window other=113.71 ms  (gpu_l8=704.95 ms)
+    rep 5/6  deconv=564.95 ms  reduce=25.21 ms  in-window other=109.59 ms  (gpu_l8=699.74 ms)
+    rep 6/6  deconv=564.81 ms  reduce=25.11 ms  in-window other=111.82 ms  (gpu_l8=701.74 ms)
+==============================================================
+ FSRCNN GPU profile -- gb10
+ gpu:       NVIDIA GB10
+ hostname:  node6
+ date:      2026-08-09T22:38:44+08:00
+ arch used: -arch=native
+ backdrop:  OMP_NUM_THREADS=20 (layers 1-7)
+ reps:      6 per configuration
+ frames:    150, 176x144 -> 352x288
+==============================================================
+
+PHASE A -- production binary. Use these for the paper.
+All figures are mean +/- sample SD over 6 reps, milliseconds,
+totalled across all 150 frames.
+
+config         wall                | gpu_l8              | h2d                 | d2h                 | cpu_l17             | vram_kb
+----------------------------------------------------------------------------------------------------------------------------------
+16x16_256       4953.67 +/- 32.87  |   696.51 +/- 1.78   |   681.05 +/- 7.65   |     3.49 +/- 0.09   |  3417.50 +/- 32.10  | 45382
+8x8_256         4888.50 +/- 59.34  |   669.36 +/- 3.06   |   653.85 +/- 8.38   |     3.48 +/- 0.09   |  3395.23 +/- 47.08  | 45382
+32x8_256        4750.67 +/- 30.40  |   533.19 +/- 2.58   |   514.16 +/- 12.12  |     3.46 +/- 0.06   |  3392.82 +/- 21.62  | 45382
+16x16_128       4932.67 +/- 42.59  |   699.07 +/- 2.79   |   685.59 +/- 13.57  |     3.51 +/- 0.06   |  3400.40 +/- 33.23  | 45382
+16x16_512       4930.50 +/- 36.81  |   697.84 +/- 4.61   |   672.54 +/- 13.45  |     3.49 +/- 0.04   |  3417.61 +/- 46.84  | 45382
+
+PHASE B -- instrumented binary. Decomposition of gpu_l8 only;
+do not quote these as standalone timings.
+
+config         deconv (56x)        | reduction (1x)      | in-window other     | gpu_l8 (instr.)
+--------------------------------------------------------------------------------------
+16x16_256        564.74 +/- 0.75   |    26.08 +/- 1.07   |   114.71 +/- 4.51   |   705.54 +/- 5.50  
+8x8_256          546.27 +/- 0.27   |    24.73 +/- 0.61   |   117.29 +/- 1.75   |   688.29 +/- 2.22  
+32x8_256         424.07 +/- 0.76   |    26.32 +/- 1.02   |   127.65 +/- 4.10   |   578.03 +/- 5.02  
+16x16_128        565.93 +/- 0.50   |    25.92 +/- 0.61   |   115.77 +/- 3.18   |   707.62 +/- 3.86  
+16x16_512        565.17 +/- 0.32   |    25.95 +/- 0.94   |   114.83 +/- 4.40   |   705.94 +/- 5.41  
+
+Reading Phase B: 'in-window other' is the 56 per-channel H2D copies
+issued inside the event bracket, plus launch gaps. deconv + reduction +
+in-window other = gpu_l8. If Phase B's gpu_l8 differs noticeably from
+Phase A's, the instrumentation is perturbing the run and the split
+should be reported as indicative rather than exact.
+
+Files to send back:
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_gb10.txt
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_gb10.csv
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_gb10.rawlog
+==============================================================
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# 

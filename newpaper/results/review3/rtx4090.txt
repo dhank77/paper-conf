@@ -1,0 +1,294 @@
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# bash ./collect_env.sh
+==============================================================
+ FSRCNN paper -- environment capture
+ tag:       rtx4090
+ hostname:  lab-iot-MS-7E06
+ date:      2026-08-09T22:30:59+08:00
+ cwd:       /home/lab-iot/FSRCNN/paper-conf/newpaper/plans
+==============================================================
+
+---------- [1] nvcc (THE ANSWER TO REVIEW ITEM #1) ----------
+which nvcc: /usr/local/cuda/bin/nvcc
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Wed_Jul_16_07:30:01_PM_PDT_2025
+Cuda compilation tools, release 13.0, V13.0.48
+Build cuda_13.0.r13.0/compiler.36260728_0
+
+---------- [2] driver / runtime as the GPU reports it ----------
+Sun Aug  9 22:30:59 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.65.06              Driver Version: 580.65.06      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        On  |   00000000:01:00.0  On |                  Off |
+|  0%   40C    P8             25W /  450W |     131MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            2201      G   /usr/lib/xorg/Xorg                       71MiB |
+|    0   N/A  N/A            2652      G   /usr/bin/gnome-shell                     29MiB |
++-----------------------------------------------------------------------------------------+
+
+-- query form (easier to quote in the table) --
+name, compute_cap, driver_version, memory.total [MiB]
+NVIDIA GeForce RTX 4090, 8.9, 580.65.06, 24564 MiB
+
+---------- [3] what the runtime API actually sees ----------
+(probe not built -- no nvcc)
+
+---------- [4] host compiler ----------
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+OpenMP: 1 (1 = supported)
+
+---------- [5] CPU / memory / OS ----------
+Architecture:                            x86_64
+CPU(s):                                  32
+Model name:                              Intel(R) Core(TM) i9-14900K
+Thread(s) per core:                      2
+Core(s) per socket:                      24
+Socket(s):                               1
+CPU(s) scaling MHz:                      26%
+CPU max MHz:                             6000.0000
+CPU min MHz:                             800.0000
+L1d cache:                               896 KiB (24 instances)
+L1i cache:                               1.3 MiB (24 instances)
+L2 cache:                                32 MiB (12 instances)
+L3 cache:                                36 MiB (1 instance)
+NUMA node(s):                            1
+
+               total        used        free      shared  buff/cache   available
+Mem:            62Gi       2.8Gi        57Gi       6.9Mi       3.4Gi        59Gi
+Swap:          8.0Gi          0B       8.0Gi
+
+Linux lab-iot-MS-7E06 6.14.0-36-generic #36~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Oct 15 15:45:17 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+
+NAME="Ubuntu"
+VERSION="24.04.1 LTS (Noble Numbat)"
+
+==============================================================
+ Done. Send back: /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_env_rtx4090.txt
+==============================================================
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# 
+
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# bash ./collect_gpu_profile.sh
+[INFO] Platform: NVIDIA GeForce RTX 4090  tag=rtx4090  backdrop threads=4  reps=6
+[INFO] built ./fsrcnn_gpu_prof from fsrcnn_gpu_main.cu (-arch=native)
+[INFO] built ./fsrcnn_gpu_instr from fsrcnn_gpu_instrumented.cu (-arch=native)
+[INFO] === Phase A: production binary (fsrcnn_gpu_main.cu) ===
+[INFO] --- config 16x16, reduce=256 : 6 reps ---
+    rep 1/6  wall=5562 ms  gpu_l8=433.62 ms  h2d=389.61 ms  d2h=16.83 ms
+    rep 2/6  wall=5527 ms  gpu_l8=438.74 ms  h2d=395.43 ms  d2h=16.22 ms
+    rep 3/6  wall=5485 ms  gpu_l8=440.35 ms  h2d=396.15 ms  d2h=16.92 ms
+    rep 4/6  wall=5893 ms  gpu_l8=442.18 ms  h2d=396.62 ms  d2h=17.22 ms
+    rep 5/6  wall=5490 ms  gpu_l8=434.22 ms  h2d=388.80 ms  d2h=16.70 ms
+    rep 6/6  wall=5584 ms  gpu_l8=433.24 ms  h2d=388.84 ms  d2h=17.23 ms
+[INFO] --- config 8x8, reduce=256 : 6 reps ---
+    rep 1/6  wall=5475 ms  gpu_l8=412.22 ms  h2d=368.17 ms  d2h=16.02 ms
+    rep 2/6  wall=5493 ms  gpu_l8=410.93 ms  h2d=366.95 ms  d2h=16.54 ms
+    rep 3/6  wall=5587 ms  gpu_l8=412.86 ms  h2d=369.58 ms  d2h=16.73 ms
+    rep 4/6  wall=5582 ms  gpu_l8=413.90 ms  h2d=369.57 ms  d2h=16.88 ms
+    rep 5/6  wall=5501 ms  gpu_l8=411.38 ms  h2d=367.87 ms  d2h=16.33 ms
+    rep 6/6  wall=5531 ms  gpu_l8=408.48 ms  h2d=363.55 ms  d2h=16.29 ms
+[INFO] --- config 32x8, reduce=256 : 6 reps ---
+    rep 1/6  wall=5411 ms  gpu_l8=359.08 ms  h2d=316.98 ms  d2h=15.87 ms
+    rep 2/6  wall=5538 ms  gpu_l8=356.97 ms  h2d=314.61 ms  d2h=16.26 ms
+    rep 3/6  wall=5366 ms  gpu_l8=357.45 ms  h2d=315.14 ms  d2h=16.05 ms
+    rep 4/6  wall=5507 ms  gpu_l8=356.22 ms  h2d=313.23 ms  d2h=16.29 ms
+    rep 5/6  wall=5560 ms  gpu_l8=375.33 ms  h2d=331.06 ms  d2h=17.01 ms
+    rep 6/6  wall=5445 ms  gpu_l8=360.45 ms  h2d=317.35 ms  d2h=17.03 ms
+[INFO] --- config 16x16, reduce=128 : 6 reps ---
+    rep 1/6  wall=5628 ms  gpu_l8=434.97 ms  h2d=391.05 ms  d2h=16.76 ms
+    rep 2/6  wall=5592 ms  gpu_l8=441.98 ms  h2d=397.37 ms  d2h=16.34 ms
+    rep 3/6  wall=5586 ms  gpu_l8=436.86 ms  h2d=393.37 ms  d2h=16.32 ms
+    rep 4/6  wall=5669 ms  gpu_l8=435.99 ms  h2d=391.61 ms  d2h=17.46 ms
+    rep 5/6  wall=5470 ms  gpu_l8=433.66 ms  h2d=390.17 ms  d2h=16.35 ms
+    rep 6/6  wall=5473 ms  gpu_l8=441.49 ms  h2d=398.13 ms  d2h=15.85 ms
+[INFO] --- config 16x16, reduce=512 : 6 reps ---
+    rep 1/6  wall=5744 ms  gpu_l8=430.89 ms  h2d=385.80 ms  d2h=16.31 ms
+    rep 2/6  wall=5472 ms  gpu_l8=435.70 ms  h2d=391.83 ms  d2h=17.07 ms
+    rep 3/6  wall=5634 ms  gpu_l8=430.65 ms  h2d=386.22 ms  d2h=17.03 ms
+    rep 4/6  wall=5770 ms  gpu_l8=431.51 ms  h2d=385.67 ms  d2h=17.06 ms
+    rep 5/6  wall=5597 ms  gpu_l8=440.72 ms  h2d=396.09 ms  d2h=16.20 ms
+    rep 6/6  wall=5787 ms  gpu_l8=434.00 ms  h2d=389.01 ms  d2h=16.41 ms
+[INFO] === Phase B: instrumented binary (per-kernel split) ===
+[INFO] --- config 16x16, reduce=256 : 6 reps ---
+    rep 1/6  deconv=310.46 ms  reduce=2.62 ms  in-window other=152.26 ms  (gpu_l8=465.33 ms)
+    rep 2/6  deconv=308.72 ms  reduce=2.63 ms  in-window other=153.78 ms  (gpu_l8=465.12 ms)
+    rep 3/6  deconv=308.55 ms  reduce=2.63 ms  in-window other=153.51 ms  (gpu_l8=464.69 ms)
+    rep 4/6  deconv=308.74 ms  reduce=2.62 ms  in-window other=152.06 ms  (gpu_l8=463.42 ms)
+    rep 5/6  deconv=309.98 ms  reduce=2.62 ms  in-window other=157.55 ms  (gpu_l8=470.16 ms)
+    rep 6/6  deconv=315.47 ms  reduce=2.63 ms  in-window other=152.60 ms  (gpu_l8=470.70 ms)
+[INFO] --- config 8x8, reduce=256 : 6 reps ---
+    rep 1/6  deconv=311.88 ms  reduce=2.62 ms  in-window other=152.62 ms  (gpu_l8=467.11 ms)
+    rep 2/6  deconv=315.65 ms  reduce=2.64 ms  in-window other=151.65 ms  (gpu_l8=469.94 ms)
+    rep 3/6  deconv=313.16 ms  reduce=2.61 ms  in-window other=150.82 ms  (gpu_l8=466.59 ms)
+    rep 4/6  deconv=312.70 ms  reduce=2.62 ms  in-window other=151.47 ms  (gpu_l8=466.79 ms)
+    rep 5/6  deconv=311.37 ms  reduce=2.62 ms  in-window other=153.87 ms  (gpu_l8=467.85 ms)
+    rep 6/6  deconv=309.91 ms  reduce=2.64 ms  in-window other=152.16 ms  (gpu_l8=464.71 ms)
+[INFO] --- config 32x8, reduce=256 : 6 reps ---
+    rep 1/6  deconv=261.72 ms  reduce=2.62 ms  in-window other=152.50 ms  (gpu_l8=416.85 ms)
+    rep 2/6  deconv=259.25 ms  reduce=2.62 ms  in-window other=152.36 ms  (gpu_l8=414.23 ms)
+    rep 3/6  deconv=261.18 ms  reduce=2.63 ms  in-window other=152.45 ms  (gpu_l8=416.26 ms)
+    rep 4/6  deconv=267.98 ms  reduce=2.63 ms  in-window other=152.03 ms  (gpu_l8=422.64 ms)
+    rep 5/6  deconv=260.89 ms  reduce=2.62 ms  in-window other=151.56 ms  (gpu_l8=415.06 ms)
+    rep 6/6  deconv=260.39 ms  reduce=2.62 ms  in-window other=151.94 ms  (gpu_l8=414.95 ms)
+[INFO] --- config 16x16, reduce=128 : 6 reps ---
+    rep 1/6  deconv=309.14 ms  reduce=2.35 ms  in-window other=153.69 ms  (gpu_l8=465.18 ms)
+    rep 2/6  deconv=309.91 ms  reduce=2.36 ms  in-window other=153.06 ms  (gpu_l8=465.33 ms)
+    rep 3/6  deconv=310.54 ms  reduce=2.38 ms  in-window other=153.14 ms  (gpu_l8=466.07 ms)
+    rep 4/6  deconv=309.03 ms  reduce=2.36 ms  in-window other=153.25 ms  (gpu_l8=464.64 ms)
+    rep 5/6  deconv=314.19 ms  reduce=2.43 ms  in-window other=153.30 ms  (gpu_l8=469.92 ms)
+    rep 6/6  deconv=307.37 ms  reduce=2.37 ms  in-window other=154.23 ms  (gpu_l8=463.97 ms)
+[INFO] --- config 16x16, reduce=512 : 6 reps ---
+    rep 1/6  deconv=310.02 ms  reduce=2.70 ms  in-window other=153.24 ms  (gpu_l8=465.96 ms)
+    rep 2/6  deconv=311.46 ms  reduce=2.67 ms  in-window other=153.41 ms  (gpu_l8=467.53 ms)
+    rep 3/6  deconv=315.01 ms  reduce=2.67 ms  in-window other=153.31 ms  (gpu_l8=470.99 ms)
+    rep 4/6  deconv=309.78 ms  reduce=2.68 ms  in-window other=153.94 ms  (gpu_l8=466.40 ms)
+    rep 5/6  deconv=311.98 ms  reduce=2.66 ms  in-window other=153.18 ms  (gpu_l8=467.82 ms)
+    rep 6/6  deconv=310.52 ms  reduce=2.67 ms  in-window other=153.67 ms  (gpu_l8=466.86 ms)
+==============================================================
+ FSRCNN GPU profile -- rtx4090
+ gpu:       NVIDIA GeForce RTX 4090
+ hostname:  lab-iot-MS-7E06
+ date:      2026-08-09T22:37:40+08:00
+ arch used: -arch=native
+ backdrop:  OMP_NUM_THREADS=4 (layers 1-7)
+ reps:      6 per configuration
+ frames:    150, 176x144 -> 352x288
+==============================================================
+
+PHASE A -- production binary. Use these for the paper.
+All figures are mean +/- sample SD over 6 reps, milliseconds,
+totalled across all 150 frames.
+
+config         wall                | gpu_l8              | h2d                 | d2h                 | cpu_l17             | vram_kb
+----------------------------------------------------------------------------------------------------------------------------------
+16x16_256       5590.17 +/- 153.38 |   437.06 +/- 3.86   |   392.57 +/- 3.85   |    16.85 +/- 0.38   |  4671.05 +/- 148.57 | 45382
+8x8_256         5528.17 +/- 47.26  |   411.63 +/- 1.87   |   367.62 +/- 2.24   |    16.46 +/- 0.31   |  4621.28 +/- 57.00  | 45382
+32x8_256        5471.17 +/- 76.17  |   360.92 +/- 7.22   |   318.06 +/- 6.55   |    16.42 +/- 0.49   |  4624.50 +/- 70.96  | 45382
+16x16_128       5569.67 +/- 81.63  |   437.49 +/- 3.46   |   393.62 +/- 3.38   |    16.51 +/- 0.55   |  4646.52 +/- 81.44  | 45382
+16x16_512       5667.33 +/- 122.43 |   433.91 +/- 3.88   |   389.10 +/- 4.18   |    16.68 +/- 0.41   |  4747.32 +/- 118.46 | 45382
+
+PHASE B -- instrumented binary. Decomposition of gpu_l8 only;
+do not quote these as standalone timings.
+
+config         deconv (56x)        | reduction (1x)      | in-window other     | gpu_l8 (instr.)
+--------------------------------------------------------------------------------------
+16x16_256        310.32 +/- 2.64   |     2.62 +/- 0.01   |   153.63 +/- 2.04   |   466.57 +/- 3.07  
+8x8_256          312.45 +/- 1.94   |     2.62 +/- 0.01   |   152.10 +/- 1.06   |   467.16 +/- 1.71  
+32x8_256         261.90 +/- 3.09   |     2.62 +/- 0.01   |   152.14 +/- 0.36   |   416.66 +/- 3.08  
+16x16_128        310.03 +/- 2.30   |     2.38 +/- 0.03   |   153.45 +/- 0.44   |   465.85 +/- 2.11  
+16x16_512        311.46 +/- 1.93   |     2.67 +/- 0.01   |   153.46 +/- 0.29   |   467.59 +/- 1.80  
+
+Reading Phase B: 'in-window other' is the 56 per-channel H2D copies
+issued inside the event bracket, plus launch gaps. deconv + reduction +
+in-window other = gpu_l8. If Phase B's gpu_l8 differs noticeably from
+Phase A's, the instrumentation is perturbing the run and the split
+should be reported as indicative rather than exact.
+
+Files to send back:
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_rtx4090.txt
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_rtx4090.csv
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_gpuprofile_rtx4090.rawlog
+==============================================================
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# 
+
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# bash ./collect_reconstruction_quality.sh
+[INFO] Building fsrcnn_gpu_instr...
+[INFO] built with -arch=native
+[INFO] Downsampling 176x144 -> 88x72 (bicubic)...
+[INFO] LR sequence OK (1425600 bytes)
+[INFO] Running FSRCNN (scale 2) on the LR sequence...
+[INFO] SR sequence OK (5702400 bytes)
+[INFO] Bicubic upscale 88x72 -> 176x144 (comparator)...
+[INFO] Scoring FSRCNN and bicubic against the original 176x144...
+[INFO] Extracting frame 26 from each sequence...
+==============================================================
+ FSRCNN reconstruction quality (self-contained SR experiment)
+ gpu:      NVIDIA GeForce RTX 4090
+ hostname: lab-iot-MS-7E06
+ date:     2026-08-09T22:38:17+08:00
+==============================================================
+
+Protocol
+  ground truth : suzie_qcif.yuv, 176x144, 150 frames
+  LR input     : bicubic downsample to 88x72
+  candidate 1  : FSRCNN scale 2, 88x72 -> 176x144
+  candidate 2  : bicubic upscale, 88x72 -> 176x144
+  scored with  : ffmpeg psnr / ssim, both against the ground truth
+
+Read the y: component, not the 'average'. Only the Y plane passes
+through the network; U and V are 2x pixel replication in the source,
+so including them measures the replication, not FSRCNN.
+
+  FSRCNN 2x (V2, GPU spatial reduction)
+    psnr: [Parsed_psnr_0 @ 0x5aedf3290c00] PSNR y:37.864571 u:48.559050 v:47.477743 average:39.419242 min:38.480887 max:44.234818
+    ssim: [Parsed_ssim_0 @ 0x6007ddd44c80] SSIM Y:0.966542 (14.755050) U:0.987393 (18.993726) V:0.985588 (18.412733) All:0.973192 (15.717302)
+
+  Bicubic 2x (comparator)
+    psnr: [Parsed_psnr_0 @ 0x60f9f0c469c0] PSNR y:35.690343 u:50.450988 v:49.710015 average:37.372663 min:36.254086 max:42.117521
+    ssim: [Parsed_ssim_0 @ 0x5a84298c3d40] SSIM Y:0.953247 (13.301877) U:0.991811 (20.867464) V:0.991172 (20.541536) All:0.965995 (14.684565)
+
+Interpretation: FSRCNN's Y-plane PSNR must exceed bicubic's for the
+network to be worth its runtime. If it does not, say so in the paper
+rather than dropping the experiment -- the speedup claims stand on
+their own either way, and a negative result here is honest and
+publishable. Do not tune the protocol until the number improves.
+
+ffmpeg: ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+
+Files to send back:
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_quality_rtx4090.txt
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/quality_frames/  (4 PNGs, frame 26)
+==============================================================
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# 
+
+[INFO] Generating deterministic reference (V1, 1 thread)...
+[INFO] Running V0 at 32 threads, 3 times...
+[INFO] run 1 done (diff_bytes=5010476)
+[INFO] run 2 done (diff_bytes=5042223)
+[INFO] run 3 done (diff_bytes=4749465)
+==============================================================
+ Fig. 1 panel (b) provenance -- V0 race at 32 threads
+ gpu:      NVIDIA GeForce RTX 4090
+ hostname: lab-iot-MS-7E06
+ cpu:      Intel(R) Core(TM) i9-14900K
+ nproc:    32
+ date:     2026-08-09T22:40:31+08:00
+==============================================================
+
+Reference: V1 spatial reduction, OMP_NUM_THREADS=1, 352 x 288.
+Candidate: V0 naive OpenMP, OMP_NUM_THREADS=32, 3 runs.
+
+run 1: diff_bytes=5010476 / 22809600
+    [Parsed_psnr_0 @ 0x5b10eb2c2800] PSNR y:21.457039 u:inf v:inf average:23.217951 min:15.775029 max:57.797072
+    [Parsed_ssim_0 @ 0x58b5a1ef1a40] SSIM Y:0.767136 (6.328982) U:1.000000 (inf) V:1.000000 (inf) All:0.844758 (8.089895)
+
+run 2: diff_bytes=5042223 / 22809600
+    [Parsed_psnr_0 @ 0x5d2df96c5a00] PSNR y:21.633016 u:inf v:inf average:23.393929 min:15.872005 max:45.787459
+    [Parsed_ssim_0 @ 0x5c277ab50b80] SSIM Y:0.777145 (6.519770) U:1.000000 (inf) V:1.000000 (inf) All:0.851430 (8.280682)
+
+run 3: diff_bytes=4749465 / 22809600
+    [Parsed_psnr_0 @ 0x630774656a00] PSNR y:21.339452 u:inf v:inf average:23.100365 min:12.933934 max:50.862573
+    [Parsed_ssim_0 @ 0x59c4619d9dc0] SSIM Y:0.778779 (6.551730) U:1.000000 (inf) V:1.000000 (inf) All:0.852519 (8.312642)
+
+Expect the three runs to disagree with each other as well as with the
+reference. That is the race, and it is the figure's whole argument.
+Take the y: PSNR/SSIM from whichever run you use for the panel and
+quote it as a representative run, with the observed range alongside.
+
+Files to send back:
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_v0frame_rtx4090.txt
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/v0_frames_rtx4090/  (4 PNGs)
+==============================================================
+root@lab-iot-MS-7E06:/home/lab-iot/FSRCNN/paper-conf/newpaper/plans# 
