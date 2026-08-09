@@ -15,23 +15,24 @@
 \usepackage{booktabs}
 \usepackage{url}
 
-% IEEEtran sets \ttdefault to Courier (pcr), which ships in the "courier"
-% package. A TeX Live "basic" scheme does not include it, and the failure mode
-% is silent in the worst way: every \texttt{} falls back to nullfont and
-% renders as nothing at all. Fall back to Computer Modern Typewriter, which is
-% in every distribution, when the Courier metrics are absent. On a machine with
-% courier installed this is a no-op and the paper still sets in Courier.
-\IfFileExists{pcrr7t.tfm}{}{\renewcommand{\ttdefault}{cmtt}}
+% IEEEtran prescribes Courier (pcr) for \texttt. If the courier package is
+% missing -- it is absent from the TeX Live "basic" scheme -- every \texttt
+% silently renders as nullfont, i.e. completely invisible, with only a log
+% warning. Loading it explicitly turns that silent failure into a hard error.
+% Install with: tlmgr install courier
+\usepackage{courier}
 
-% Tighter float packing. IEEEtran's defaults reserve generous separation and
-% refuse pages that are mostly float, which on a table-heavy paper strands a
-% lot of vertical whitespace. These are typesetting parameters only; no
-% content changes.
-\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
-\setlength{\floatsep}{7pt plus 2pt minus 2pt}
-\setlength{\intextsep}{7pt plus 2pt minus 2pt}
-\setlength{\dbltextfloatsep}{7pt plus 2pt minus 2pt}
-\setlength{\dblfloatsep}{7pt plus 2pt minus 2pt}
+% Layout note for the IEEE conference format. IEEEtran prescribes margins,
+% column widths, line spacing and fonts; none of those are touched here.
+% Two minimal adjustments keep a table-heavy paper inside the 6-page limit:
+%   (1) textfloatsep 18.6pt -> 14pt, the gap between a float and body text.
+%       This is the only prescribed length altered, by 4.6pt.
+%   (2) float placement fractions, which govern only where LaTeX is willing
+%       to put a float and change no visible spacing at all.
+% Without (1) the paper sets to 7 pages with the extra space stranded as
+% whitespace around tables rather than used for content.
+\setlength{\textfloatsep}{14pt plus 2pt minus 4pt}
+\setlength{\dbltextfloatsep}{14pt plus 2pt minus 4pt}
 \renewcommand{\topfraction}{0.92}
 \renewcommand{\bottomfraction}{0.85}
 \renewcommand{\textfraction}{0.06}
@@ -58,7 +59,7 @@ latjoromhi25d@student.unhas.ac.id, adnan@unhas.ac.id}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-FSRCNN's final deconvolution layer is both its computational bottleneck and a correctness hazard: naive multi-threaded CPU accumulation races and corrupts output non-reproducibly. We offload that layer to isolated per-channel CUDA kernels followed by a parallel reduction, eliminating races by construction, and evaluate on two architecturally distinct platforms --- the NVIDIA GB10 Grace Blackwell Superchip (unified memory over NVLink-C2C) and an Intel i9-14900K desktop with an RTX 4090 (discrete, PCIe). On both, CPU and GPU spatial-reduction output is byte-identical to a verified deterministic reference at every configuration tested, and the GPU output is bit-identical \emph{across} the two platforms (matching SHA-256) despite differing host ISA and GPU microarchitecture. The warp-aligned $32{\times}8$ grid is fastest on both, and per-kernel event profiling localizes the entire gain to the deconvolution kernel, exactly where the coalescing explanation predicts. Speedups over each platform's best correctness-verified CPU configuration are $1.46\times$ (GB10, $31.5$ FPS) and $1.63\times$. Profiling also yields an architectural boundary for the pattern's cost: determinism costs $4.6\%$ of GPU Layer~8 time on the GB10 but $0.6\%$ on the RTX 4090, according to whether the private buffer fits last-level cache, while device-to-host transfer runs the other way and is $4.74\times$ faster on unified memory.
+FSRCNN's final deconvolution layer is both its computational bottleneck and a correctness hazard: naive multi-threaded CPU accumulation races and corrupts output non-reproducibly. We offload it to isolated per-channel CUDA kernels followed by a parallel reduction, eliminating races by construction, and evaluate on two architecturally distinct platforms: an NVIDIA GB10 Grace Blackwell Superchip with unified memory, and an Intel i9-14900K desktop with an RTX 4090 over PCIe. On both, CPU and GPU spatial-reduction output is byte-identical to a verified deterministic reference at every configuration tested, and the GPU output is bit-identical across the two platforms despite differing host instruction set architecture and GPU microarchitecture. The warp-aligned 32-by-8 grid is fastest on both, and per-kernel profiling localizes the entire gain to the deconvolution kernel, exactly where memory coalescing predicts. Speedups over each platform's best correctness-verified CPU configuration reach 1.46 and 1.63 times. Profiling further yields an architectural boundary for the cost of the pattern: determinism costs 4.6 percent of GPU layer-8 time on the GB10 but 0.6 percent on the RTX 4090, according to whether the private buffer fits in last-level cache, while device-to-host transfer runs the opposite way and is 4.74 times faster on unified memory.
 \end{abstract}
 
 \begin{IEEEkeywords}
