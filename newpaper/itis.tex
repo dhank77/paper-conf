@@ -226,7 +226,7 @@ Total Wall Time & $4{,}750.67 \pm 30.40$ & $5{,}471.17 \pm 76.17$ \\
 }
 
 \vspace{1mm}
-\footnotesize{Indented rows decompose the event window above them and are not additional wall-time slices. They come from a separately instrumented binary whose event recording inflates that window by $8.4\%$ (GB10) and $15.4\%$ (RTX 4090). That overhead is incurred \emph{per launch}, so it is concentrated almost entirely in the $8{,}400$ \texttt{deconv\_kernel} launches rather than the $150$ reduction launches: dividing the inflation by the launch count gives $5.34$~\textmu s (GB10) and $6.64$~\textmu s (RTX 4090), two independent platforms agreeing to within an order. The reduction figure is therefore inflated by only about $0.80$~ms on the GB10, some $3\%$, and deflating the whole window uniformly instead would wrongly place the reduction above its platform's DRAM peak. The production \texttt{h2d\_ms} counter is omitted: it overlaps the event window and is not a transfer measurement (see text).}
+\footnotesize{Indented rows decompose the event window above them and are not additional wall-time slices. They come from a separately instrumented binary whose event recording inflates that window by $8.4\%$ (GB10) and $15.4\%$ (RTX 4090). That overhead is incurred \emph{per launch}, so it is concentrated almost entirely in the $8{,}400$ \texttt{deconv\_kernel} launches rather than the $150$ reduction launches: dividing the inflation by the launch count gives $5.34$~\textmu s (GB10) and $6.64$~\textmu s (RTX 4090), two independent platforms agreeing to within an order. The reduction figure is therefore inflated by only about $0.80$~ms on the GB10, some $3\%$, and deflating the whole window uniformly instead would wrongly place the reduction above its platform's DRAM peak. The production \texttt{h2d\_ms} counter is omitted (see text).}
 \end{table}
 
 Two results stand out, pointing in opposite directions.
@@ -252,7 +252,7 @@ Shifting from the default $16{\times}16$ grid ($696.51 \pm 1.78$~ms) to the warp
 \label{sec:nvlink}
 With that error corrected, transfer is not the bottleneck we took it for. On the GB10 everything inside the event window that is not kernel execution totals $127.65$~ms, $2.7\%$ of wall time, plus $3.46$~ms of D2H; even charging that entire residual to transfer, which overstates it, moves under $3\%$ of the pipeline. The RTX 4090's residual is larger both absolutely and as a share of its window ($152.14$~ms, $36.5\%$ against $22.1\%$), the direction PCIe versus NVLink-C2C predicts, though small enough that we do not lean on it. The one clean and clearly asymmetric transfer measurement is D2H.
 
-What Table~\ref{tab:breakdown} shows instead is an Amdahl's Law~\cite{amdahl1967} ceiling. Layer~8 is now $11.2\%$ of GB10 wall time and $6.6\%$ on the RTX 4090, while CPU Layers 1--7, still on 20 and 4 OpenMP threads rather than serial, account for $71.4\%$ and $84.5\%$. The accelerated stage has been optimized into near-irrelevance: making Layer~8 free would still leave the RTX 4090 pipeline at $93\%$ of current wall time. Offloading Layers 1--7 is therefore the only remaining path to sub-second reconstruction, and a Roofline analysis~\cite{williams2009roofline} would establish whether that offload is compute- or memory-bound first. The unaccounted remainder is process launch, file I/O and the per-frame \texttt{uint8}$\leftrightarrow$\texttt{double} conversions, all single-threaded and outside the instrumented region.
+What Table~\ref{tab:breakdown} shows instead is an Amdahl's Law~\cite{amdahl1967} ceiling. Layer~8 is now $11.2\%$ of GB10 wall time and $6.6\%$ on the RTX 4090, while CPU Layers 1--7, still on 20 and 4 OpenMP threads rather than serial, account for $71.4\%$ and $84.5\%$. Making Layer~8 free would still leave the RTX 4090 pipeline at $93\%$ of current wall time, so offloading Layers 1--7 is the only remaining path to sub-second reconstruction; a Roofline analysis~\cite{williams2009roofline} would establish whether that offload is compute- or memory-bound first. The unaccounted remainder is process launch, file I/O and the per-frame \texttt{uint8}$\leftrightarrow$\texttt{double} conversions, all single-threaded and outside the instrumented region.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -276,7 +276,7 @@ At the kernel level $32{\times}8$ remains fastest on this Ada Lovelace GPU ($360
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\columnwidth]{figures/warp_alignment_cross_platform.pdf}
-\caption{GPU Layer~8 kernel time by grid configuration on both GPUs, mean $\pm$ SD over 6 runs. The warp-aligned $32{\times}8$ grid (outlined) is fastest on both architectures, and the advantage is many standard deviations wide on each.}
+\caption{GPU Layer~8 kernel time by grid configuration, mean $\pm$ SD over 6 runs. The warp-aligned $32{\times}8$ grid (outlined) is fastest on both architectures.}
 \label{fig:warp-cross}
 \end{figure}
 
@@ -291,22 +291,22 @@ The largest gap is the absence of a competitive GPU baseline: V2 is compared onl
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
-We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvolution and evaluated it on two architecturally distinct platforms. On both, the CPU and GPU spatial-reduction variants are bit-exact against a verified deterministic reference at every configuration tested, while naive accumulation corrupts output non-monotonically, falling as low as $13.8$~dB and reaching a near-undetectable $68.6$~dB on the RTX 4090, the more instructive failure. GPU output is further bit-identical \emph{across} the two platforms, spanning two host ISAs and two GPU generations. The warp-aligned $32{\times}8$ grid is fastest on both, with per-kernel profiling localizing the entire gain to the deconvolution, as the coalescing explanation requires, and speedups over each platform's best correctness-verified CPU configuration reach $1.46\times$ ($31.5$ FPS) and $1.63\times$. That profiling also corrected an error in our own earlier instrumentation: what we read as a large host-to-device asymmetry was a host-side counter double-counting kernel-completion waiting, which we retract. The genuine asymmetries run in opposite directions. Unified memory returns results $4.74\times$ faster, while the discrete GPU runs the bandwidth-bound reduction $10.0\times$ faster because its L2 holds the entire private buffer that the GB10 must stream at $95\%$ of memory peak. The cost of determinism therefore depends less on the algorithm than on whether the privatization working set fits last-level cache, a boundary that should transfer to any network to which this pattern is applied.
+We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvolution and evaluated it on two architecturally distinct platforms. On both, the CPU and GPU variants are bit-exact against a verified deterministic reference at every configuration tested, while naive accumulation corrupts output non-monotonically, falling as low as $13.8$~dB and reaching a near-undetectable $68.6$~dB, the more instructive failure. GPU output is further bit-identical \emph{across} the two platforms, spanning two host ISAs and two GPU generations. The warp-aligned $32{\times}8$ grid is fastest on both, with per-kernel profiling localizing the entire gain to the deconvolution as the coalescing explanation requires, and speedups over each platform's best correctness-verified CPU configuration reach $1.46\times$ ($31.5$ FPS) and $1.63\times$. That profiling also corrected an error in our own earlier instrumentation: what we read as a large host-to-device asymmetry was a host-side counter double-counting kernel-completion waiting, which we retract. The genuine asymmetries run in opposite directions. Unified memory returns results $4.74\times$ faster, while the discrete GPU runs the bandwidth-bound reduction $10.0\times$ faster because its L2 holds the entire private buffer that the GB10 must stream at $95\%$ of memory peak. The cost of determinism therefore depends less on the algorithm than on whether the privatization working set fits last-level cache, a boundary that should transfer to any network to which this pattern is applied.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{thebibliography}{00}
 \footnotesize
 \itemsep0pt plus 0.5pt
 
-\bibitem{annisa2025} Annisa, Adnan, and Z. Zainuddin, ``Serial to parallel video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE AIMS}, 2025, pp. 1--8.
+\bibitem{annisa2025} Annisa, Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artif. Intell. Mechatron. Syst. (AIMS)}, 2025, pp. 1--8.
 
 \bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the super-resolution convolutional neural network,'' in \emph{Proc. ECCV}, 2016, pp. 391--407.
 
 \bibitem{shi2016edge} W. Shi \emph{et al.}, ``Edge computing: vision and challenges,'' \emph{IEEE Internet Things J.}, vol. 3, no. 5, pp. 637--646, 2016.
 
-\bibitem{wang2020pipeit} S. Wang \emph{et al.}, ``High-throughput CNN inference on embedded ARM big.LITTLE processors,'' \emph{IEEE TCAD}, vol. 39, no. 10, pp. 2254--2267, 2020.
+\bibitem{wang2020pipeit} S. Wang \emph{et al.}, ``High-throughput CNN inference on embedded ARM big.LITTLE multicore processors,'' \emph{IEEE TCAD}, vol. 39, no. 10, pp. 2254--2267, 2020.
 
-\bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible scheduling for asymmetric multicores with PMCSched,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
+\bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible system software scheduling for asymmetric multicore systems with PMCSched: a case for Intel Alder Lake,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
 
 \bibitem{eichenberger2012ompaffinity} A. E. Eichenberger \emph{et al.}, ``The design of OpenMP thread affinity,'' in \emph{IWOMP}, LNCS 7312, 2012, pp. 15--28.
 
@@ -320,7 +320,7 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 
 \bibitem{amdahl1967} G. M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \emph{Proc. AFIPS}, 1967, pp. 483--485.
 
-\bibitem{williams2009roofline} S. Williams, A. Waterman, and D. Patterson, ``Roofline: an insightful visual performance model for multicore architectures,'' \emph{Commun. ACM}, vol. 52, no. 4, 2009.
+\bibitem{williams2009roofline} S. Williams, A. Waterman, and D. Patterson, ``Roofline: an insightful visual performance model for multicore architectures,'' \emph{Commun. ACM}, vol. 52, no. 4, pp. 65--76, 2009.
 
 \bibitem{chetlur2014cudnn} S. Chetlur \emph{et al.}, ``cuDNN: efficient primitives for deep learning,'' arXiv:1410.0759, 2014.
 
