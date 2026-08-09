@@ -1,0 +1,270 @@
+### phase=A config=16x16_256 rep=1 wall_ms=5562 status=0
+[PROFILING] cpu_l17_ms=4662.56 h2d_ms=389.61 gpu_l8_ms=433.62 d2h_ms=16.83 total_ms=5502.62 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_256 rep=2 wall_ms=5527 status=0
+[PROFILING] cpu_l17_ms=4598.32 h2d_ms=395.43 gpu_l8_ms=438.74 d2h_ms=16.22 total_ms=5448.70 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_256 rep=3 wall_ms=5485 status=0
+[PROFILING] cpu_l17_ms=4544.74 h2d_ms=396.15 gpu_l8_ms=440.35 d2h_ms=16.92 total_ms=5398.17 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_256 rep=4 wall_ms=5893 status=0
+[PROFILING] cpu_l17_ms=4956.73 h2d_ms=396.62 gpu_l8_ms=442.18 d2h_ms=17.22 total_ms=5812.76 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_256 rep=5 wall_ms=5490 status=0
+[PROFILING] cpu_l17_ms=4585.17 h2d_ms=388.80 gpu_l8_ms=434.22 d2h_ms=16.70 total_ms=5424.90 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_256 rep=6 wall_ms=5584 status=0
+[PROFILING] cpu_l17_ms=4678.80 h2d_ms=388.84 gpu_l8_ms=433.24 d2h_ms=17.23 total_ms=5518.11 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=8x8_256 rep=1 wall_ms=5475 status=0
+[PROFILING] cpu_l17_ms=4576.37 h2d_ms=368.17 gpu_l8_ms=412.22 d2h_ms=16.02 total_ms=5372.78 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=8x8_256 rep=2 wall_ms=5493 status=0
+[PROFILING] cpu_l17_ms=4560.93 h2d_ms=366.95 gpu_l8_ms=410.93 d2h_ms=16.54 total_ms=5355.35 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=8x8_256 rep=3 wall_ms=5587 status=0
+[PROFILING] cpu_l17_ms=4679.15 h2d_ms=369.58 gpu_l8_ms=412.86 d2h_ms=16.73 total_ms=5478.32 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=8x8_256 rep=4 wall_ms=5582 status=0
+[PROFILING] cpu_l17_ms=4690.47 h2d_ms=369.57 gpu_l8_ms=413.90 d2h_ms=16.88 total_ms=5490.82 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=8x8_256 rep=5 wall_ms=5501 status=0
+[PROFILING] cpu_l17_ms=4577.13 h2d_ms=367.87 gpu_l8_ms=411.38 d2h_ms=16.33 total_ms=5372.71 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=8x8_256 rep=6 wall_ms=5531 status=0
+[PROFILING] cpu_l17_ms=4643.62 h2d_ms=363.55 gpu_l8_ms=408.48 d2h_ms=16.29 total_ms=5431.93 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=32x8_256 rep=1 wall_ms=5411 status=0
+[PROFILING] cpu_l17_ms=4575.80 h2d_ms=316.98 gpu_l8_ms=359.08 d2h_ms=15.87 total_ms=5267.72 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=32x8_256 rep=2 wall_ms=5538 status=0
+[PROFILING] cpu_l17_ms=4705.56 h2d_ms=314.61 gpu_l8_ms=356.97 d2h_ms=16.26 total_ms=5393.40 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=32x8_256 rep=3 wall_ms=5366 status=0
+[PROFILING] cpu_l17_ms=4519.32 h2d_ms=315.14 gpu_l8_ms=357.45 d2h_ms=16.05 total_ms=5207.96 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=32x8_256 rep=4 wall_ms=5507 status=0
+[PROFILING] cpu_l17_ms=4670.91 h2d_ms=313.23 gpu_l8_ms=356.22 d2h_ms=16.29 total_ms=5356.65 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=32x8_256 rep=5 wall_ms=5560 status=0
+[PROFILING] cpu_l17_ms=4674.22 h2d_ms=331.06 gpu_l8_ms=375.33 d2h_ms=17.01 total_ms=5397.61 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=32x8_256 rep=6 wall_ms=5445 status=0
+[PROFILING] cpu_l17_ms=4601.17 h2d_ms=317.35 gpu_l8_ms=360.45 d2h_ms=17.03 total_ms=5296.00 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_128 rep=1 wall_ms=5628 status=0
+[PROFILING] cpu_l17_ms=4700.62 h2d_ms=391.05 gpu_l8_ms=434.97 d2h_ms=16.76 total_ms=5543.39 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_128 rep=2 wall_ms=5592 status=0
+[PROFILING] cpu_l17_ms=4659.31 h2d_ms=397.37 gpu_l8_ms=441.98 d2h_ms=16.34 total_ms=5515.00 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_128 rep=3 wall_ms=5586 status=0
+[PROFILING] cpu_l17_ms=4658.86 h2d_ms=393.37 gpu_l8_ms=436.86 d2h_ms=16.32 total_ms=5505.41 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_128 rep=4 wall_ms=5669 status=0
+[PROFILING] cpu_l17_ms=4756.21 h2d_ms=391.61 gpu_l8_ms=435.99 d2h_ms=17.46 total_ms=5601.27 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_128 rep=5 wall_ms=5470 status=0
+[PROFILING] cpu_l17_ms=4556.89 h2d_ms=390.17 gpu_l8_ms=433.66 d2h_ms=16.35 total_ms=5397.07 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_128 rep=6 wall_ms=5473 status=0
+[PROFILING] cpu_l17_ms=4547.25 h2d_ms=398.13 gpu_l8_ms=441.49 d2h_ms=15.85 total_ms=5402.72 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_512 rep=1 wall_ms=5744 status=0
+[PROFILING] cpu_l17_ms=4825.20 h2d_ms=385.80 gpu_l8_ms=430.89 d2h_ms=16.31 total_ms=5658.20 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_512 rep=2 wall_ms=5472 status=0
+[PROFILING] cpu_l17_ms=4558.69 h2d_ms=391.83 gpu_l8_ms=435.70 d2h_ms=17.07 total_ms=5403.29 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_512 rep=3 wall_ms=5634 status=0
+[PROFILING] cpu_l17_ms=4717.22 h2d_ms=386.22 gpu_l8_ms=430.65 d2h_ms=17.03 total_ms=5551.12 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_512 rep=4 wall_ms=5770 status=0
+[PROFILING] cpu_l17_ms=4839.75 h2d_ms=385.67 gpu_l8_ms=431.51 d2h_ms=17.06 total_ms=5673.99 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_512 rep=5 wall_ms=5597 status=0
+[PROFILING] cpu_l17_ms=4676.96 h2d_ms=396.09 gpu_l8_ms=440.72 d2h_ms=16.20 total_ms=5529.97 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=A config=16x16_512 rep=6 wall_ms=5787 status=0
+[PROFILING] cpu_l17_ms=4866.13 h2d_ms=389.01 gpu_l8_ms=434.00 d2h_ms=16.41 total_ms=5705.55 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_256 rep=1 wall_ms=5361 status=0
+[PROFILING] cpu_l17_ms=4416.06 h2d_ms=390.95 gpu_l8_ms=465.33 d2h_ms=16.41 total_ms=5288.76 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[KERNELSPLIT] deconv_ms=310.46 reduce_ms=2.62 in_window_other_ms=152.26 gpu_l8_ms=465.33 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_256 rep=2 wall_ms=5581 status=0
+[PROFILING] cpu_l17_ms=4612.11 h2d_ms=389.42 gpu_l8_ms=465.12 d2h_ms=16.51 total_ms=5483.16 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[KERNELSPLIT] deconv_ms=308.72 reduce_ms=2.63 in_window_other_ms=153.78 gpu_l8_ms=465.12 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_256 rep=3 wall_ms=5598 status=0
+[PROFILING] cpu_l17_ms=4644.50 h2d_ms=386.31 gpu_l8_ms=464.69 d2h_ms=16.97 total_ms=5512.47 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[KERNELSPLIT] deconv_ms=308.55 reduce_ms=2.63 in_window_other_ms=153.51 gpu_l8_ms=464.69 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_256 rep=4 wall_ms=5422 status=0
+[PROFILING] cpu_l17_ms=4473.31 h2d_ms=392.07 gpu_l8_ms=463.42 d2h_ms=15.78 total_ms=5344.58 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[KERNELSPLIT] deconv_ms=308.74 reduce_ms=2.62 in_window_other_ms=152.06 gpu_l8_ms=463.42 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_256 rep=5 wall_ms=6225 status=0
+[PROFILING] cpu_l17_ms=5232.78 h2d_ms=392.04 gpu_l8_ms=470.16 d2h_ms=17.28 total_ms=6112.25 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[KERNELSPLIT] deconv_ms=309.98 reduce_ms=2.62 in_window_other_ms=157.55 gpu_l8_ms=470.16 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_256 rep=6 wall_ms=5382 status=0
+[PROFILING] cpu_l17_ms=4451.93 h2d_ms=392.34 gpu_l8_ms=470.70 d2h_ms=16.07 total_ms=5331.03 vram_kb=45382 block_x=16 block_y=16 threads_reduce=256
+[KERNELSPLIT] deconv_ms=315.47 reduce_ms=2.63 in_window_other_ms=152.60 gpu_l8_ms=470.70 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=8x8_256 rep=1 wall_ms=5546 status=0
+[PROFILING] cpu_l17_ms=4601.22 h2d_ms=390.22 gpu_l8_ms=467.11 d2h_ms=16.27 total_ms=5474.82 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=311.88 reduce_ms=2.62 in_window_other_ms=152.62 gpu_l8_ms=467.11 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=8x8_256 rep=2 wall_ms=5492 status=0
+[PROFILING] cpu_l17_ms=4535.73 h2d_ms=396.48 gpu_l8_ms=469.94 d2h_ms=16.10 total_ms=5418.25 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=315.65 reduce_ms=2.64 in_window_other_ms=151.65 gpu_l8_ms=469.94 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=8x8_256 rep=3 wall_ms=5427 status=0
+[PROFILING] cpu_l17_ms=4488.47 h2d_ms=393.42 gpu_l8_ms=466.59 d2h_ms=17.02 total_ms=5365.50 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=313.16 reduce_ms=2.61 in_window_other_ms=150.82 gpu_l8_ms=466.59 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=8x8_256 rep=4 wall_ms=5413 status=0
+[PROFILING] cpu_l17_ms=4458.90 h2d_ms=394.32 gpu_l8_ms=466.79 d2h_ms=15.95 total_ms=5335.96 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=312.70 reduce_ms=2.62 in_window_other_ms=151.47 gpu_l8_ms=466.79 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=8x8_256 rep=5 wall_ms=5886 status=0
+[PROFILING] cpu_l17_ms=4896.16 h2d_ms=390.51 gpu_l8_ms=467.85 d2h_ms=16.40 total_ms=5770.92 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=311.37 reduce_ms=2.62 in_window_other_ms=153.87 gpu_l8_ms=467.85 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=8x8_256 rep=6 wall_ms=5312 status=0
+[PROFILING] cpu_l17_ms=4368.98 h2d_ms=393.48 gpu_l8_ms=464.71 d2h_ms=16.59 total_ms=5243.75 vram_kb=45382 block_x=8 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=309.91 reduce_ms=2.64 in_window_other_ms=152.16 gpu_l8_ms=464.71 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=32x8_256 rep=1 wall_ms=5612 status=0
+[PROFILING] cpu_l17_ms=4704.32 h2d_ms=342.57 gpu_l8_ms=416.85 d2h_ms=16.79 total_ms=5480.53 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=261.72 reduce_ms=2.62 in_window_other_ms=152.50 gpu_l8_ms=416.85 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=32x8_256 rep=2 wall_ms=5395 status=0
+[PROFILING] cpu_l17_ms=4496.06 h2d_ms=342.08 gpu_l8_ms=414.23 d2h_ms=16.63 total_ms=5268.99 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=259.25 reduce_ms=2.62 in_window_other_ms=152.36 gpu_l8_ms=414.23 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=32x8_256 rep=3 wall_ms=5515 status=0
+[PROFILING] cpu_l17_ms=4615.70 h2d_ms=343.88 gpu_l8_ms=416.26 d2h_ms=15.86 total_ms=5391.71 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=261.18 reduce_ms=2.63 in_window_other_ms=152.45 gpu_l8_ms=416.26 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=32x8_256 rep=4 wall_ms=5401 status=0
+[PROFILING] cpu_l17_ms=4476.09 h2d_ms=345.93 gpu_l8_ms=422.64 d2h_ms=16.46 total_ms=5261.11 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=267.98 reduce_ms=2.63 in_window_other_ms=152.03 gpu_l8_ms=422.64 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=32x8_256 rep=5 wall_ms=5465 status=0
+[PROFILING] cpu_l17_ms=4569.23 h2d_ms=344.54 gpu_l8_ms=415.06 d2h_ms=16.76 total_ms=5345.60 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=260.89 reduce_ms=2.62 in_window_other_ms=151.56 gpu_l8_ms=415.06 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=32x8_256 rep=6 wall_ms=5339 status=0
+[PROFILING] cpu_l17_ms=4446.67 h2d_ms=343.04 gpu_l8_ms=414.95 d2h_ms=16.32 total_ms=5220.98 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+[KERNELSPLIT] deconv_ms=260.39 reduce_ms=2.62 in_window_other_ms=151.94 gpu_l8_ms=414.95 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_128 rep=1 wall_ms=5306 status=0
+[PROFILING] cpu_l17_ms=4376.62 h2d_ms=394.01 gpu_l8_ms=465.18 d2h_ms=16.08 total_ms=5251.89 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[KERNELSPLIT] deconv_ms=309.14 reduce_ms=2.35 in_window_other_ms=153.69 gpu_l8_ms=465.18 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_128 rep=2 wall_ms=5314 status=0
+[PROFILING] cpu_l17_ms=4376.53 h2d_ms=390.79 gpu_l8_ms=465.33 d2h_ms=16.36 total_ms=5249.00 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[KERNELSPLIT] deconv_ms=309.91 reduce_ms=2.36 in_window_other_ms=153.06 gpu_l8_ms=465.33 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_128 rep=3 wall_ms=5359 status=0
+[PROFILING] cpu_l17_ms=4403.27 h2d_ms=393.32 gpu_l8_ms=466.07 d2h_ms=15.88 total_ms=5278.53 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[KERNELSPLIT] deconv_ms=310.54 reduce_ms=2.38 in_window_other_ms=153.14 gpu_l8_ms=466.07 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_128 rep=4 wall_ms=5499 status=0
+[PROFILING] cpu_l17_ms=4564.11 h2d_ms=391.26 gpu_l8_ms=464.64 d2h_ms=17.07 total_ms=5437.08 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[KERNELSPLIT] deconv_ms=309.03 reduce_ms=2.36 in_window_other_ms=153.25 gpu_l8_ms=464.64 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_128 rep=5 wall_ms=5519 status=0
+[PROFILING] cpu_l17_ms=4541.46 h2d_ms=397.87 gpu_l8_ms=469.92 d2h_ms=16.08 total_ms=5425.32 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[KERNELSPLIT] deconv_ms=314.19 reduce_ms=2.43 in_window_other_ms=153.30 gpu_l8_ms=469.92 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_128 rep=6 wall_ms=5605 status=0
+[PROFILING] cpu_l17_ms=4673.98 h2d_ms=389.95 gpu_l8_ms=463.97 d2h_ms=16.63 total_ms=5544.53 vram_kb=45382 block_x=16 block_y=16 threads_reduce=128
+[KERNELSPLIT] deconv_ms=307.37 reduce_ms=2.37 in_window_other_ms=154.23 gpu_l8_ms=463.97 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_512 rep=1 wall_ms=5318 status=0
+[PROFILING] cpu_l17_ms=4373.07 h2d_ms=392.50 gpu_l8_ms=465.96 d2h_ms=16.48 total_ms=5248.01 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[KERNELSPLIT] deconv_ms=310.02 reduce_ms=2.70 in_window_other_ms=153.24 gpu_l8_ms=465.96 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_512 rep=2 wall_ms=5474 status=0
+[PROFILING] cpu_l17_ms=4509.39 h2d_ms=390.87 gpu_l8_ms=467.53 d2h_ms=16.46 total_ms=5384.25 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[KERNELSPLIT] deconv_ms=311.46 reduce_ms=2.67 in_window_other_ms=153.41 gpu_l8_ms=467.53 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_512 rep=3 wall_ms=5408 status=0
+[PROFILING] cpu_l17_ms=4429.06 h2d_ms=399.28 gpu_l8_ms=470.99 d2h_ms=16.58 total_ms=5315.91 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[KERNELSPLIT] deconv_ms=315.01 reduce_ms=2.67 in_window_other_ms=153.31 gpu_l8_ms=470.99 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_512 rep=4 wall_ms=5503 status=0
+[PROFILING] cpu_l17_ms=4525.99 h2d_ms=391.89 gpu_l8_ms=466.40 d2h_ms=16.55 total_ms=5400.82 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[KERNELSPLIT] deconv_ms=309.78 reduce_ms=2.68 in_window_other_ms=153.94 gpu_l8_ms=466.40 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_512 rep=5 wall_ms=5430 status=0
+[PROFILING] cpu_l17_ms=4456.56 h2d_ms=393.11 gpu_l8_ms=467.82 d2h_ms=16.72 total_ms=5334.21 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[KERNELSPLIT] deconv_ms=311.98 reduce_ms=2.66 in_window_other_ms=153.18 gpu_l8_ms=467.82 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+
+### phase=B config=16x16_512 rep=6 wall_ms=5412 status=0
+[PROFILING] cpu_l17_ms=4442.79 h2d_ms=394.07 gpu_l8_ms=466.86 d2h_ms=16.37 total_ms=5320.09 vram_kb=45382 block_x=16 block_y=16 threads_reduce=512
+[KERNELSPLIT] deconv_ms=310.52 reduce_ms=2.67 in_window_other_ms=153.67 gpu_l8_ms=466.86 deconv_launches=8400 frames=150 dims=176x144
+[GPU] Device 0: NVIDIA GeForce RTX 4090 (Compute 8.9, 23.51 GB VRAM)
+

@@ -1,0 +1,38 @@
+==============================================================
+ FSRCNN reconstruction quality (self-contained SR experiment)
+ gpu:      NVIDIA GeForce RTX 4090
+ hostname: lab-iot-MS-7E06
+ date:     2026-08-09T22:38:17+08:00
+==============================================================
+
+Protocol
+  ground truth : suzie_qcif.yuv, 176x144, 150 frames
+  LR input     : bicubic downsample to 88x72
+  candidate 1  : FSRCNN scale 2, 88x72 -> 176x144
+  candidate 2  : bicubic upscale, 88x72 -> 176x144
+  scored with  : ffmpeg psnr / ssim, both against the ground truth
+
+Read the y: component, not the 'average'. Only the Y plane passes
+through the network; U and V are 2x pixel replication in the source,
+so including them measures the replication, not FSRCNN.
+
+  FSRCNN 2x (V2, GPU spatial reduction)
+    psnr: [Parsed_psnr_0 @ 0x5aedf3290c00] PSNR y:37.864571 u:48.559050 v:47.477743 average:39.419242 min:38.480887 max:44.234818
+    ssim: [Parsed_ssim_0 @ 0x6007ddd44c80] SSIM Y:0.966542 (14.755050) U:0.987393 (18.993726) V:0.985588 (18.412733) All:0.973192 (15.717302)
+
+  Bicubic 2x (comparator)
+    psnr: [Parsed_psnr_0 @ 0x60f9f0c469c0] PSNR y:35.690343 u:50.450988 v:49.710015 average:37.372663 min:36.254086 max:42.117521
+    ssim: [Parsed_ssim_0 @ 0x5a84298c3d40] SSIM Y:0.953247 (13.301877) U:0.991811 (20.867464) V:0.991172 (20.541536) All:0.965995 (14.684565)
+
+Interpretation: FSRCNN's Y-plane PSNR must exceed bicubic's for the
+network to be worth its runtime. If it does not, say so in the paper
+rather than dropping the experiment -- the speedup claims stand on
+their own either way, and a negative result here is honest and
+publishable. Do not tune the protocol until the number improves.
+
+ffmpeg: ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+
+Files to send back:
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_quality_rtx4090.txt
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/quality_frames/  (4 PNGs, frame 26)
+==============================================================

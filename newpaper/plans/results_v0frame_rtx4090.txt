@@ -1,0 +1,33 @@
+==============================================================
+ Fig. 1 panel (b) provenance -- V0 race at 32 threads
+ gpu:      NVIDIA GeForce RTX 4090
+ hostname: lab-iot-MS-7E06
+ cpu:      Intel(R) Core(TM) i9-14900K
+ nproc:    32
+ date:     2026-08-09T22:40:31+08:00
+==============================================================
+
+Reference: V1 spatial reduction, OMP_NUM_THREADS=1, 352 x 288.
+Candidate: V0 naive OpenMP, OMP_NUM_THREADS=32, 3 runs.
+
+run 1: diff_bytes=5010476 / 22809600
+    [Parsed_psnr_0 @ 0x5b10eb2c2800] PSNR y:21.457039 u:inf v:inf average:23.217951 min:15.775029 max:57.797072
+    [Parsed_ssim_0 @ 0x58b5a1ef1a40] SSIM Y:0.767136 (6.328982) U:1.000000 (inf) V:1.000000 (inf) All:0.844758 (8.089895)
+
+run 2: diff_bytes=5042223 / 22809600
+    [Parsed_psnr_0 @ 0x5d2df96c5a00] PSNR y:21.633016 u:inf v:inf average:23.393929 min:15.872005 max:45.787459
+    [Parsed_ssim_0 @ 0x5c277ab50b80] SSIM Y:0.777145 (6.519770) U:1.000000 (inf) V:1.000000 (inf) All:0.851430 (8.280682)
+
+run 3: diff_bytes=4749465 / 22809600
+    [Parsed_psnr_0 @ 0x630774656a00] PSNR y:21.339452 u:inf v:inf average:23.100365 min:12.933934 max:50.862573
+    [Parsed_ssim_0 @ 0x59c4619d9dc0] SSIM Y:0.778779 (6.551730) U:1.000000 (inf) V:1.000000 (inf) All:0.852519 (8.312642)
+
+Expect the three runs to disagree with each other as well as with the
+reference. That is the race, and it is the figure's whole argument.
+Take the y: PSNR/SSIM from whichever run you use for the panel and
+quote it as a representative run, with the observed range alongside.
+
+Files to send back:
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_v0frame_rtx4090.txt
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/v0_frames_rtx4090/  (4 PNGs)
+==============================================================
