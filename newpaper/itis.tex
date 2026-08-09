@@ -22,6 +22,16 @@
 % Install with: tlmgr install courier
 \usepackage{courier}
 
+% Float PLACEMENT thresholds only. These decide where LaTeX is willing to put a
+% float; no margin, column width, line spacing, font or float separation is
+% changed, so the IEEEtran-prescribed layout is untouched.
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.75}
+\renewcommand{\dbltopfraction}{0.92}
+\renewcommand{\dblfloatpagefraction}{0.75}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -120,13 +130,21 @@ NVIDIA GPUs execute threads in SIMD groups of 32 called \emph{warps}~\cite{nvidi
 
 \subsection{Evaluation Methodology}
 \label{sec:methodology}
-The workload is 150 frames of the Suzie sequence ($176{\times}144 \rightarrow 352{\times}288$, YUV420p). Every configuration ran 7 times: run 1 discarded as warmup, runs 2--7 recorded as mean $\pm$ SD. CPU binaries use \texttt{gcc -fopenmp -O3} (no \texttt{-march=native} or \texttt{-ffast-math}) with plain \texttt{\#pragma omp parallel for}, so placement follows \texttt{libgomp}'s static default; the GPU binary uses \texttt{nvcc -O3 -arch=native}, resolving to \texttt{sm\_121} and \texttt{sm\_89}. Both platforms run GCC 13.3.0 and CUDA 13.0, differing only in patch level. All arithmetic is double precision, matching the CPU baseline so the bit-exact comparison is as strict as possible; FP32 would admit rounding divergence even for a logically equivalent computation (throughput consequence in Section~\ref{sec:rtx4090}).
+The workload is 150 frames of the Suzie sequence ($176{\times}144 \rightarrow 352{\times}288$, YUV420p). Every configuration ran 7 times: run 1 discarded as warmup, runs 2--7 recorded as mean $\pm$ SD. CPU binaries use \texttt{gcc -fopenmp -O3} (no \texttt{-march=native} or \texttt{-ffast-math}) with plain \texttt{\#pragma omp parallel for}, so placement follows \texttt{libgomp}'s static default; the GPU binary uses \texttt{nvcc -O3 -arch=native}. Both platforms run GCC 13.3.0 and CUDA 13.0. All arithmetic is double precision, matching the CPU baseline so the bit-exact comparison is as strict as possible; FP32 would admit rounding divergence even for a logically equivalent computation (throughput consequence in Section~\ref{sec:rtx4090}).
 
-\emph{Reference file:} we run V1 single-threaded once to generate a deterministic reference. Since all three variants implement the identical algorithm and differ only in execution strategy, this is an internal determinism check rather than a high-resolution ground truth. Correctness is assessed by byte comparison (\texttt{cmp -l}, $\text{diff\_bytes}=0$ for V1 against V2 at every grid configuration) and by PSNR/SSIM~\cite{wang2004ssim} computed with \texttt{ffmpeg}; V1/V2's PSNR$=\infty$ is logically equivalent to the byte comparison, so we report it as \emph{bit-exact}. PSNR/SSIM in Table~\ref{tab:benchmark} are all-component averages, and because only the Y plane passes through the network the untouched chroma pulls them upward. The RTX 4090's worst V0 case reads $23.0$~dB/$0.845$ all-component but $21.5$~dB/$0.767$ on luminance alone, so those figures \emph{understate} the corruption. We give luminance-only numbers wherever its magnitude matters.
+\emph{Reference file:} we run V1 single-threaded once to generate a deterministic reference. Since all three variants implement the identical algorithm and differ only in execution strategy, this is an internal determinism check; Section~\ref{sec:quality} scores reconstruction separately. Correctness is assessed by byte comparison (\texttt{cmp -l}, $\text{diff\_bytes}=0$ for V1 against V2 at every grid configuration) and by PSNR/SSIM~\cite{wang2004ssim} computed with \texttt{ffmpeg}; V1/V2's PSNR$=\infty$ is logically equivalent to the byte comparison, so we report it as \emph{bit-exact}. PSNR/SSIM in Table~\ref{tab:benchmark} are all-component averages, so the untouched chroma pulls them upward: the RTX 4090's worst V0 case reads $23.0$~dB/$0.845$ all-component but $21.5$~dB/$0.767$ on luminance alone. Those figures \emph{understate} the corruption, and we give luminance-only numbers wherever its magnitude matters.
 
-V0 degrades non-monotonically from its data race: $13.8$~dB on the GB10 (4 threads), and $68.6$~dB/$0.99996$ on the RTX 4090 (4 threads) before collapsing to $23.0$~dB at 32 threads. The RTX case is the instructive one. A race costing only $68.6$~dB is invisible to casual inspection or to a coarse PSNR threshold, yet it is just as non-deterministic as the $13.8$~dB case. That argues for determinism by construction rather than for trusting that runs ``look fine.'' Three consecutive V0 runs at 32 threads corrupted $4.75$, $5.01$ and $5.04$ million of $22.8$ million bytes ($21.34$, $21.46$, $21.63$~dB PSNR-Y): never the same output twice.
+V0 degrades non-monotonically from its data race: $13.8$~dB on the GB10 (4 threads), and $68.6$~dB/$0.99996$ on the RTX 4090 (4 threads) before collapsing to $23.0$~dB at 32 threads. The RTX case is the instructive one. A race costing only $68.6$~dB is invisible to casual inspection or to a coarse PSNR threshold, yet it is just as non-deterministic as the $13.8$~dB case, which argues for determinism by construction rather than for trusting that runs ``look fine.'' Three consecutive V0 runs at 32 threads corrupted $4.75$, $5.01$ and $5.04$ million of $22.8$ million bytes ($21.34$, $21.46$, $21.63$~dB PSNR-Y): never the same output twice. Fig.~\ref{fig:correctness} shows one frame.
 
 
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/correctness_visual_check.pdf}
+\caption{Frame 26. Panel (b) is one representative V0 run of three on the RTX 4090; the scanline artifacts come from unsynchronized writes to \texttt{img\_fltr\_8}. Panels (c) and (d) are pixel-identical to (a) at every configuration tested.}
+\label{fig:correctness}
+\end{figure}
 
 \subsection{Performance Scaling \& Accuracy Benchmark}
 
@@ -169,6 +187,10 @@ GPU V2 (Best Grid) & Grid $32{\times}8\_256$ & $5{,}435.50 \pm 148.01$ & 4.21$\t
 \footnotesize{\emph{Speedup vs. Serial}: CPU rows against their own variant's 1-thread time; GPU V2 has none of its own, so its denominator is CPU V1's serial time on that platform (Section~\ref{sec:gb10-speedup} also reports it against the faster bit-exact V0 serial time). \emph{Speedup vs. Best CPU}: GPU V2 only, against CPU V1's fastest correctness-verified configuration. \emph{Dev./SSIM} are against each platform's own deterministic reference; ``bit-exact'' is logically equivalent to \texttt{cmp -l}, not an independent quality measurement, and figures are all-component averages (Section~\ref{sec:methodology}). \emph{GPU L8 Kernel}: mean $\pm$ SD over 6 runs of the profiling sweep (Section~\ref{sec:breakdown}); kernel times for the three remaining grid configurations are given in Section~\ref{sec:warp-generalize}.}
 \end{table*}
 
+\subsection{Reconstruction Quality Against a High-Resolution Reference}
+\label{sec:quality}
+Since no high-resolution ground truth exists in the pipeline, we constructed one: Suzie was bicubic-downsampled to $88{\times}72$, reconstructed at scale 2, and scored against the original, with bicubic upscaling of the same input as comparator. We report luminance only, since only the Y plane passes through the network. FSRCNN reaches $37.86$~dB PSNR-Y and $0.9665$ SSIM-Y against bicubic's $35.69$~dB and $0.9532$, a gain of $2.17$~dB over 150 frames. This is one sequence at one scale factor, a sanity check rather than a claim about FSRCNN generally~\cite{dong2016fsrcnn}.
+
 \subsection{The Cost of Determinism, Quantified}
 \label{sec:cost-of-determinism}
 Table~\ref{tab:benchmark} quantifies the CPU-side cost directly, as the wall-time delta between V0 (racy, no privatization) and V1 (privatized) at matched thread counts: $+18.2\%$, $+17.6\%$ and $+9.1\%$ at 1, 4 and 20 threads on the GB10, and $+9.2\%$ and $+7.8\%$ at 1 and 4 threads on the RTX 4090. This delta isolates privatization rather than a difference in how much work is threaded. V0 and V1 parallelize the same deconvolution, and V1's reduction pass is itself parallel over output pixels (Section~II-C). What the delta measures is writing and re-reading $43.3$~MiB of private buffers, not serializing a stage. Determinism therefore costs $8$--$18\%$ of CPU wall time. The GB10 points hint the cost falls once the machine saturates, but 1 and 4 threads are nearly identical ($18.2\%$ vs. $17.6\%$), making this a two-level effect at best rather than a trend.
@@ -179,7 +201,7 @@ On the GPU, per-kernel instrumentation (Section~\ref{sec:breakdown}) puts the sa
 \label{sec:breakdown}
 We instrumented CUDA Event profiling inside the GPU binary and ran the optimal configuration ($32{\times}8\_256$) six times on each platform (Table~\ref{tab:breakdown}).
 
-\emph{A correction to our earlier reading.} An earlier draft treated the host-side counter \texttt{h2d\_ms} as a disjoint slice of wall time and reported host-to-device transfer as $516.74$~ms, some $11\%$ of the pipeline. That was wrong. The counter accumulates host time inside \texttt{cudaMemcpy}, but those copies are issued \emph{inside} the window \texttt{gpu\_l8\_ms} measures, and a blocking copy cannot begin until the previously launched kernel drains, so it charges kernel waiting to transfer and double-counts. The sweep makes this plain: \texttt{h2d\_ms} tracks \texttt{gpu\_l8\_ms} at a nearly fixed ratio across all five configurations, and shifts by $167$~ms on the GB10 when only the \emph{kernel block shape} changes, though the transferred byte count is identical throughout. We retract the ``H2D asymmetry'' claim built on it, and report instead the decomposition obtained by bracketing each kernel with its own events.
+\emph{A correction to our earlier reading.} An earlier draft treated the host-side counter \texttt{h2d\_ms} as a disjoint slice of wall time and reported host-to-device transfer as $516.74$~ms, some $11\%$ of the pipeline. That was wrong. Those copies are issued \emph{inside} the window \texttt{gpu\_l8\_ms} measures, and a blocking copy cannot begin until the previously launched kernel drains, so the counter charges kernel waiting to transfer and double-counts. The sweep makes this plain: \texttt{h2d\_ms} shifts by $167$~ms on the GB10 when only the \emph{kernel block shape} changes, though the transferred byte count is identical throughout. We retract the ``H2D asymmetry'' claim built on it, and report the per-kernel decomposition instead.
 
 \begin{table}[htbp]
 \caption{Layer~8 Profiling Breakdown, $32{\times}8\_256$, 150 Frames (ms, mean $\pm$ SD over 6 runs)}
@@ -230,21 +252,21 @@ Shifting from the default $16{\times}16$ grid ($696.51 \pm 1.78$~ms) to the warp
 \label{sec:nvlink}
 With that error corrected, transfer is not the bottleneck we took it for. On the GB10 everything inside the event window that is not kernel execution totals $127.65$~ms, $2.7\%$ of wall time, plus $3.46$~ms of D2H; even charging that entire residual to transfer, which overstates it, moves under $3\%$ of the pipeline. The RTX 4090's residual is larger both absolutely and as a share of its window ($152.14$~ms, $36.5\%$ against $22.1\%$), the direction PCIe versus NVLink-C2C predicts, though small enough that we do not lean on it. The one clean and clearly asymmetric transfer measurement is D2H.
 
-What Table~\ref{tab:breakdown} shows instead is an Amdahl's Law~\cite{amdahl1967} ceiling. Layer~8 is now $11.2\%$ of GB10 wall time and $6.6\%$ on the RTX 4090, while CPU Layers 1--7, still on 20 and 4 OpenMP threads rather than serial, account for $71.4\%$ and $84.5\%$. The accelerated stage has been optimized into near-irrelevance: making Layer~8 free would still leave the RTX 4090 pipeline at $93\%$ of current wall time. Offloading Layers 1--7 is therefore the only remaining path to sub-second reconstruction, and a Roofline analysis~\cite{williams2009roofline} would establish whether that offload is compute- or memory-bound first. The unaccounted remainder is process launch, file I/O and the per-frame \texttt{uint8}$\leftrightarrow$\texttt{double} conversions, all single-threaded and outside the instrumented region; it is larger on the GB10 ($821.20$~ms against $469.33$~ms), consistent with serial host code on a $3.9$~GHz ARM core rather than a $6.0$~GHz x86 one, though we did not instrument it to confirm.
+What Table~\ref{tab:breakdown} shows instead is an Amdahl's Law~\cite{amdahl1967} ceiling. Layer~8 is now $11.2\%$ of GB10 wall time and $6.6\%$ on the RTX 4090, while CPU Layers 1--7, still on 20 and 4 OpenMP threads rather than serial, account for $71.4\%$ and $84.5\%$. The accelerated stage has been optimized into near-irrelevance: making Layer~8 free would still leave the RTX 4090 pipeline at $93\%$ of current wall time. Offloading Layers 1--7 is therefore the only remaining path to sub-second reconstruction, and a Roofline analysis~\cite{williams2009roofline} would establish whether that offload is compute- or memory-bound first. The unaccounted remainder is process launch, file I/O and the per-frame \texttt{uint8}$\leftrightarrow$\texttt{double} conversions, all single-threaded and outside the instrumented region.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Cross-Platform Validation on Discrete-GPU Hardware}
 \label{sec:rtx4090}
 
-To test whether the approach generalizes beyond unified memory, we replicated the experiment on a discrete-GPU desktop (Table~\ref{tab:hardware}). Two differences matter. CPU and GPU memory are physically separate over PCIe rather than sharing one pool, and the CPU is heterogeneous: 8 Performance-cores with Hyper-Threading plus 16 Efficiency-cores without, for 24 physical and 32 logical threads, against the GB10's 20 homogeneous-per-tier cores with no SMT.
+To test whether the approach generalizes beyond unified memory, we replicated the experiment on a discrete-GPU desktop (Table~\ref{tab:hardware}). Two differences matter: CPU and GPU memory are separate over PCIe rather than sharing one pool, and the CPU is heterogeneous (24 physical / 32 logical threads across P- and E-cores) against the GB10's 20 homogeneous-per-tier cores with no SMT.
 
 \subsection{Methodology Adjustment and GPU Speedup}
-Reusing the GB10's ladder and 20-thread backdrop misleads here: wall time collapses past 8 threads to $\sim$3.5$\times$ slower than the 4-thread optimum, reproducibly across three full runs, so that configuration would have backdropped every GPU run with a degraded CPU. We therefore swept a topology-correct ladder (1--32) and used this platform's own best CPU configuration (4 threads) as backdrop. The collapse is consistent with the P/E-core split relying on Intel Thread Director while the generic OpenMP pool carries no affinity control~\cite{eichenberger2012ompaffinity}, but the 4-thread optimum does not cleanly match the 8 P-cores, so we claim no confirmed explanation and cannot exclude bandwidth or thermal effects (Section~\ref{sec:limitations}). It is incidental to our contribution; we report it because it changes what a fair CPU baseline is here. With the backdrop corrected, GPU V2 reaches $5{,}435$--$5{,}579$~ms ($26.9$--$27.6$ FPS), $1.59\times$--$1.63\times$ over CPU V1's best (4 threads, $8{,}844.17$~ms). That is not the inflated $4\times$+ obtained by comparing against serial time, or against a collapsed high-thread-count run such as CPU V0 at 32 threads (Table~\ref{tab:benchmark}).
+Reusing the GB10's ladder and 20-thread backdrop misleads here: wall time collapses past 8 threads to $\sim$3.5$\times$ slower than the 4-thread optimum, reproducibly across three full runs. We therefore swept a topology-correct ladder (1--32) and used this platform's own best CPU configuration (4 threads) as backdrop. The collapse is consistent with the P/E-core split relying on Intel Thread Director while the generic OpenMP pool carries no affinity control~\cite{eichenberger2012ompaffinity}, though the 4-thread optimum does not cleanly match the 8 P-cores, so we claim no confirmed explanation (Section~\ref{sec:limitations}). It is incidental to our contribution, reported because it changes what a fair CPU baseline is here. With the backdrop corrected, GPU V2 reaches $5{,}435$--$5{,}579$~ms ($26.9$--$27.6$ FPS), $1.59\times$--$1.63\times$ over CPU V1's best (4 threads, $8{,}844.17$~ms). That is not the inflated $4\times$+ obtained by comparing against serial time, or against a collapsed high-thread-count run such as CPU V0 at 32 threads (Table~\ref{tab:benchmark}).
 
 \subsection{Cross-Architecture Bit-Exactness}
 \label{sec:cross-arch-bitexact}
-Section~\ref{sec:methodology} establishes bit-exactness \emph{within} each platform. A stronger question is whether GPU V2's output is identical \emph{across} them. The GB10 (ARM host, Blackwell \texttt{sm\_121}) and the RTX 4090 (x86 host, Ada Lovelace \texttt{sm\_89}) differ in host ISA and GPU microarchitecture, so bit-identical output is not guaranteed by IEEE-754 \texttt{double} compliance alone: code generation for two SM targets, FMA contraction, and math-library implementations can each diverge in the last bit. The toolchains are otherwise closely matched (GCC 13.3.0 and CUDA 13.0 on both, differing only in patch level), so this isolates the ISA and microarchitecture difference rather than compounding it with a toolkit-version difference; a cross-\emph{toolkit} claim would need a separate experiment. Running the winning $32{\times}8$ configuration on both and comparing raw outputs, \texttt{cmp -l} reports $0$ differing bytes and the SHA-256 digests match (\texttt{8db2c07a...ca066b}). GPU V2's output is therefore bit-identical across two GPU generations and two host ISAs, the strongest form of the determinism claim this paper makes.
+Section~\ref{sec:methodology} establishes bit-exactness \emph{within} each platform. Whether GPU V2's output is identical \emph{across} them is a stronger question. The GB10 (ARM host, \texttt{sm\_121}) and the RTX 4090 (x86 host, \texttt{sm\_89}) differ in host ISA and GPU microarchitecture, so bit-identical output is not guaranteed by IEEE-754 \texttt{double} compliance alone: code generation for two SM targets, FMA contraction, and math libraries can each diverge in the last bit. The toolchains are otherwise closely matched (GCC 13.3.0 and CUDA 13.0 on both), so this isolates ISA and microarchitecture rather than compounding them with a toolkit difference; a cross-\emph{toolkit} claim would need its own experiment. Running the winning $32{\times}8$ configuration on both, \texttt{cmp -l} reports $0$ differing bytes and the SHA-256 digests match (\texttt{8db2c07a...ca066b}). That is the strongest form of the determinism claim this paper makes.
 
 \subsection{Warp Alignment Generalizes Across GPU Architectures}
 \label{sec:warp-generalize}
@@ -265,7 +287,7 @@ CPU and GPU memory here are physically separate over PCIe, unlike the GB10's uni
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Limitations and Future Work}
 \label{sec:limitations}
-The largest gap is the absence of a competitive GPU baseline: V2 is compared only against CPU implementations, not \texttt{atomicAdd}, an output-stationary gather kernel, or cuDNN. Two of our explanations are inferences from timing rather than direct measurements. The cache account of the $10\times$ reduction gap would be settled by L2 hit-rate counters and a working-set sweep across the L2 boundary; the coalescing account, though localized to \texttt{deconv\_kernel} as predicted, would be settled by load-efficiency counters and non-aligned block widths. Our host-to-device figure also remains an upper bound containing launch overhead and host padding, separable with pinned memory or multiple streams, though D2H is unaffected. No FP32 ablation quantifies the speedup-versus-bit-exactness trade-off, and no \texttt{OMP\_PROC\_BIND} control isolates the RTX 4090 collapse from bandwidth saturation or thermal throttling. Our correctness evidence is also internal: every PSNR/SSIM figure compares variants against one another, so it validates cross-variant determinism rather than FSRCNN's reconstruction quality against an independently sourced high-resolution reference. Finally, all results use one 150-frame QCIF-to-CIF sequence. Higher resolutions would shift the compute-to-transfer ratio and push the private buffer past the RTX 4090's L2, the regime in which our design rule is most testable.
+The largest gap is the absence of a competitive GPU baseline: V2 is compared only against CPU implementations, not \texttt{atomicAdd}, an output-stationary gather kernel, or cuDNN. Two of our explanations are inferences from timing rather than direct measurements. The cache account of the $10\times$ reduction gap would be settled by L2 hit-rate counters and a working-set sweep across the L2 boundary; the coalescing account, though localized to \texttt{deconv\_kernel} as predicted, would be settled by load-efficiency counters and non-aligned block widths. Our host-to-device figure also remains an upper bound containing launch overhead and host padding, separable with pinned memory or multiple streams, though D2H is unaffected. No FP32 ablation quantifies the speedup-versus-bit-exactness trade-off, and no \texttt{OMP\_PROC\_BIND} control isolates the RTX 4090 collapse from bandwidth saturation or thermal throttling. Finally, all results use one 150-frame QCIF-to-CIF sequence, with reconstruction quality (Section~\ref{sec:quality}) measured at a single scale factor against a bicubic-downsampled stand-in and chroma replicated rather than reconstructed. Higher resolutions would shift the compute-to-transfer ratio and push the private buffer past the RTX 4090's L2, the regime in which our design rule is most testable.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
@@ -276,35 +298,35 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 \footnotesize
 \itemsep0pt plus 0.5pt
 
-\bibitem{annisa2025} Annisa, Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artif. Intell. Mechatron. Syst. (AIMS)}, 2025, pp. 1--8.
+\bibitem{annisa2025} Annisa, Adnan, and Z. Zainuddin, ``Serial to parallel video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE AIMS}, 2025, pp. 1--8.
 
 \bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the super-resolution convolutional neural network,'' in \emph{Proc. ECCV}, 2016, pp. 391--407.
 
-\bibitem{shi2016edge} W. Shi, J. Cao, Q. Zhang, Y. Li, and L. Xu, ``Edge computing: vision and challenges,'' \emph{IEEE Internet Things J.}, vol. 3, no. 5, pp. 637--646, 2016.
+\bibitem{shi2016edge} W. Shi \emph{et al.}, ``Edge computing: vision and challenges,'' \emph{IEEE Internet Things J.}, vol. 3, no. 5, pp. 637--646, 2016.
 
-\bibitem{wang2020pipeit} S. Wang \emph{et al.}, ``High-throughput CNN inference on embedded ARM big.LITTLE multicore processors,'' \emph{IEEE Trans. Comput.-Aided Design Integr. Circuits Syst.}, vol. 39, no. 10, pp. 2254--2267, 2020.
+\bibitem{wang2020pipeit} S. Wang \emph{et al.}, ``High-throughput CNN inference on embedded ARM big.LITTLE processors,'' \emph{IEEE TCAD}, vol. 39, no. 10, pp. 2254--2267, 2020.
 
-\bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible system software scheduling for asymmetric multicore systems with PMCSched: a case for Intel Alder Lake,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
+\bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible scheduling for asymmetric multicores with PMCSched,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
 
-\bibitem{eichenberger2012ompaffinity} A. E. Eichenberger, C. Terboven, M. Wong, and D. an Mey, ``The design of OpenMP thread affinity,'' in \emph{IWOMP}, LNCS 7312, Springer, 2012, pp. 15--28.
+\bibitem{eichenberger2012ompaffinity} A. E. Eichenberger \emph{et al.}, ``The design of OpenMP thread affinity,'' in \emph{IWOMP}, LNCS 7312, 2012, pp. 15--28.
 
 \bibitem{nvidiacudaguide} NVIDIA Corp., \emph{CUDA C++ Programming Guide}. [Online]. Available: docs.nvidia.com/cuda/cuda-c-programming-guide/
 
-\bibitem{go2017apunet} Y. Go, M. A. Jamshed, Y. Moon, C. Hwang, and K. Park, ``APUNet: revitalizing GPU as packet processing accelerator,'' in \emph{Proc. USENIX NSDI}, 2017, pp. 83--96.
+\bibitem{go2017apunet} Y. Go \emph{et al.}, ``APUNet: revitalizing GPU as packet processing accelerator,'' in \emph{Proc. USENIX NSDI}, 2017, pp. 83--96.
 
-\bibitem{wang2004ssim} Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, ``Image quality assessment: from error visibility to structural similarity,'' \emph{IEEE Trans. Image Process.}, vol. 13, no. 4, pp. 600--612, 2004.
+\bibitem{wang2004ssim} Z. Wang \emph{et al.}, ``Image quality assessment: from error visibility to structural similarity,'' \emph{IEEE Trans. Image Process.}, vol. 13, no. 4, pp. 600--612, 2004.
 
-\bibitem{dong2014srcnn} C. Dong, C. C. Loy, K. He, and X. Tang, ``Learning a deep convolutional network for image super-resolution,'' in \emph{Proc. ECCV}, 2014, pp. 184--199.
+\bibitem{dong2014srcnn} C. Dong \emph{et al.}, ``Learning a deep convolutional network for image super-resolution,'' in \emph{Proc. ECCV}, 2014, pp. 184--199.
 
-\bibitem{amdahl1967} G. M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \emph{Proc. AFIPS Spring Joint Comput. Conf.}, 1967, pp. 483--485.
+\bibitem{amdahl1967} G. M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \emph{Proc. AFIPS}, 1967, pp. 483--485.
 
-\bibitem{williams2009roofline} S. Williams, A. Waterman, and D. Patterson, ``Roofline: an insightful visual performance model for multicore architectures,'' \emph{Commun. ACM}, vol. 52, no. 4, pp. 65--76, 2009.
+\bibitem{williams2009roofline} S. Williams, A. Waterman, and D. Patterson, ``Roofline: an insightful visual performance model for multicore architectures,'' \emph{Commun. ACM}, vol. 52, no. 4, 2009.
 
 \bibitem{chetlur2014cudnn} S. Chetlur \emph{et al.}, ``cuDNN: efficient primitives for deep learning,'' arXiv:1410.0759, 2014.
 
-\bibitem{serebryany2009threadsanitizer} K. Serebryany and T. Iskhodzhanov, ``ThreadSanitizer: data race detection in practice,'' in \emph{Proc. Workshop on Binary Instrumentation and Applications (WBIA)}, 2009, pp. 62--71.
+\bibitem{serebryany2009threadsanitizer} K. Serebryany and T. Iskhodzhanov, ``ThreadSanitizer: data race detection in practice,'' in \emph{Proc. WBIA}, 2009, pp. 62--71.
 
-\bibitem{lashgar2012warpresize} A. Lashgar, A. Baniasadi, and A. Khonsari, ``Warp size impact in GPUs: large or small?,'' in \emph{Proc. 5th Workshop on General Purpose Processing with GPUs (GPGPU-5)}, 2012, pp. 27--32.
+\bibitem{lashgar2012warpresize} A. Lashgar, A. Baniasadi, and A. Khonsari, ``Warp size impact in GPUs: large or small?,'' in \emph{Proc. GPGPU-5}, 2012, pp. 27--32.
 
 \bibitem{dumoulin2016convolution} V. Dumoulin and F. Visin, ``A guide to convolution arithmetic for deep learning,'' arXiv:1603.07285, 2016.
 
@@ -314,7 +336,7 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 
 \bibitem{nvidiaada2022} NVIDIA Corp., \emph{NVIDIA Ada GPU Architecture}, Whitepaper V2.02, 2022.
 
-\bibitem{nvidiagracehopper2022} NVIDIA Corp., ``NVIDIA Grace Hopper Superchip architecture in-depth,'' NVIDIA Developer Blog, Nov. 2022.
+\bibitem{nvidiagracehopper2022} NVIDIA Corp., ``Grace Hopper Superchip architecture in-depth,'' NVIDIA Developer Blog, 2022.
 
 \bibitem{wahlgren2025upm} J. Wahlgren \emph{et al.}, ``Dissecting CPU-GPU unified physical memory on AMD MI300A APUs,'' in \emph{Proc. IEEE IISWC}, 2025.
 
