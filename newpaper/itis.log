@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  9 AUG 2026 23:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  9 AUG 2026 23:56
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -363,8 +363,14 @@ Underfull \hbox (badness 3701) in paragraph at lines 141--142
 PU bi-na-ries use \OT1/pcr/m/n/10 gcc
  []
 
-[2] [3]
-Underfull \vbox (badness 4096) has occurred while \output is active []
+[2]
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 2
+29.
+ (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ts1ptm.fd
+File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
+)
+[3]
+Underfull \vbox (badness 1867) has occurred while \output is active []
 
  [4]
 Underfull \hbox (badness 1371) in paragraph at lines 273--274
@@ -374,7 +380,7 @@ Underfull \hbox (badness 1371) in paragraph at lines 273--274
  []
 
 [5]
-Underfull \hbox (badness 10000) in paragraph at lines 323--324
+Underfull \hbox (badness 10000) in paragraph at lines 327--328
 []\OT1/ptm/m/n/8 Arm Ltd., ``Dy-namIQ tech-nol-ogy.'' [On-line]. Avail-able:
  []
 
@@ -396,11 +402,11 @@ L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 4247 strings out of 469006
- 66833 string characters out of 5454814
- 503615 words of memory out of 5000000
- 32898 multiletter control sequences out of 15000+600000
- 668683 words of font info for 119 fonts, out of 8000000 for 9000
+ 4275 strings out of 469006
+ 67292 string characters out of 5454814
+ 503875 words of memory out of 5000000
+ 32922 multiletter control sequences out of 15000+600000
+ 668997 words of font info for 120 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
  57i,14n,65p,1652b,289s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmex1
@@ -418,7 +424,7 @@ pe1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1
 times/utmbi8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/time
 s/utmr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/times/utm
 ri8a.pfb>
-Output written on itis.pdf (6 pages, 200266 bytes).
+Output written on itis.pdf (6 pages, 201453 bytes).
 PDF statistics:
  94 PDF objects out of 1000 (max. 8388607)
  57 compressed objects within 1 object stream
