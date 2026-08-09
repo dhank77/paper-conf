@@ -1,101 +1,91 @@
 \relax 
-\citation{shi2016edge,zhou2019edge}
+\citation{shi2016edge}
 \citation{dong2014srcnn}
 \citation{dong2016fsrcnn}
 \citation{annisa2025}
-\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
 \citation{dong2014srcnn}
 \citation{dong2016fsrcnn}
-\citation{shi2016edge,zhou2019edge}
+\citation{shi2016edge}
 \citation{annisa2025}
 \citation{wang2020pipeit}
 \citation{chetlur2014cudnn}
 \citation{go2017apunet}
 \citation{wahlgren2025upm}
 \citation{bilbao2023pmcsched,eichenberger2012ompaffinity}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Background and Baseline Architecture}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Related Work}{1}{}\protected@file@percent }
 \citation{dumoulin2016convolution}
-\citation{serebryany2009threadsanitizer}
 \citation{nvidiagb10_2025}
 \citation{armdynamiq}
 \citation{nvidiaada2022}
 \citation{nvidiaada2022}
 \citation{chetlur2014cudnn}
 \citation{nvidiacudaguide}
-\citation{lashgar2012warpresize}
-\@writefile{toc}{\contentsline {section}{\numberline {II}Background and Baseline Architecture}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Related Work}{2}{}\protected@file@percent }
+\citation{wang2004ssim}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}FSRCNN Architecture}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Baseline Variants}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {III}GPU Spatial Reduction Implementation}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Hardware Targets: GB10 and RTX 4090}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}CUDA Kernel Design and Warp Alignment}{2}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Hardware Specifications: GB10 (GX10) vs. RTX 4090 Desktop}}{2}{}\protected@file@percent }
 \newlabel{tab:hardware}{{I}{2}{}{table.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}CUDA Kernel Design and Warp Alignment}{2}{}\protected@file@percent }
-\citation{wang2004ssim}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Evaluation}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Evaluation Methodology}{2}{}\protected@file@percent }
+\newlabel{sec:methodology}{{\mbox  {IV-A}}{2}{}{subsection.4.1}{}}
 \citation{dong2016fsrcnn}
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Evaluation}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Evaluation Methodology}{3}{}\protected@file@percent }
-\newlabel{sec:methodology}{{\mbox  {IV-A}}{3}{}{subsection.4.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Performance Scaling \& Accuracy Benchmark}{3}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Frame 26 of the reconstructed Suzie sequence across all four output variants. (a) Verified deterministic reference (V1, single-threaded). (b) V0's naive accumulation at 32 threads on the RTX 4090 (Intel i9-14900K host), visibly corrupted by unsynchronized concurrent writes to \texttt  {img\_fltr\_8} (horizontal scanline artifacts); this is one representative run of three, which scored $21.34$--$21.63$~dB PSNR-Y and $0.767$--$0.779$ SSIM-Y against (a) and never reproduced the same output twice. (c) V1 (CPU spatial reduction) and (d) V2 (GPU spatial reduction) are both pixel-identical to (a) at every thread count and grid configuration tested, visually indistinguishable from the reference unlike (b).}}{3}{}\protected@file@percent }
-\newlabel{fig:correctness}{{1}{3}{}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Reconstruction Quality Against a High-Resolution Reference}{3}{}\protected@file@percent }
 \newlabel{sec:quality}{{\mbox  {IV-C}}{3}{}{subsection.4.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}The Cost of Determinism, Quantified}{3}{}\protected@file@percent }
 \newlabel{sec:cost-of-determinism}{{\mbox  {IV-D}}{3}{}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Fine-Grained GPU Timing Breakdown}{3}{}\protected@file@percent }
+\newlabel{sec:breakdown}{{\mbox  {IV-E}}{3}{}{subsection.4.5}{}}
+\citation{wang2020pipeit}
 \@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Key Configurations on Both Platforms: Performance and Deviation from Each Platform's Verified Deterministic Reference. Wall times are mean $\pm $ SD over the 6 measured runs of a 7-run repetition.}}{4}{}\protected@file@percent }
 \newlabel{tab:benchmark}{{II}{4}{}{table.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Fine-Grained GPU Timing Breakdown}{4}{}\protected@file@percent }
-\newlabel{sec:breakdown}{{\mbox  {IV-E}}{4}{}{subsection.4.5}{}}
-\citation{wang2020pipeit}
-\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Fine-Grained Profiling Breakdown, Optimal Configuration ($32{\times }8\_256$, 150 Frames), Mean $\pm $ SD over 6 Runs}}{5}{}\protected@file@percent }
-\newlabel{tab:breakdown}{{III}{5}{}{table.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion and Key Insights}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Speedup vs. Maxed-Out CPU Cores, and Warp Alignment}{5}{}\protected@file@percent }
-\newlabel{sec:gb10-speedup}{{\mbox  {V-A}}{5}{}{subsection.5.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Transfer Cost and Amdahl's Law}{5}{}\protected@file@percent }
-\newlabel{sec:nvlink}{{\mbox  {V-B}}{5}{}{subsection.5.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Layer~8 Profiling Breakdown, $32{\times }8\_256$, 150 Frames (ms, mean $\pm $ SD over 6 runs)}}{4}{}\protected@file@percent }
+\newlabel{tab:breakdown}{{III}{4}{}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion and Key Insights}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Speedup vs. Maxed-Out CPU Cores, and Warp Alignment}{4}{}\protected@file@percent }
+\newlabel{sec:gb10-speedup}{{\mbox  {V-A}}{4}{}{subsection.5.1}{}}
 \citation{amdahl1967}
 \citation{williams2009roofline}
 \citation{eichenberger2012ompaffinity}
-\citation{bilbao2023pmcsched}
 \citation{nvidiacudaguide}
 \citation{nvidiagracehopper2022,wahlgren2025upm}
 \citation{go2017apunet}
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Cross-Platform Validation on Discrete-GPU Hardware}{6}{}\protected@file@percent }
-\newlabel{sec:rtx4090}{{VI}{6}{}{section.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Methodology Adjustment and GPU Speedup Against a Fair Baseline}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Cross-Architecture Bit-Exactness}{6}{}\protected@file@percent }
-\newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{6}{}{subsection.6.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Warp Alignment Generalizes Across GPU Architectures}{6}{}\protected@file@percent }
-\newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{6}{}{subsection.6.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Transfer Cost and Amdahl's Law}{5}{}\protected@file@percent }
+\newlabel{sec:nvlink}{{\mbox  {V-B}}{5}{}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Cross-Platform Validation on Discrete-GPU Hardware}{5}{}\protected@file@percent }
+\newlabel{sec:rtx4090}{{VI}{5}{}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Methodology Adjustment and GPU Speedup}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Cross-Architecture Bit-Exactness}{5}{}\protected@file@percent }
+\newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{5}{}{subsection.6.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Warp Alignment Generalizes Across GPU Architectures}{5}{}\protected@file@percent }
+\newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{5}{}{subsection.6.3}{}}
 \bibcite{annisa2025}{1}
 \bibcite{dong2016fsrcnn}{2}
 \bibcite{shi2016edge}{3}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GPU Layer~8 kernel execution time by grid configuration, GB10 (Blackwell) vs. RTX 4090 (Ada Lovelace). The warp-aligned $32{\times }8$ grid (outlined) is fastest on both GPU architectures.}}{7}{}\protected@file@percent }
-\newlabel{fig:warp-cross}{{2}{7}{}{figure.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{7}{}\protected@file@percent }
-\newlabel{sec:limitations}{{VII}{7}{}{section.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{7}{}\protected@file@percent }
-\bibcite{zhou2019edge}{4}
-\bibcite{wang2020pipeit}{5}
-\bibcite{bilbao2023pmcsched}{6}
-\bibcite{eichenberger2012ompaffinity}{7}
-\bibcite{nvidiacudaguide}{8}
-\bibcite{go2017apunet}{9}
-\bibcite{wang2004ssim}{10}
-\bibcite{dong2014srcnn}{11}
-\bibcite{amdahl1967}{12}
-\bibcite{serebryany2009threadsanitizer}{13}
-\bibcite{williams2009roofline}{14}
-\bibcite{chetlur2014cudnn}{15}
-\bibcite{dumoulin2016convolution}{16}
-\bibcite{nvidiagb10_2025}{17}
-\bibcite{armdynamiq}{18}
-\bibcite{nvidiaada2022}{19}
-\bibcite{nvidiagracehopper2022}{20}
-\bibcite{wahlgren2025upm}{21}
-\bibcite{lashgar2012warpresize}{22}
-\gdef \@abspage@last{8}
+\bibcite{wang2020pipeit}{4}
+\bibcite{bilbao2023pmcsched}{5}
+\bibcite{eichenberger2012ompaffinity}{6}
+\bibcite{nvidiacudaguide}{7}
+\bibcite{go2017apunet}{8}
+\bibcite{wang2004ssim}{9}
+\bibcite{dong2014srcnn}{10}
+\bibcite{amdahl1967}{11}
+\bibcite{williams2009roofline}{12}
+\bibcite{chetlur2014cudnn}{13}
+\bibcite{dumoulin2016convolution}{14}
+\bibcite{nvidiagb10_2025}{15}
+\bibcite{armdynamiq}{16}
+\bibcite{nvidiaada2022}{17}
+\bibcite{nvidiagracehopper2022}{18}
+\bibcite{wahlgren2025upm}{19}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{6}{}\protected@file@percent }
+\newlabel{sec:limitations}{{VII}{6}{}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{6}{}\protected@file@percent }
+\gdef \@abspage@last{6}
