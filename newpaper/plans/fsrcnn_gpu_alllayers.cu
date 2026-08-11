@@ -1,0 +1,962 @@
+// FSRCNN V3: ALL EIGHT LAYERS ON GPU.
+// Derived from fsrcnn_gpu_main.cu; Layer 8 path and all host scaffolding
+// (weight loading, YUV I/O) are unchanged. Layers 1-7 move from OpenMP CPU
+// to conv_layer_kernel + prelu_kernel.
+// Compile with: nvcc -arch=sm_90 -O3 -o fsrcnn_gpu fsrcnn_gpu_main.cu -lm
+
+// Bypass glibc bits/math-vector.h ARM SVE/NEON vector math declarations for
+// NVCC on ARM64
+#ifndef _BITS_MATH_VECTOR_H
+#define _BITS_MATH_VECTOR_H 1
+#endif
+
+#if defined(__aarch64__)
+#ifndef __Float32x4_t
+typedef void *__Float32x4_t;
+#endif
+#ifndef __Float64x2_t
+typedef void *__Float64x2_t;
+#endif
+#ifndef __SVFloat32_t
+typedef void *__SVFloat32_t;
+#endif
+#ifndef __SVFloat64_t
+typedef void *__SVFloat64_t;
+#endif
+#ifndef __SVBool_t
+typedef void *__SVBool_t;
+#endif
+#endif
+
+#include <cuda_runtime_api.h>
+#include <omp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+// Global grid search and profiling parameters
+int g_block_x = 16;
+int g_block_y = 16;
+int g_threads_reduce = 256;
+
+double g_cpu_l17_ms = 0.0;
+double g_h2d_ms = 0.0;
+double g_gpu_l8_ms = 0.0;
+double g_d2h_ms = 0.0;
+size_t g_vram_bytes = 0;
+
+static inline double get_time_ms(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1000000.0;
+}
+
+// Weight arrays
+double weights_layer1[1400];
+double biases_layer1[56];
+double weights_layer2[672];
+double biases_layer2[12];
+double weights_layer3[1296];
+double biases_layer3[12];
+double weights_layer4[1296];
+double biases_layer4[12];
+double weights_layer5[1296];
+double biases_layer5[12];
+double weights_layer6[1296];
+double biases_layer6[12];
+double weights_layer7[672];
+double biases_layer7[56];
+double weights_layer8[4536];
+double biases_layer8;
+
+// Function declarations
+void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale);
+void FSRCNN_Layer8_GPU(double *img_hr, double *img_fltr_7, int rows, int cols,
+                       int scale);
+void imfilter(double *img, double *kernel, double *img_fltr, int rows, int cols,
+              int padsize);
+void pad_image(double *img, double *img_pad, int rows, int cols, int padsize);
+void PReLU(double *img_fltr, int rows, int cols, double bias,
+           double prelu_coeff);
+double Max(double a, double b);
+double Min(double a, double b);
+void imadd(double *img_fltr_sum, double *img_fltr_crnt, int cols, int rows);
+void deconv(double *img_input, double *img_output, double *kernel, int cols,
+            int rows, int stride);
+void double_2_uint8(double *double_img, unsigned char *uint8_img, int cols,
+                    int rows);
+inline void print_cuda_device_info(void) {
+  int device = 0;
+  if (cudaGetDevice(&device) == cudaSuccess) {
+    cudaDeviceProp prop;
+    if (cudaGetDeviceProperties(&prop, device) == cudaSuccess) {
+      printf("[GPU] Device %d: %s (Compute %d.%d, %.2f GB VRAM)\n", device,
+             prop.name, prop.major, prop.minor,
+             (double)prop.totalGlobalMem / (1024.0 * 1024.0 * 1024.0));
+    }
+  }
+}
+
+// CUDA error checking
+#define CHECK_CUDA(call)                                                       \
+  do {                                                                         \
+    cudaError_t err = call;                                                    \
+    if (err != cudaSuccess) {                                                  \
+      fprintf(stderr, "CUDA error at %s:%d - %s\n", __FILE__, __LINE__,        \
+              cudaGetErrorString(err));                                        \
+      exit(EXIT_FAILURE);                                                      \
+    }                                                                          \
+  } while (0)
+
+// ============================================================================
+// CUDA KERNELS
+// ============================================================================
+
+__global__ void deconv_kernel(const double *__restrict__ d_input_padded,
+                              double *__restrict__ d_output,
+                              const double *__restrict__ d_kernel, int rows_pad,
+                              int cols_pad, int rows_out, int cols_out,
+                              int stride, int border, int fsize) {
+  int out_y = blockIdx.y * blockDim.y + threadIdx.y;
+  int out_x = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (out_y >= rows_out || out_x >= cols_out)
+    return;
+
+  int offset = (fsize + 1) / 2 + stride * border - 1;
+  int tmp_y = out_y + offset;
+  int tmp_x = out_x + offset;
+
+  double sum = 0.0;
+
+  for (int kr = 0; kr < fsize; kr++) {
+    for (int kc = 0; kc < fsize; kc++) {
+      int i_candidate = tmp_y - kr;
+      int j_candidate = tmp_x - kc;
+
+      if (i_candidate >= 0 && j_candidate >= 0 && i_candidate % stride == 0 &&
+          j_candidate % stride == 0) {
+
+        int i = i_candidate / stride;
+        int j = j_candidate / stride;
+        if (i < rows_pad && j < cols_pad) {
+          int in_idx = i * cols_pad + j;
+          int k_idx = kr * fsize + kc;
+          sum += d_input_padded[in_idx] * d_kernel[k_idx];
+        }
+      }
+    }
+  }
+
+  d_output[out_y * cols_out + out_x] = sum;
+}
+
+__global__ void spatial_reduction_kernel(const double *__restrict__ d_all_tmp,
+                                         double *__restrict__ d_img_hr,
+                                         double bias, int num_channels,
+                                         int hr_pixels) {
+  int p = blockIdx.x * blockDim.x + threadIdx.x;
+  if (p < hr_pixels) {
+    double sum = 0.0;
+    for (int j = 0; j < num_channels; j++) {
+      sum += d_all_tmp[j * hr_pixels + p];
+    }
+    d_img_hr[p] = sum + bias;
+  }
+}
+
+__global__ void pad_image_kernel(const double *__restrict__ d_img,
+                                 double *__restrict__ d_img_pad, int rows,
+                                 int cols, int padsize) {
+  int cols_pad = cols + 2 * padsize;
+  int rows_pad = rows + 2 * padsize;
+
+  int i = blockIdx.y * blockDim.y + threadIdx.y;
+  int j = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (i >= rows_pad || j >= cols_pad)
+    return;
+
+  int cnt_pad = i * cols_pad + j;
+
+  if (i >= padsize && i < rows_pad - padsize && j >= padsize &&
+      j < cols_pad - padsize) {
+    int cnt = (i - padsize) * cols + (j - padsize);
+    d_img_pad[cnt_pad] = d_img[cnt];
+  } else if (i < padsize && j >= padsize && j < cols_pad - padsize) {
+    int cnt = (j - padsize);
+    d_img_pad[cnt_pad] = d_img[cnt];
+  } else if (i >= rows_pad - padsize && j >= padsize &&
+             j < cols_pad - padsize) {
+    int cnt = (rows - 1) * cols + (j - padsize);
+    d_img_pad[cnt_pad] = d_img[cnt];
+  } else if (i >= padsize && i < rows_pad - padsize && j < padsize) {
+    int cnt = (i - padsize) * cols;
+    d_img_pad[cnt_pad] = d_img[cnt];
+  } else if (i >= padsize && i < rows_pad - padsize &&
+             j >= cols_pad - padsize) {
+    int cnt = (i - padsize) * cols + (cols - 1);
+    d_img_pad[cnt_pad] = d_img[cnt];
+  } else {
+    int src_i = (i < padsize)               ? 0
+                : (i >= rows_pad - padsize) ? (rows - 1)
+                                            : (i - padsize);
+    int src_j = (j < padsize)               ? 0
+                : (j >= cols_pad - padsize) ? (cols - 1)
+                                            : (j - padsize);
+    int cnt = src_i * cols + src_j;
+    d_img_pad[cnt_pad] = d_img[cnt];
+  }
+}
+
+// ============================================================================
+// Host wrapper: FSRCNN Layer 8 on GPU
+// ============================================================================
+void FSRCNN_Layer8_GPU(double *img_hr, double *img_fltr_7, int rows, int cols,
+                       int scale) {
+  int filtersize8 = 81;
+  int num_channels8 = 56;
+  int hr_pixels = (rows * scale) * (cols * scale);
+
+  int border = 1;
+  int fsize = 9;
+  int rows_pad = rows + 2 * border;
+  int cols_pad = cols + 2 * border;
+  int rows_out = rows * scale;
+  int cols_out = cols * scale;
+
+  g_vram_bytes = (rows_pad * cols_pad + (size_t)num_channels8 * hr_pixels +
+                  (size_t)num_channels8 * filtersize8 + hr_pixels) *
+                 sizeof(double);
+
+  double t_h2d_start = get_time_ms();
+
+  double *d_input_padded = NULL;
+  double *d_all_tmp = NULL;
+  double *d_kernel8 = NULL;
+  double *d_img_hr = NULL;
+
+  CHECK_CUDA(cudaMalloc(&d_input_padded, rows_pad * cols_pad * sizeof(double)));
+  CHECK_CUDA(
+      cudaMalloc(&d_all_tmp, num_channels8 * hr_pixels * sizeof(double)));
+  CHECK_CUDA(
+      cudaMalloc(&d_kernel8, num_channels8 * filtersize8 * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_img_hr, hr_pixels * sizeof(double)));
+
+  CHECK_CUDA(cudaMemcpy(d_kernel8, weights_layer8,
+                        num_channels8 * filtersize8 * sizeof(double),
+                        cudaMemcpyHostToDevice));
+
+  g_h2d_ms += (get_time_ms() - t_h2d_start);
+
+  dim3 block_deconv(g_block_x, g_block_y);
+  dim3 grid_deconv((cols_out + block_deconv.x - 1) / block_deconv.x,
+                   (rows_out + block_deconv.y - 1) / block_deconv.y);
+
+  cudaEvent_t ev_start, ev_stop;
+  CHECK_CUDA(cudaEventCreate(&ev_start));
+  CHECK_CUDA(cudaEventCreate(&ev_stop));
+  CHECK_CUDA(cudaEventRecord(ev_start));
+
+  for (int j = 0; j < num_channels8; j++) {
+    double *h_input_padded =
+        (double *)malloc(rows_pad * cols_pad * sizeof(double));
+    pad_image(img_fltr_7 + j * rows * cols, h_input_padded, rows, cols, border);
+
+    double t_copy_start = get_time_ms();
+    CHECK_CUDA(cudaMemcpy(d_input_padded, h_input_padded,
+                          rows_pad * cols_pad * sizeof(double),
+                          cudaMemcpyHostToDevice));
+    g_h2d_ms += (get_time_ms() - t_copy_start);
+    free(h_input_padded);
+
+    deconv_kernel<<<grid_deconv, block_deconv>>>(
+        d_input_padded, d_all_tmp + j * hr_pixels, d_kernel8 + j * filtersize8,
+        rows_pad, cols_pad, rows_out, cols_out, scale, border, fsize);
+    CHECK_CUDA(cudaGetLastError());
+  }
+
+  int threads_reduce = g_threads_reduce;
+  int blocks_reduce = (hr_pixels + threads_reduce - 1) / threads_reduce;
+  spatial_reduction_kernel<<<blocks_reduce, threads_reduce>>>(
+      d_all_tmp, d_img_hr, biases_layer8, num_channels8, hr_pixels);
+  CHECK_CUDA(cudaGetLastError());
+
+  CHECK_CUDA(cudaEventRecord(ev_stop));
+  CHECK_CUDA(cudaEventSynchronize(ev_stop));
+
+  float kernel_ms = 0.0f;
+  CHECK_CUDA(cudaEventElapsedTime(&kernel_ms, ev_start, ev_stop));
+  g_gpu_l8_ms += kernel_ms;
+
+  CHECK_CUDA(cudaEventDestroy(ev_start));
+  CHECK_CUDA(cudaEventDestroy(ev_stop));
+
+  double t_d2h_start = get_time_ms();
+  CHECK_CUDA(cudaMemcpy(img_hr, d_img_hr, hr_pixels * sizeof(double),
+                        cudaMemcpyDeviceToHost));
+  g_d2h_ms += (get_time_ms() - t_d2h_start);
+
+  CHECK_CUDA(cudaFree(d_input_padded));
+  CHECK_CUDA(cudaFree(d_all_tmp));
+  CHECK_CUDA(cudaFree(d_kernel8));
+  CHECK_CUDA(cudaFree(d_img_hr));
+}
+
+// ============================================================================
+// CPU helper functions (unchanged from spatial reduction version)
+// ============================================================================
+
+void imfilter(double *img, double *kernel, double *img_fltr, int rows, int cols,
+              int padsize) {
+  int cols_pad = cols + 2 * padsize;
+  int rows_pad = rows + 2 * padsize;
+  int i, j, cnt, cnt_pad, cnt_krnl, k1, k2;
+  double sum;
+
+  double *img_pad = (double *)malloc(rows_pad * cols_pad * sizeof(double));
+  pad_image(img, img_pad, rows, cols, padsize);
+
+  for (i = padsize; i < rows_pad - padsize; i++)
+    for (j = padsize; j < cols_pad - padsize; j++) {
+      cnt = (i - padsize) * cols + (j - padsize);
+      sum = 0;
+      cnt_krnl = 0;
+      for (k1 = -padsize; k1 <= padsize; k1++)
+        for (k2 = -padsize; k2 <= padsize; k2++) {
+          cnt_pad = (i + k1) * cols_pad + j + k2;
+          sum = sum + (*(img_pad + cnt_pad)) * (*(kernel + cnt_krnl));
+          cnt_krnl++;
+        }
+      *(img_fltr + cnt) = sum;
+    }
+
+  free(img_pad);
+  img_pad = NULL;
+}
+
+void pad_image(double *img, double *img_pad, int rows, int cols, int padsize) {
+  int cols_pad = cols + 2 * padsize;
+  int rows_pad = rows + 2 * padsize;
+  int i, j, k, cnt, cnt_pad, k1, k2;
+
+  for (i = padsize; i < rows_pad - padsize; i++)
+    for (j = padsize; j < cols_pad - padsize; j++) {
+      cnt_pad = i * cols_pad + j;
+      cnt = (i - padsize) * (cols) + j - padsize;
+      double x = *(img + cnt);
+      *(img_pad + cnt_pad) = x;
+    }
+
+  for (j = padsize; j < cols_pad - padsize; j++)
+    for (k = 0; k < padsize; k++) {
+      cnt_pad = j + k * cols_pad;
+      cnt = j - padsize;
+      *(img_pad + cnt_pad) = *(img + cnt);
+      cnt_pad = j + (rows_pad - 1 - k) * cols_pad;
+      cnt = (j - padsize) + (rows - 1) * cols;
+      *(img_pad + cnt_pad) = *(img + cnt);
+    }
+
+  for (i = padsize; i < rows_pad - padsize; i++)
+    for (k = 0; k < padsize; k++) {
+      cnt = (i - padsize) * cols;
+      cnt_pad = i * cols_pad + k;
+      *(img_pad + cnt_pad) = *(img + cnt);
+      cnt = (i - padsize) * cols + cols - 1;
+      cnt_pad = i * cols_pad + cols_pad - 1 - k;
+      *(img_pad + cnt_pad) = *(img + cnt);
+    }
+
+  for (k1 = 0; k1 < padsize; k1++)
+    for (k2 = 0; k2 < padsize; k2++) {
+      cnt_pad = k1 * cols_pad + k2;
+      *(img_pad + cnt_pad) = *(img);
+      cnt_pad = k1 * cols_pad + cols_pad - 1 - k2;
+      *(img_pad + cnt_pad) = *(img + cols - 1);
+      cnt_pad = (rows_pad - 1 - k1) * cols_pad + k2;
+      *(img_pad + cnt_pad) = *(img + (rows - 1) * cols);
+      cnt_pad = (rows_pad - 1 - k1) * cols_pad + cols_pad - 1 - k2;
+      *(img_pad + cnt_pad) = *(img + (rows - 1) * cols + cols - 1);
+    }
+}
+
+void PReLU(double *img_fltr, int rows, int cols, double bias,
+           double prelu_coeff) {
+  int cnt = 0;
+  for (int i = 0; i < rows; i++)
+    for (int j = 0; j < cols; j++) {
+      cnt = i * cols + j;
+      *(img_fltr + cnt) = Max(*(img_fltr + cnt) + bias, 0) +
+                          prelu_coeff * Min(*(img_fltr + cnt) + bias, 0);
+    }
+}
+
+double Max(double a, double b) { return a > b ? a : b; }
+
+double Min(double a, double b) { return a > b ? b : a; }
+
+void imadd(double *img_fltr_sum, double *img_fltr_crnt, int cols, int rows) {
+  int cnt = 0;
+  for (int i = 0; i < rows; i++)
+    for (int j = 0; j < cols; j++) {
+      cnt = i * cols + j;
+      *(img_fltr_sum + cnt) = *(img_fltr_sum + cnt) + *(img_fltr_crnt + cnt);
+    }
+}
+
+void deconv(double *img_input, double *img_output, double *kernel, int cols,
+            int rows, int stride) {
+  int border = 1;
+  int fsize = 9;
+  int rows_pad = rows + 2 * border;
+  int cols_pad = cols + 2 * border;
+  double *img_input_padded =
+      (double *)malloc(rows_pad * cols_pad * sizeof(double));
+  pad_image(img_input, img_input_padded, rows, cols, border);
+
+  int rows_out_pad = rows_pad * stride;
+  int cols_out_pad = cols_pad * stride;
+  double *img_output_tmp = (double *)calloc(
+      (rows_out_pad + fsize - 1) * (cols_out_pad + fsize - 1), sizeof(double));
+  double *kernel_modif = (double *)malloc(fsize * fsize * sizeof(double));
+
+  int idx, idy;
+  for (int i = 0; i < rows_pad; i++)
+    for (int j = 0; j < cols_pad; j++) {
+      int cnt_img = i * cols_pad + j;
+      idx = i * stride;
+      idy = j * stride;
+      int cnt_img_output = idx * (cols_out_pad + fsize - 1) + idy;
+      int cnt_kernel = 0;
+      for (int k_r = 0; k_r < fsize; k_r++) {
+        for (int k_c = 0; k_c < fsize; k_c++) {
+          cnt_kernel = k_r * fsize + k_c;
+          *(kernel_modif + cnt_kernel) =
+              (*(kernel + cnt_kernel)) * (*(img_input_padded + cnt_img));
+          *(img_output_tmp + cnt_img_output + k_c) =
+              *(img_output_tmp + cnt_img_output + k_c) +
+              *(kernel_modif + cnt_kernel);
+        }
+        cnt_img_output = cnt_img_output + (cols_out_pad + fsize - 1);
+      }
+    }
+
+  int rows_out = rows * stride;
+  int cols_out = cols * stride;
+
+  for (int i = 0; i < rows_out; i++)
+    for (int j = 0; j < cols_out; j++) {
+      int i_tmp = i + ((fsize + 1) / 2) + stride * border - 1;
+      int j_tmp = j + ((fsize + 1) / 2) + stride * border - 1;
+      int cnt_img_out = i * cols_out + j;
+      int cnt_img_out_tmp = i_tmp * (cols_out_pad + fsize - 1) + j_tmp;
+      *(img_output + cnt_img_out) = *(img_output_tmp + cnt_img_out_tmp);
+    }
+
+  free(img_input_padded);
+  img_input_padded = NULL;
+  free(img_output_tmp);
+  img_output_tmp = NULL;
+  free(kernel_modif);
+  kernel_modif = NULL;
+}
+
+void double_2_uint8(double *double_img, unsigned char *uint8_img, int cols,
+                    int rows) {
+  int i, j, cnt;
+  for (i = 0; i < rows; i++)
+    for (j = 0; j < cols; j++) {
+      cnt = i * cols + j;
+      double val = *(double_img + cnt);
+      if (val < 0)
+        val = 0;
+      if (val > 255)
+        val = 255;
+      *(uint8_img + cnt) = (unsigned char)(val + 0.5);
+    }
+}
+
+// ============================================================================
+// ALL-LAYERS GPU ADDITIONS (V3)
+//
+// Bit-exactness is the design constraint, not an afterthought. The CPU path
+// computes each output pixel as
+//     acc = 0; for j in channels: { s = 0; for k in window: s += in*w; acc += s; }
+// so one CUDA thread per (filter, pixel) walking the same two loops in the same
+// order reproduces the identical floating-point summation. Any scheme that
+// reorders or tree-reduces those sums would not.
+//
+// Padding: pad_image() in the CPU path is pure edge replication, so
+//     img_pad[i][j] == img[clamp(i-pad)][clamp(j-pad)]
+// and the kernel clamps indices instead of materialising a padded buffer.
+//
+// One asymmetry that matters: Layer 1 writes imfilter's result directly, while
+// Layers 2-7 calloc to zero and then imadd. Those differ if the first channel
+// sum is -0.0 (0.0 + -0.0 == +0.0). ZERO_INIT reproduces each case exactly.
+// ============================================================================
+
+__global__ void conv_layer_kernel(const double *__restrict__ d_in,
+                                  double *__restrict__ d_out,
+                                  const double *__restrict__ d_w, int rows,
+                                  int cols, int num_channels, int num_filters,
+                                  int patch, int zero_init) {
+  int p = blockIdx.x * blockDim.x + threadIdx.x;
+  int f = blockIdx.y * blockDim.y + threadIdx.y;
+  int npix = rows * cols;
+  if (p >= npix || f >= num_filters)
+    return;
+
+  int r = p / cols;
+  int c = p - r * cols;
+  int pad = (patch - 1) / 2;
+  int fsz = patch * patch;
+
+  double acc = 0.0;
+  for (int j = 0; j < num_channels; j++) {
+    const double *img = d_in + (size_t)j * npix;
+    const double *w = d_w + (size_t)(f * num_channels + j) * fsz;
+    double s = 0.0;
+    int kidx = 0;
+    for (int k1 = -pad; k1 <= pad; k1++) {
+      int rr = r + k1;
+      rr = rr < 0 ? 0 : (rr > rows - 1 ? rows - 1 : rr);
+      for (int k2 = -pad; k2 <= pad; k2++) {
+        int cc = c + k2;
+        cc = cc < 0 ? 0 : (cc > cols - 1 ? cols - 1 : cc);
+        s += img[rr * cols + cc] * w[kidx];
+        kidx++;
+      }
+    }
+    if (j == 0)
+      acc = zero_init ? (0.0 + s) : s;
+    else
+      acc += s;
+  }
+  d_out[(size_t)f * npix + p] = acc;
+}
+
+__global__ void prelu_kernel(double *__restrict__ d_img, int npix,
+                             int num_filters, const double *__restrict__ d_bias,
+                             double coeff) {
+  int p = blockIdx.x * blockDim.x + threadIdx.x;
+  int f = blockIdx.y * blockDim.y + threadIdx.y;
+  if (p >= npix || f >= num_filters)
+    return;
+  size_t idx = (size_t)f * npix + p;
+  double x = d_img[idx] + d_bias[f];
+  // Matches CPU Max(x,0) + coeff*Min(x,0) term by term.
+  double hi = x > 0.0 ? x : 0.0;
+  double lo = x < 0.0 ? x : 0.0;
+  d_img[idx] = hi + coeff * lo;
+}
+
+// Layer 8 driven from a feature map that is already on the device, so the
+// per-channel host round trip of FSRCNN_Layer8_GPU disappears.
+double g_gpu_all_ms = 0.0;
+
+void FSRCNN_Layer8_GPU_dev(double *d_img_hr, const double *d_img_fltr_7,
+                           int rows, int cols, int scale) {
+  int filtersize8 = 81, num_channels8 = 56;
+  int hr_pixels = (rows * scale) * (cols * scale);
+  int border = 1, fsize = 9;
+  int rows_pad = rows + 2 * border, cols_pad = cols + 2 * border;
+  int rows_out = rows * scale, cols_out = cols * scale;
+
+  double *d_all_tmp = NULL, *d_kernel8 = NULL, *d_pad = NULL;
+  CHECK_CUDA(cudaMalloc(&d_all_tmp, (size_t)num_channels8 * hr_pixels * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_kernel8, (size_t)num_channels8 * filtersize8 * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_pad, (size_t)rows_pad * cols_pad * sizeof(double)));
+  CHECK_CUDA(cudaMemcpy(d_kernel8, weights_layer8,
+                        (size_t)num_channels8 * filtersize8 * sizeof(double),
+                        cudaMemcpyHostToDevice));
+
+  dim3 bpad(16, 16);
+  dim3 gpad((cols_pad + 15) / 16, (rows_pad + 15) / 16);
+  dim3 bdec(g_block_x, g_block_y);
+  dim3 gdec((cols_out + bdec.x - 1) / bdec.x, (rows_out + bdec.y - 1) / bdec.y);
+
+  for (int j = 0; j < num_channels8; j++) {
+    pad_image_kernel<<<gpad, bpad>>>(d_img_fltr_7 + (size_t)j * rows * cols,
+                                     d_pad, rows, cols, border);
+    CHECK_CUDA(cudaGetLastError());
+    deconv_kernel<<<gdec, bdec>>>(d_pad, d_all_tmp + (size_t)j * hr_pixels,
+                                  d_kernel8 + j * filtersize8, rows_pad,
+                                  cols_pad, rows_out, cols_out, scale, border,
+                                  fsize);
+    CHECK_CUDA(cudaGetLastError());
+  }
+  int tr = g_threads_reduce;
+  spatial_reduction_kernel<<<(hr_pixels + tr - 1) / tr, tr>>>(
+      d_all_tmp, d_img_hr, biases_layer8, num_channels8, hr_pixels);
+  CHECK_CUDA(cudaGetLastError());
+
+  CHECK_CUDA(cudaFree(d_all_tmp));
+  CHECK_CUDA(cudaFree(d_kernel8));
+  CHECK_CUDA(cudaFree(d_pad));
+}
+
+// ============================================================================
+// FSRCNN main function -- ALL EIGHT LAYERS ON GPU (V3)
+// ============================================================================
+struct LayerSpec {
+  int filters, channels, patch;
+  const double *w, *b;
+  double coeff;
+};
+
+void FSRCNN(double *img_hr, double *img_lr, int rows, int cols, int scale) {
+  int npix = rows * cols;
+  int hr_pixels = (rows * scale) * (cols * scale);
+
+  LayerSpec L[7] = {
+      {56, 1, 5, weights_layer1, biases_layer1, -0.8986},
+      {12, 56, 1, weights_layer2, biases_layer2, 0.3236},
+      {12, 12, 3, weights_layer3, biases_layer3, 0.2288},
+      {12, 12, 3, weights_layer4, biases_layer4, 0.2476},
+      {12, 12, 3, weights_layer5, biases_layer5, 0.3495},
+      {12, 12, 3, weights_layer6, biases_layer6, 0.7806},
+      {56, 12, 1, weights_layer7, biases_layer7, 0.0087}};
+
+  double t0 = get_time_ms();
+
+  double *d_in = NULL, *d_out = NULL, *d_w = NULL, *d_b = NULL, *d_hr = NULL;
+  CHECK_CUDA(cudaMalloc(&d_in, (size_t)56 * npix * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_out, (size_t)56 * npix * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_w, (size_t)56 * 56 * 25 * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_b, (size_t)56 * sizeof(double)));
+  CHECK_CUDA(cudaMalloc(&d_hr, (size_t)hr_pixels * sizeof(double)));
+
+  double th = get_time_ms();
+  CHECK_CUDA(cudaMemcpy(d_in, img_lr, (size_t)npix * sizeof(double),
+                        cudaMemcpyHostToDevice));
+  g_h2d_ms += get_time_ms() - th;
+
+  dim3 blk(256, 1);
+  for (int i = 0; i < 7; i++) {
+    int F = L[i].filters, C = L[i].channels, P = L[i].patch;
+    CHECK_CUDA(cudaMemcpy(d_w, L[i].w, (size_t)F * C * P * P * sizeof(double),
+                          cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_b, L[i].b, (size_t)F * sizeof(double),
+                          cudaMemcpyHostToDevice));
+    dim3 grd((npix + blk.x - 1) / blk.x, F);
+    // zero_init=0 for Layer 1 (writes imfilter directly), 1 for Layers 2-7
+    // (calloc + imadd). See the note above conv_layer_kernel.
+    conv_layer_kernel<<<grd, blk>>>(d_in, d_out, d_w, rows, cols, C, F, P,
+                                    i == 0 ? 0 : 1);
+    CHECK_CUDA(cudaGetLastError());
+    prelu_kernel<<<grd, blk>>>(d_out, npix, F, d_b, L[i].coeff);
+    CHECK_CUDA(cudaGetLastError());
+    double *sw = d_in;
+    d_in = d_out;
+    d_out = sw;
+  }
+
+  FSRCNN_Layer8_GPU_dev(d_hr, d_in, rows, cols, scale);
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  double td = get_time_ms();
+  CHECK_CUDA(cudaMemcpy(img_hr, d_hr, (size_t)hr_pixels * sizeof(double),
+                        cudaMemcpyDeviceToHost));
+  g_d2h_ms += get_time_ms() - td;
+
+  CHECK_CUDA(cudaFree(d_in));
+  CHECK_CUDA(cudaFree(d_out));
+  CHECK_CUDA(cudaFree(d_w));
+  CHECK_CUDA(cudaFree(d_b));
+  CHECK_CUDA(cudaFree(d_hr));
+
+  g_gpu_all_ms += get_time_ms() - t0;
+  g_vram_bytes = (size_t)(56 * npix * 2 + 56 * 56 * 25 + 56 + hr_pixels +
+                          56 * hr_pixels) * sizeof(double);
+}
+
+// ============================================================================
+// Main
+// ============================================================================
+int main(int argc, char *argv[]) {
+  if (argc < 3) {
+    printf("Usage: %s <input.yuv> <output.yuv> [block_x] [block_y] "
+           "[threads_reduce]\n",
+           argv[0]);
+    return 1;
+  }
+
+  char *inFile = argv[1];
+  char *outFile = argv[2];
+
+  if (argc >= 4)
+    g_block_x = atoi(argv[3]);
+  if (argc >= 5)
+    g_block_y = atoi(argv[4]);
+  if (argc >= 6)
+    g_threads_reduce = atoi(argv[5]);
+
+  int scale = 2;
+  int num = 150;
+  int inCols = 176;
+  int inRows = 144;
+  int outCols = inCols * scale;
+  int outRows = inRows * scale;
+
+  // Initialize CUDA
+  CHECK_CUDA(cudaSetDevice(0));
+  print_cuda_device_info();
+
+  // Read weights (same as CPU version)
+  // Read weights (identical to CPU version)
+  FILE *weights_layer1_ptr;
+  weights_layer1_ptr = fopen("weights_layer1.txt", "r");
+  if (weights_layer1_ptr == NULL) {
+    printf("Error reading weights_layer1\n");
+    return 1;
+  };
+  for (int i = 0; i < 1400; i++)
+    fscanf(weights_layer1_ptr, "%lf", &weights_layer1[i]);
+  fclose(weights_layer1_ptr);
+
+  FILE *biases_layer1_ptr;
+  biases_layer1_ptr = fopen("biasess_layer1.txt", "r");
+  if (biases_layer1_ptr == NULL) {
+    printf("Error reading biases_layer1\n");
+    return 1;
+  };
+  for (int i = 0; i < 56; i++)
+    fscanf(biases_layer1_ptr, "%lf", &biases_layer1[i]);
+  fclose(biases_layer1_ptr);
+
+  FILE *weights_layer2_ptr;
+  weights_layer2_ptr = fopen("weights_layer2.txt", "r");
+  if (weights_layer2_ptr == NULL) {
+    printf("Error reading weights_layer2\n");
+    return 1;
+  };
+  for (int i = 0; i < 672; i++)
+    fscanf(weights_layer2_ptr, "%lf", &weights_layer2[i]);
+  fclose(weights_layer2_ptr);
+
+  FILE *biases_layer2_ptr;
+  biases_layer2_ptr = fopen("biasess_layer2.txt", "r");
+  if (biases_layer2_ptr == NULL) {
+    printf("Error reading biases_layer2\n");
+    return 1;
+  };
+  for (int i = 0; i < 12; i++)
+    fscanf(biases_layer2_ptr, "%lf", &biases_layer2[i]);
+  fclose(biases_layer2_ptr);
+
+  FILE *weights_layer3_ptr;
+  weights_layer3_ptr = fopen("weights_layer3.txt", "r");
+  if (weights_layer3_ptr == NULL) {
+    printf("Error reading weights_layer3\n");
+    return 1;
+  };
+  for (int i = 0; i < 1296; i++)
+    fscanf(weights_layer3_ptr, "%lf", &weights_layer3[i]);
+  fclose(weights_layer3_ptr);
+
+  FILE *biases_layer3_ptr;
+  biases_layer3_ptr = fopen("biasess_layer3.txt", "r");
+  if (biases_layer3_ptr == NULL) {
+    printf("Error reading biases_layer3\n");
+    return 1;
+  };
+  for (int i = 0; i < 12; i++)
+    fscanf(biases_layer3_ptr, "%lf", &biases_layer3[i]);
+  fclose(biases_layer3_ptr);
+
+  FILE *weights_layer4_ptr;
+  weights_layer4_ptr = fopen("weights_layer4.txt", "r");
+  if (weights_layer4_ptr == NULL) {
+    printf("Error reading weights_layer4\n");
+    return 1;
+  };
+  for (int i = 0; i < 1296; i++)
+    fscanf(weights_layer4_ptr, "%lf", &weights_layer4[i]);
+  fclose(weights_layer4_ptr);
+
+  FILE *biases_layer4_ptr;
+  biases_layer4_ptr = fopen("biasess_layer4.txt", "r");
+  if (biases_layer4_ptr == NULL) {
+    printf("Error reading biases_layer4\n");
+    return 1;
+  };
+  for (int i = 0; i < 12; i++)
+    fscanf(biases_layer4_ptr, "%lf", &biases_layer4[i]);
+  fclose(biases_layer4_ptr);
+
+  FILE *weights_layer5_ptr;
+  weights_layer5_ptr = fopen("weights_layer5.txt", "r");
+  if (weights_layer5_ptr == NULL) {
+    printf("Error reading weights_layer5\n");
+    return 1;
+  };
+  for (int i = 0; i < 1296; i++)
+    fscanf(weights_layer5_ptr, "%lf", &weights_layer5[i]);
+  fclose(weights_layer5_ptr);
+
+  FILE *biases_layer5_ptr;
+  biases_layer5_ptr = fopen("biasess_layer5.txt", "r");
+  if (biases_layer5_ptr == NULL) {
+    printf("Error reading biases_layer5\n");
+    return 1;
+  };
+  for (int i = 0; i < 12; i++)
+    fscanf(biases_layer5_ptr, "%lf", &biases_layer5[i]);
+  fclose(biases_layer5_ptr);
+
+  FILE *weights_layer6_ptr;
+  weights_layer6_ptr = fopen("weights_layer6.txt", "r");
+  if (weights_layer6_ptr == NULL) {
+    printf("Error reading weights_layer6\n");
+    return 1;
+  };
+  for (int i = 0; i < 1296; i++)
+    fscanf(weights_layer6_ptr, "%lf", &weights_layer6[i]);
+  fclose(weights_layer6_ptr);
+
+  FILE *biases_layer6_ptr;
+  biases_layer6_ptr = fopen("biasess_layer6.txt", "r");
+  if (biases_layer6_ptr == NULL) {
+    printf("Error reading biases_layer6\n");
+    return 1;
+  };
+  for (int i = 0; i < 12; i++)
+    fscanf(biases_layer6_ptr, "%lf", &biases_layer6[i]);
+  fclose(biases_layer6_ptr);
+
+  FILE *weights_layer7_ptr;
+  weights_layer7_ptr = fopen("weights_layer7.txt", "r");
+  if (weights_layer7_ptr == NULL) {
+    printf("Error reading weights_layer7\n");
+    return 1;
+  };
+  for (int i = 0; i < 672; i++)
+    fscanf(weights_layer7_ptr, "%lf", &weights_layer7[i]);
+  fclose(weights_layer7_ptr);
+
+  FILE *biases_layer7_ptr;
+  biases_layer7_ptr = fopen("biasess_layer7.txt", "r");
+  if (biases_layer7_ptr == NULL) {
+    printf("Error reading biases_layer7\n");
+    return 1;
+  };
+  for (int i = 0; i < 56; i++)
+    fscanf(biases_layer7_ptr, "%lf", &biases_layer7[i]);
+  fclose(biases_layer7_ptr);
+
+  FILE *weights_layer8_ptr;
+  weights_layer8_ptr = fopen("weights_layer8.txt", "r");
+  if (weights_layer8_ptr == NULL) {
+    printf("Error reading weights_layer8\n");
+    return 1;
+  };
+  for (int i = 0; i < 4536; i++)
+    fscanf(weights_layer8_ptr, "%lf", &weights_layer8[i]);
+  fclose(weights_layer8_ptr);
+
+  FILE *biases_layer8_ptr;
+  biases_layer8_ptr = fopen("biasess_layer8.txt", "r");
+  if (biases_layer8_ptr == NULL) {
+    printf("Error reading biases_layer8\n");
+    return 1;
+  };
+  fscanf(biases_layer8_ptr, "%lf", &biases_layer8);
+  fclose(biases_layer8_ptr);
+
+  // For brevity, assume weights are loaded here
+  // Same file reading logic as fsrcnn_parallel_spatial_reduction.c
+
+  unsigned char *inBuf =
+      (unsigned char *)malloc(inCols * inRows * sizeof(unsigned char));
+  unsigned char *outBuf =
+      (unsigned char *)malloc(outCols * outRows * sizeof(unsigned char));
+  double *inBuf_tmp = (double *)malloc(inCols * inRows * sizeof(double));
+  double *outBuf_tmp = (double *)malloc(outCols * outRows * sizeof(double));
+
+  FILE *inFp = fopen(inFile, "rb");
+  if (inFp == NULL) {
+    fprintf(stderr, "Error opening input file: %s\n", inFile);
+    return 1;
+  }
+  FILE *outFp = fopen(outFile, "wb");
+  if (outFp == NULL) {
+    fprintf(stderr, "Error opening output file: %s\n", outFile);
+    fclose(inFp);
+    return 1;
+  }
+
+  for (int fcnt = 0; fcnt < num; fcnt++) {
+    unsigned char *inP = inBuf;
+    double *inP_tmp = inBuf_tmp;
+    unsigned char *outP = outBuf;
+    double *outP_tmp = outBuf_tmp;
+
+    // Y Component
+    fread(inBuf, sizeof(unsigned char), inCols * inRows, inFp);
+    for (int i = 0; i < inRows; i++)
+      for (int j = 0; j < inCols; j++) {
+        int cnt = i * inCols + j;
+        int x = *inP++;
+        *(inP_tmp + cnt) = (double)(x / 255.0);
+      }
+
+    FSRCNN(outP_tmp, inP_tmp, inRows, inCols, scale);
+
+    for (int i = 0; i < inRows * scale; i++)
+      for (int j = 0; j < inCols * scale; j++) {
+        int cnt = i * inCols * scale + j;
+        *(outP_tmp + cnt) = *(outP_tmp + cnt) * 255;
+      }
+
+    double_2_uint8(outP_tmp, outP, outCols, outRows);
+    fwrite(outBuf, sizeof(unsigned char), outCols * outRows, outFp);
+
+    // U Component
+    fread(inBuf, sizeof(unsigned char), inCols * inRows / 4, inFp);
+    inP = inBuf;
+    outP = outBuf;
+    for (int i = 0; i < inRows / 2; i++)
+      for (int j = 0; j < inCols / 2; j++) {
+        int cnt = 2 * (i * outCols / 2 + j);
+        unsigned char x = *inP++;
+        *(outP + cnt) = x;
+        *(outP + cnt + 1) = x;
+        *(outP + cnt + outCols / 2) = x;
+        *(outP + cnt + outCols / 2 + 1) = x;
+      }
+    fwrite(outBuf, sizeof(unsigned char), outCols * outRows / 4, outFp);
+
+    // V Component
+    fread(inBuf, sizeof(unsigned char), inCols * inRows / 4, inFp);
+    inP = inBuf;
+    outP = outBuf;
+    for (int i = 0; i < inRows / 2; i++)
+      for (int j = 0; j < inCols / 2; j++) {
+        int cnt = 2 * (i * outCols / 2 + j);
+        unsigned char x = *inP++;
+        *(outP + cnt) = x;
+        *(outP + cnt + 1) = x;
+        *(outP + cnt + outCols / 2) = x;
+        *(outP + cnt + outCols / 2 + 1) = x;
+      }
+    fwrite(outBuf, sizeof(unsigned char), outCols * outRows / 4, outFp);
+  }
+
+  free(inBuf);
+  free(inBuf_tmp);
+  free(outBuf);
+  free(outBuf_tmp);
+  fclose(inFp);
+  fclose(outFp);
+
+  double total_wall = g_gpu_all_ms;
+  fprintf(stderr,
+          "[PROFILING] gpu_all_ms=%.2f cpu_l17_ms=%.2f h2d_ms=%.2f gpu_l8_ms=%.2f d2h_ms=%.2f "
+          "total_ms=%.2f vram_kb=%zu block_x=%d block_y=%d threads_reduce=%d\n",
+          g_gpu_all_ms, g_cpu_l17_ms, g_h2d_ms, g_gpu_l8_ms, g_d2h_ms, total_wall,
+          g_vram_bytes / 1024, g_block_x, g_block_y, g_threads_reduce);
+
+  return 0;
+}

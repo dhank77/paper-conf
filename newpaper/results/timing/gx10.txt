@@ -1,0 +1,56 @@
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# bash ./collect_layer_timing.sh
+[INFO] Platform: NVIDIA GB10  tag=gb10  backdrop=20  reps=6
+[INFO] built ./fsrcnn_gpu_lt (-arch=native)
+[INFO] built ./fsrcnn_gpu_ref (-arch=native)
+[INFO] === Per-layer sweep (instrumented binary) ===
+  rep 1/6  L1=293.54 L2=741.62 L3=486.99 L4=478.62 L5=475.33 L6=469.74 L7=555.02 | sum=3500.87 cpu_l17=3500.92 resid=0.05
+  rep 2/6  L1=314.44 L2=728.93 L3=483.07 L4=477.81 L5=480.62 L6=474.08 L7=555.89 | sum=3514.84 cpu_l17=3514.90 resid=0.06
+  rep 3/6  L1=291.29 L2=718.97 L3=467.54 L4=468.19 L5=467.79 L6=455.10 L7=563.75 | sum=3432.64 cpu_l17=3432.69 resid=0.05
+  rep 4/6  L1=301.71 L2=738.89 L3=481.45 L4=479.26 L5=474.24 L6=469.84 L7=561.09 | sum=3506.47 cpu_l17=3506.54 resid=0.07
+  rep 5/6  L1=308.35 L2=744.88 L3=480.45 L4=476.40 L5=468.46 L6=466.73 L7=546.59 | sum=3491.85 cpu_l17=3491.90 resid=0.05
+  rep 6/6  L1=293.95 L2=755.54 L3=483.90 L4=471.83 L5=469.33 L6=461.66 L7=557.14 | sum=3493.33 cpu_l17=3493.38 resid=0.05
+[INFO] === Control: production binary, same config ===
+  control rep 1: 4714 ms
+  control rep 2: 4750 ms
+  control rep 3: 4718 ms
+==============================================================
+ Per-layer CPU breakdown (Layers 1-7) -- gb10
+ gpu:       NVIDIA GB10
+ hostname:  node6
+ date:      2026-08-10T14:03:55+08:00
+ backdrop:  OMP_NUM_THREADS=20
+ reps:      6, grid 32 8 256, 150 frames
+==============================================================
+
+All figures milliseconds, totalled across 150 frames, mean +/- SD.
+
+  Layer                  Time (ms)          share of L1-7
+  ------------------------------------------------------------
+  Layer 1                   300.55 +/- 9.31    8.6%
+  Layer 2                   738.14 +/- 12.75  21.1%
+  Layer 3                   480.57 +/- 6.77   13.8%
+  Layer 4                   475.35 +/- 4.40   13.6%
+  Layer 5                   472.63 +/- 5.01   13.5%
+  Layer 6                   466.19 +/- 6.81   13.4%
+  Layer 7                   556.58 +/- 5.91   15.9%
+  ------------------------------------------------------------
+  sum L1-L7                3490.00 +/- 29.36
+  cpu_l17_ms               3490.06 +/- 29.37
+  residual                    0.06 +/- 0.01 
+  wall (instr.)            4892.33 +/- 46.21
+  wall (control)           4727.33 +/- 19.73
+
+Checks:
+  bit-exact vs production binary : 0 differing bytes (must be 0)
+  residual = cpu_l17_ms - sum(L1..L7). A large residual means real work
+  sits between the layer blocks and belongs to no single layer; a small
+  one means the split accounts for the lump.
+  Compare the two wall lines: if they agree, the timers are free and the
+  per-layer numbers can be quoted as absolute times, not just shares.
+
+Send back:
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_layertiming_gb10.txt
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_layertiming_gb10.csv
+  /home/lab_iot/FSRCNN/paper-conf/newpaper/plans/results_layertiming_gb10.rawlog
+==============================================================
+root@node6:/home/lab_iot/FSRCNN/paper-conf/newpaper/plans# 

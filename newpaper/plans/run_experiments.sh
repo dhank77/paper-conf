@@ -43,9 +43,13 @@ CPU_SOURCE="fsrcnn_parallel_spatial_reduction.c"
 CPU_BINARY="./fsrcnn_cpu"
 GPU_SOURCE="fsrcnn_gpu.cu fsrcnn_gpu_main.cu"
 GPU_BINARY="./fsrcnn_gpu"
+# V3: all eight layers on GPU (Layers 1-7 as CUDA kernels, not OpenMP CPU)
+GPU_ALL_SOURCE="fsrcnn_gpu_alllayers.cu"
+GPU_ALL_BINARY="./fsrcnn_gpu_all"
 OUTPUT_V0="out_v0.yuv"
 OUTPUT_CPU="out_cpu.yuv"
 OUTPUT_GPU="out_gpu.yuv"
+OUTPUT_GPU_ALL="out_gpu_all.yuv"
 CSV_FILE="raw_results.csv"
 
 # Thread sweep and GPU backdrop are platform-dependent (core topology differs
@@ -158,12 +162,54 @@ build_gpu() {
     fi
 }
 
+build_gpu_all() {
+    log_info "Building GPU V3 (all layers) binary: $GPU_ALL_BINARY from $GPU_ALL_SOURCE"
+
+    if [ ! -f "$GPU_ALL_SOURCE" ]; then
+        log_warn "GPU V3 source not found: $GPU_ALL_SOURCE, skipping V3 build."
+        return 0
+    fi
+    if ! command -v nvcc &> /dev/null; then
+        log_error "nvcc not found. Install CUDA toolkit first."
+        exit 1
+    fi
+
+    local arm_flags=""
+    if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
+        arm_flags="-D_BITS_MATH_VECTOR_H -D__Float32x4_t=void* -D__Float64x2_t=void* -D__SVFloat32_t=void* -D__SVFloat64_t=void* -D__SVBool_t=void*"
+    fi
+
+    # FMAD note: the CPU path computes s += a*b as a separate multiply and add.
+    # nvcc contracts that into an FMA by default, which rounds differently and
+    # would break bit-exactness. We build with -fmad=false first and fall back
+    # to the default only if that fails to compile; --validate is what proves
+    # which one is actually bit-exact on this machine.
+    local fmad="${NVCC_FMAD:--fmad=false}"
+
+    local compiled=0
+    for arch in native sm_121 sm_120 sm_90 sm_89 sm_87 sm_80 sm_75; do
+        if nvcc -arch="$arch" $fmad $arm_flags -O3 -std=c++11 -Xcompiler -fopenmp \
+                -Xcompiler -fno-tree-vectorize -o "$GPU_ALL_BINARY" "$GPU_ALL_SOURCE" \
+                -lm -lcudart 2>/dev/null; then
+            log_info "GPU V3 binary ready (-arch=$arch $fmad): $GPU_ALL_BINARY"
+            compiled=1
+            break
+        fi
+    done
+
+    if [ "$compiled" -eq 0 ]; then
+        log_error "Failed to compile $GPU_ALL_SOURCE with any architecture option."
+        exit 1
+    fi
+}
+
 # Auto-build binaries before any phase
 build_all() {
     log_info "=== Building binaries ==="
     build_v0
     build_cpu
     build_gpu
+    build_gpu_all
     log_info "=== Build complete ==="
     echo ""
 }
@@ -327,6 +373,31 @@ phase1_validate() {
         log_error "FAIL: GPU output differs from ground truth ($diff bytes)"
         exit 1
     fi
+
+    # --- V3: all eight layers on GPU ---
+    if [ ! -f "$GPU_ALL_BINARY" ]; then
+        build_gpu_all
+    fi
+    if [ -f "$GPU_ALL_BINARY" ]; then
+        log_info "--- Validating GPU V3 (all layers) ---"
+        local v3_wall=$(run_and_time "GPU V3 all-layers" "$GPU_ALL_BINARY $INPUT_YUV $OUTPUT_GPU_ALL 32 8 256")
+        local v3_diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_GPU_ALL")
+        log_info "GPU V3 output hash: $(compute_hash "$OUTPUT_GPU_ALL")"
+        log_info "GPU V3 diff bytes:  $v3_diff"
+        if [ "$v3_diff" -eq 0 ]; then
+            log_info "PASS: GPU V3 (all layers) is bit-exact with ground truth"
+        else
+            local v3_total=$(get_file_size "$OUTPUT_GPU_ALL")
+            log_error "FAIL: GPU V3 differs from ground truth ($v3_diff of $v3_total bytes)"
+            log_error "This is the expected first failure mode: floating-point contraction."
+            log_error "The CPU computes s += a*b as separate multiply and add; nvcc may fuse"
+            log_error "them into an FMA with different rounding. Retry the build with:"
+            log_error "    NVCC_FMAD=-fmad=true  bash $0 --validate     # force fusion"
+            log_error "    NVCC_FMAD=             bash $0 --validate     # nvcc default"
+            log_error "Whichever gives 0 differing bytes is the one to benchmark with."
+            exit 1
+        fi
+    fi
 }
 
 # ===================== PHASE 3: PERFORMANCE SCALING & GRID SEARCH =====================
@@ -341,6 +412,7 @@ phase3_benchmark() {
     build_v0
     build_cpu
     build_gpu
+    build_gpu_all
     
     echo "run_id,variant,threads,device,block_x,block_y,threads_reduce,wall_ms_mean,wall_ms_sd,cpu_l17_ms,h2d_ms,gpu_l8_ms,d2h_ms,diff_bytes,total_bytes,pct_diff,psnr_db,ssim,peak_rss_kb,vram_kb" > "$CSV_FILE"
     
@@ -474,6 +546,70 @@ phase3_benchmark() {
         run_id=$((run_id + 1))
     done
     
+
+    # --- V3 GPU All-Layers configurations ---
+    # Layers 1-7 now run as CUDA kernels too, so OMP_NUM_THREADS is irrelevant
+    # here; the grid parameters still select the Layer 8 deconv/reduction shape.
+    if [ -f "$GPU_ALL_BINARY" ]; then
+        local gpu_all_configs=(
+            "16 16 256"
+            "32 8 256"
+        )
+        for cfg in "${gpu_all_configs[@]}"; do
+            read bx by tr <<< "$cfg"
+            log_info "--- GPU V3 all-layers (Block: ${bx}x${by}, Reduce: ${tr}) ---"
+
+            local run_times=()
+            local last_prof=""
+
+            for r in $(seq 1 $TOTAL_REPS); do
+                local prof_log=$(mktemp)
+                local wall=""
+                if wall=$(run_and_time "GPU-V3 (${bx}x${by}_${tr}) [run $r/$TOTAL_REPS]" "$GPU_ALL_BINARY $INPUT_YUV $OUTPUT_GPU_ALL $bx $by $tr 2>$prof_log"); then
+                    local prof_line=$(grep "\[PROFILING\]" "$prof_log" | tail -1 || true)
+                    rm -f "$prof_log"
+                    if [ "$r" -gt 1 ]; then
+                        run_times+=("$wall")
+                        last_prof="$prof_line"
+                    fi
+                else
+                    log_error "GPU-V3 execution error output:"
+                    cat "$prof_log" >&2
+                    rm -f "$prof_log"
+                fi
+            done
+
+            local stats=$(printf "%s\n" "${run_times[@]}" | calc_stats)
+            local mean_ms=$(echo "$stats" | cut -d',' -f1)
+            local sd_ms=$(echo "$stats" | cut -d',' -f2)
+
+            local gpu_all="N/A" h2d="N/A" gpu_l8="N/A" d2h="N/A" vram_kb="0"
+            if [ -n "$last_prof" ]; then
+                gpu_all=$(echo "$last_prof" | sed -n 's/.*gpu_all_ms=\([^ ]*\).*/\1/p')
+                h2d=$(echo "$last_prof" | sed -n 's/.*h2d_ms=\([^ ]*\).*/\1/p')
+                gpu_l8=$(echo "$last_prof" | sed -n 's/.*gpu_l8_ms=\([^ ]*\).*/\1/p')
+                d2h=$(echo "$last_prof" | sed -n 's/.*d2h_ms=\([^ ]*\).*/\1/p')
+                vram_kb=$(echo "$last_prof" | sed -n 's/.*vram_kb=\([^ ]*\).*/\1/p')
+            fi
+
+            local diff=$(count_diff_bytes "$GROUND_TRUTH" "$OUTPUT_GPU_ALL")
+            local total=$(get_file_size "$OUTPUT_GPU_ALL")
+            local pct_diff=0
+            if [ "$total" -gt 0 ]; then pct_diff=$((diff * 100 / total)); fi
+            local psnr=$(compute_psnr "$GROUND_TRUTH" "$OUTPUT_GPU_ALL")
+            local ssim=$(compute_ssim "$GROUND_TRUTH" "$OUTPUT_GPU_ALL")
+
+            if [ "$diff" -ne 0 ]; then
+                log_warn "GPU V3 is NOT bit-exact vs ground truth ($diff bytes). Timings below are"
+                log_warn "not comparable to V1/V2 until this is resolved (try NVCC_FMAD=-fmad=true"
+                log_warn "or NVCC_FMAD= to use the nvcc default, then rebuild)."
+            fi
+
+            echo "$run_id,GPU-V3,ALL,GPU,$bx,$by,$tr,$mean_ms,$sd_ms,$gpu_all,$h2d,$gpu_l8,$d2h,$diff,$total,$pct_diff,$psnr,$ssim,N/A,$vram_kb" >> "$CSV_FILE"
+            run_id=$((run_id + 1))
+        done
+    fi
+
     # Print summary
     log_info "=== Summary (Wall Time Mean ± SD over 6 measured runs, PSNR & SSIM) ==="
     printf "%-9s %-12s %-16s %-9s %-16s %-10s %-12s\n" "Variant" "Config/Th" "Wall (ms)" "Speedup" "PSNR (dB)" "SSIM" "GPU L8 (ms)"
@@ -488,6 +624,12 @@ phase3_benchmark() {
         local gpu_l8_display="N/A"
         if [ "$variant" = "GPU-V2" ]; then
             cfg_label="${GPU_BACKDROP_THREADS}t_${bx}x${by}_${tr}"
+            if [ -n "$gpu_l8" ] && [ "$gpu_l8" != "N/A" ]; then
+                gpu_l8_display="${gpu_l8} ms"
+            fi
+        fi
+        if [ "$variant" = "GPU-V3" ]; then
+            cfg_label="allGPU_${bx}x${by}_${tr}"
             if [ -n "$gpu_l8" ] && [ "$gpu_l8" != "N/A" ]; then
                 gpu_l8_display="${gpu_l8} ms"
             fi
