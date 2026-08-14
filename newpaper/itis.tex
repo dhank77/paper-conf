@@ -85,7 +85,7 @@ We compare three variants. \textbf{V0 (naive OpenMP CPU)} has Layer~8 worker thr
 \section{GPU Spatial Reduction Implementation}
 
 \subsection{Hardware Targets: GB10 and RTX 4090}
-Our primary platform is the ASUS Ascent GX10 with the NVIDIA GB10 Grace Blackwell Superchip~\cite{nvidiagb10_2025}, whose CPU cluster uses Arm's DynamIQ big.LITTLE technology~\cite{armdynamiq}. Section~\ref{sec:rtx4090} cross-validates on an architecturally distinct second platform: an Intel Core i9-14900K desktop with an RTX 4090 (Ada Lovelace~\cite{nvidiaada2022}), in which CPU and GPU memory are physically separate and PCIe-connected rather than sharing the GB10's unified NVLink-C2C pool. Table~\ref{tab:hardware} compares them.
+Our primary platform is the ASUS Ascent GX10~\cite{asusgx10_datasheet} with the NVIDIA GB10 Grace Blackwell Superchip~\cite{nvidiagb10_2025}, whose CPU cluster uses Arm's DynamIQ big.LITTLE technology~\cite{armdynamiq}. Section~\ref{sec:rtx4090} cross-validates on an architecturally distinct second platform: an Intel Core i9-14900K desktop with an RTX 4090 (Ada Lovelace~\cite{nvidiaada2022}), in which CPU and GPU memory are physically separate and PCIe-connected rather than sharing the GB10's unified NVLink-C2C pool. Table~\ref{tab:hardware} compares them.
 
 \begin{table}[htbp]
 \caption{Hardware Specifications: GB10 (GX10) vs. RTX 4090 Desktop}
@@ -231,7 +231,7 @@ Total Wall Time & $4{,}750.67 \pm 30.40$ & $5{,}471.17 \pm 76.17$ \\
 
 Two results stand out, pointing in opposite directions.
 
-The reduction kernel costs $26.32$~ms on the GB10 but $2.62$~ms on the RTX 4090, a $10.0\times$ gap far larger than any general compute advantage (the deconvolution differs by $1.6\times$). The reduction is purely bandwidth-bound, reading the whole $43.31$~MiB private buffer once per frame, $6.81$~GB over 150 frames: $259$~GB/s on the GB10, about $95\%$ of the $273$~GB/s peak of its LPDDR5x pool, and $2{,}597$~GB/s on the RTX 4090, over $2.5\times$ that card's $1{,}008$~GB/s of GDDR6X. Correcting for per-launch instrumentation overhead (Table~\ref{tab:breakdown}) moves the GB10 figure to $267$~GB/s, still below peak, and pushes the RTX 4090 further above its own. A DRAM-resident working set cannot produce that. The natural explanation is the RTX 4090's $72$~MB L2, which the buffer fits inside, so the reduction is served largely from cache while the GB10 streams from unified memory near hardware peak. We offer this as the reading most consistent with the measured bandwidths, not a profiled fact, having captured no L2 counters (Section~\ref{sec:limitations}).
+The reduction kernel costs $26.32$~ms on the GB10 but $2.62$~ms on the RTX 4090, a $10.0\times$ gap far larger than any general compute advantage (the deconvolution differs by $1.6\times$). The reduction is purely bandwidth-bound, reading the whole $43.31$~MiB private buffer once per frame, $6.81$~GB over 150 frames: $259$~GB/s on the GB10, about $95\%$ of the $273$~GB/s peak of its LPDDR5x pool~\cite{asusgx10_datasheet}, and $2{,}597$~GB/s on the RTX 4090, over $2.5\times$ that card's $1{,}008$~GB/s of GDDR6X. Correcting for per-launch instrumentation overhead (Table~\ref{tab:breakdown}) moves the GB10 figure to $267$~GB/s, still below peak, and pushes the RTX 4090 further above its own. A DRAM-resident working set cannot produce that. The natural explanation is the RTX 4090's $72$~MB L2, which the buffer fits inside, so the reduction is served largely from cache while the GB10 streams from unified memory near hardware peak. We offer this as the reading most consistent with the measured bandwidths, not a profiled fact, having captured no L2 counters (Section~\ref{sec:limitations}).
 
 Device-to-host transfer runs the other way: $3.46$~ms against $16.42$~ms, a $4.74\times$ advantage for unified memory on identical payloads ($35.1$ vs. $7.4$~GB/s effective). This is the cleanest unified-versus-discrete contrast in our data, and unlike \texttt{h2d\_ms} it is measured outside the event window, after \texttt{cudaEventSynchronize}, with no kernel execution to conflate it with.
 
@@ -329,6 +329,8 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 \bibitem{dumoulin2016convolution} V. Dumoulin and F. Visin, ``A guide to convolution arithmetic for deep learning,'' arXiv:1603.07285, 2016.
 
 \bibitem{nvidiagb10_2025} NVIDIA Corp., ``NVIDIA puts Grace Blackwell on every desk and at every AI developer's fingertips,'' NVIDIA Newsroom, Jan. 2025. [Online]. Available: nvidianews.nvidia.com/news/nvidia-puts-grace-blackwell-on-every-desk-and-at-every-ai-developers-fingertips
+
+\bibitem{asusgx10_datasheet} ASUSTeK Computer Inc., \emph{ASUS Ascent GX10 Datasheet}, v8, 2025. [Online]. Available: dlcdnwebimgs.asus.com/files/media/202506/5c0fb57c-4e48-4e96-8c97-04bf8df2677c/asus-ascent-gx10-datasheet.pdf
 
 \bibitem{armdynamiq} Arm Ltd., ``DynamIQ technology.'' [Online]. Available: arm.com/technologies/dynamiq
 
