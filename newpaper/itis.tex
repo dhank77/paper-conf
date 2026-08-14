@@ -61,7 +61,7 @@ Super-resolution, FSRCNN, GPU offloading, CUDA, spatial reduction, Grace Blackwe
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
-Edge and workstation-class AI hardware increasingly adopt SoCs in which multicore CPUs and GPUs co-exist on high-speed interconnects~\cite{shi2016edge}. Super-resolution CNNs have moved in step. Early formulations~\cite{dong2014srcnn} gave way to FSRCNN~\cite{dong2016fsrcnn}, which defers feature extraction to low-resolution space and upscales only at the final deconvolution layer.
+Edge and workstation-class AI hardware increasingly adopt SoCs in which multicore CPUs and GPUs co-exist on high-speed interconnects~\cite{nvidiagracehopper2022,wahlgren2025upm}. Super-resolution CNNs have moved in step. Early formulations~\cite{dong2014srcnn} gave way to FSRCNN~\cite{dong2016fsrcnn}, which defers feature extraction to low-resolution space and upscales only at the final deconvolution layer.
 
 That final stage (Layer~8) carries a disproportionate cost: for $2\times$ upscaling it applies a $9{\times}9$ kernel across 56 channels and accumulates them into one output plane. Parallelizing it on a multicore CPU poses a dilemma. Naive shared accumulation races and corrupts output non-reproducibly~\cite{annisa2025}, while mutexes or atomics bring prohibitive contention. Privatize-then-reduce avoids both by writing per-channel private buffers and reducing them in a separate deterministic pass, at the price of $43.3$~MiB of extra traffic.
 
@@ -72,7 +72,7 @@ We offload that deconvolution and reduction to CUDA while parallelizing Layers 1
 \section{Background and Baseline Architecture}
 
 \subsection{Related Work}
-CNN super-resolution progressed from early formulations~\cite{dong2014srcnn} to FSRCNN~\cite{dong2016fsrcnn}, increasingly deployed on heterogeneous CPU+GPU SoCs~\cite{shi2016edge}. Closest to ours, Annisa et al.~\cite{annisa2025} characterize the same Layer~8 race on an Orange Pi~5 with the same Suzie sequence, finding corruption worse under LITTLE-core affinity; their aim is characterizing that corruption rather than remedying it, and we do not compare speedups, our hardware differing by orders of magnitude in core count and class. Privatize-then-reduce is classical; our contribution is adopting it as a race-free CPU baseline and moving it to the GPU, which changes its cost profile while preserving bit-exactness. CNN inference scales well on ARM big.LITTLE under proper scheduling~\cite{wang2020pipeit}, so our GB10 baseline is non-trivial. Libraries such as cuDNN~\cite{chetlur2014cudnn} target convolution broadly but not this race-free layout; we claim only control over the memory layout, not superior speed. Discrete-GPU PCIe overhead is well documented~\cite{go2017apunet}, motivating the unified-versus-discrete comparison, and recent work characterizes unified physical memory directly~\cite{wahlgren2025upm}. Our RTX 4090 scheduling collapse relates to work on asymmetric-CPU scheduling~\cite{bilbao2023pmcsched,eichenberger2012ompaffinity}; there we contribute an observation, not a mechanism.
+CNN super-resolution progressed from early formulations~\cite{dong2014srcnn} to FSRCNN~\cite{dong2016fsrcnn}, increasingly deployed on heterogeneous CPU+GPU SoCs~\cite{nvidiagracehopper2022,wahlgren2025upm}. Closest to ours, Annisa et al.~\cite{annisa2025} characterize the same Layer~8 race on an Orange Pi~5 with the same Suzie sequence, finding corruption worse under LITTLE-core affinity; their aim is characterizing that corruption rather than remedying it, and we do not compare speedups, our hardware differing by orders of magnitude in core count and class. Privatize-then-reduce is classical; our contribution is adopting it as a race-free CPU baseline and moving it to the GPU, which changes its cost profile while preserving bit-exactness. CNN inference scales well on ARM big.LITTLE under proper scheduling~\cite{wang2020pipeit}, so our GB10 baseline is non-trivial. Libraries such as cuDNN~\cite{chetlur2014cudnn} target convolution broadly but not this race-free layout; we claim only control over the memory layout, not superior speed. Discrete-GPU PCIe overhead is well documented~\cite{go2017apunet}, motivating the unified-versus-discrete comparison, and recent work characterizes unified physical memory directly~\cite{wahlgren2025upm}. Our RTX 4090 scheduling collapse relates to work on asymmetric-CPU scheduling~\cite{bilbao2023pmcsched,eichenberger2012ompaffinity}; there we contribute an observation, not a mechanism.
 
 \subsection{FSRCNN Architecture}
 FSRCNN consists of eight layers: Feature Extraction (Layer 1), Shrinking (Layer 2), four Mapping layers (Layers 3--6), Expanding (Layer 7), and Deconvolution (Layer 8). For an input sequence at $176{\times}144$ scaled by $2\times$, Layers 1--7 all operate in low-resolution space and produce 56 feature maps. Layer~8 then does the upscaling. It takes those 56 channels, applies a $9{\times}9$ transposed convolution~\cite{dumoulin2016convolution} with stride 2, and reduces them into a single $352{\times}288$ YUV luminance frame.
@@ -142,7 +142,7 @@ V0 degrades non-monotonically from its data race: $13.8$~dB on the GB10 (4 threa
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\columnwidth]{figures/correctness_visual_check.pdf}
-\caption{Frame 26. Panel (b) is one representative V0 run of three on the RTX 4090 ($21.5$~dB PSNR-Y / $0.767$ SSIM against (a)); the scanline artifacts come from unsynchronized writes to \texttt{img\_fltr\_8}. Panels (c) and (d) are pixel-identical to (a) at every configuration tested.}
+\caption{Frame 26. Panel (b) is one representative V0 run of three -- V0 is the CPU-only naive baseline; no GPU computation is involved. It uses 32 OpenMP threads on the Intel i9-14900K host CPU of the second (discrete-GPU) desktop platform ($21.5$~dB PSNR-Y / $0.767$ SSIM against (a)); the scanline artifacts come from unsynchronized writes to \texttt{img\_fltr\_8}. Panels (c) and (d) are pixel-identical to (a) at every configuration tested.}
 \label{fig:correctness}
 \end{figure}
 
@@ -302,8 +302,6 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 
 \bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the super-resolution convolutional neural network,'' in \emph{Proc. ECCV}, 2016, pp. 391--407.
 
-\bibitem{shi2016edge} W. Shi \emph{et al.}, ``Edge computing: vision and challenges,'' \emph{IEEE Internet Things J.}, vol. 3, no. 5, pp. 637--646, 2016.
-
 \bibitem{wang2020pipeit} S. Wang \emph{et al.}, ``High-throughput CNN inference on embedded ARM big.LITTLE multicore processors,'' \emph{IEEE TCAD}, vol. 39, no. 10, pp. 2254--2267, 2020.
 
 \bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible system software scheduling for asymmetric multicore systems with PMCSched: a case for Intel Alder Lake,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
@@ -330,7 +328,7 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 
 \bibitem{dumoulin2016convolution} V. Dumoulin and F. Visin, ``A guide to convolution arithmetic for deep learning,'' arXiv:1603.07285, 2016.
 
-\bibitem{nvidiagb10_2025} NVIDIA Corp., ``NVIDIA puts Grace Blackwell on every desk and at every AI developer's fingertips,'' NVIDIA Newsroom, Jan. 2025.
+\bibitem{nvidiagb10_2025} NVIDIA Corp., ``NVIDIA puts Grace Blackwell on every desk and at every AI developer's fingertips,'' NVIDIA Newsroom, Jan. 2025. [Online]. Available: nvidianews.nvidia.com/news/nvidia-puts-grace-blackwell-on-every-desk-and-at-every-ai-developers-fingertips
 
 \bibitem{armdynamiq} Arm Ltd., ``DynamIQ technology.'' [Online]. Available: arm.com/technologies/dynamiq
 
