@@ -25,6 +25,7 @@
 \citation{chetlur2014cudnn}
 \citation{nvidiacudaguide}
 \citation{lashgar2012warpresize}
+\citation{wang2004ssim}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}FSRCNN Architecture}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Baseline Variants}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {III}GPU Spatial Reduction Implementation}{2}{}\protected@file@percent }
@@ -35,7 +36,6 @@
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Evaluation}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Evaluation Methodology}{2}{}\protected@file@percent }
 \newlabel{sec:methodology}{{\mbox  {IV-A}}{2}{}{subsection.4.1}{}}
-\citation{wang2004ssim}
 \citation{dong2016fsrcnn}
 \citation{asusgx10_datasheet}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Frame 26. Panel (b) is one representative V0 run of three -- V0 is the CPU-only naive baseline; no GPU computation is involved. It uses 32 OpenMP threads on the Intel i9-14900K host CPU of the second (discrete-GPU) desktop platform ($21.5$~dB PSNR-Y / $0.767$ SSIM against (a)); the scanline artifacts come from unsynchronized writes to \texttt  {img\_fltr\_8}. Panels (c) and (d) are pixel-identical to (a) at every configuration tested.}}{3}{}\protected@file@percent }
@@ -70,6 +70,8 @@
 \newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{5}{}{subsection.6.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Warp Alignment Generalizes Across GPU Architectures}{5}{}\protected@file@percent }
 \newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{5}{}{subsection.6.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GPU Layer~8 kernel time by grid configuration, mean $\pm $ SD over 6 runs. The warp-aligned $32{\times }8$ grid (outlined) is fastest on both architectures.}}{5}{}\protected@file@percent }
+\newlabel{fig:warp-cross}{{2}{5}{}{figure.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{5}{}\protected@file@percent }
 \bibcite{annisa2025}{1}
 \bibcite{dong2016fsrcnn}{2}
@@ -92,10 +94,8 @@
 \bibcite{nvidiaada2022}{19}
 \bibcite{nvidiagracehopper2022}{20}
 \bibcite{wahlgren2025upm}{21}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GPU Layer~8 kernel time by grid configuration, mean $\pm $ SD over 6 runs. The warp-aligned $32{\times }8$ grid (outlined) is fastest on both architectures.}}{6}{}\protected@file@percent }
-\newlabel{fig:warp-cross}{{2}{6}{}{figure.2}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{6}{}\protected@file@percent }
 \newlabel{sec:limitations}{{VII}{6}{}{section.7}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{6}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{References}{6}{}\protected@file@percent }
-\gdef \@abspage@last{7}
+\gdef \@abspage@last{6}

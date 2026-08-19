@@ -1,0 +1,101 @@
+\relax 
+\citation{nvidiagracehopper2022,wahlgren2025upm}
+\citation{dong2014srcnn}
+\citation{dong2016fsrcnn}
+\citation{annisa2025}
+\citation{dong2014srcnn}
+\citation{dong2016fsrcnn}
+\citation{nvidiagracehopper2022,wahlgren2025upm}
+\citation{annisa2025}
+\citation{wang2020pipeit}
+\citation{chetlur2014cudnn}
+\citation{go2017apunet}
+\citation{wahlgren2025upm}
+\citation{bilbao2023pmcsched,eichenberger2012ompaffinity}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Pendahuluan}{1}{}\protected@file@percent }
+\citation{dumoulin2016convolution}
+\citation{serebryany2009threadsanitizer}
+\citation{asusgx10_datasheet}
+\citation{nvidiagb10_2025}
+\citation{armdynamiq}
+\citation{nvidiaada2022}
+\citation{nvidiaada2022}
+\citation{chetlur2014cudnn}
+\citation{nvidiacudaguide}
+\citation{lashgar2012warpresize}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Latar Belakang dan Arsitektur Baseline}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Penelitian Terkait}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Arsitektur FSRCNN}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Varian Baseline}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Implementasi Reduksi Spasial GPU}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Target Perangkat Keras: GB10 dan RTX 4090}{2}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Spesifikasi Perangkat Keras: GB10 (GX10) vs. Desktop RTX 4090}}{2}{}\protected@file@percent }
+\newlabel{tab:hardware}{{I}{2}{}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Rancangan Kernel CUDA dan Penyelarasan Warp}{2}{}\protected@file@percent }
+\citation{wang2004ssim}
+\citation{dong2016fsrcnn}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Evaluasi Eksperimental}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Metodologi Evaluasi}{3}{}\protected@file@percent }
+\newlabel{sec:methodology}{{\mbox  {IV-A}}{3}{}{subsection.4.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Frame 26. Panel (b) adalah satu run V0 representatif dari tiga run -- V0 adalah baseline naif yang murni CPU, tidak ada komputasi GPU yang terlibat. Run ini memakai 32 thread OpenMP pada CPU host Intel i9-14900K milik platform desktop kedua (yang GPU diskretnya tidak dipakai di sini) ($21.5$~dB PSNR-Y / $0.767$ SSIM terhadap (a)); artefak scanline horizontalnya berasal dari penulisan tanpa sinkronisasi ke \texttt  {img\_fltr\_8}. Panel (c) dan (d) identik piksel demi piksel dengan (a) pada setiap konfigurasi yang diuji.}}{3}{}\protected@file@percent }
+\newlabel{fig:correctness}{{1}{3}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Penskalaan Kinerja dan Benchmark Akurasi}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Kualitas Rekonstruksi terhadap Referensi Resolusi Tinggi}{3}{}\protected@file@percent }
+\newlabel{sec:quality}{{\mbox  {IV-C}}{3}{}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Biaya Determinisme, Dikuantifikasi}{3}{}\protected@file@percent }
+\newlabel{sec:cost-of-determinism}{{\mbox  {IV-D}}{3}{}{subsection.4.4}{}}
+\citation{asusgx10_datasheet}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Konfigurasi Kunci pada Kedua Platform: Kinerja dan Deviasi terhadap Referensi Deterministik Terverifikasi Masing-Masing Platform. Waktu wall-clock adalah rerata $\pm $ SD atas 6 run terukur dari 7 kali pengulangan.}}{4}{}\protected@file@percent }
+\newlabel{tab:benchmark}{{II}{4}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Rincian Waktu GPU Secara Rinci}{4}{}\protected@file@percent }
+\newlabel{sec:breakdown}{{\mbox  {IV-E}}{4}{}{subsection.4.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Rincian Profiling Layer~8, $32{\times }8\_256$, 150 Frame (ms, rerata $\pm $ SD atas 6 run)}}{4}{}\protected@file@percent }
+\newlabel{tab:breakdown}{{III}{4}{}{table.3}{}}
+\citation{wang2020pipeit}
+\citation{amdahl1967}
+\citation{williams2009roofline}
+\citation{eichenberger2012ompaffinity}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Pembahasan dan Temuan Utama}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Percepatan terhadap CPU Berinti Penuh, dan Penyelarasan Warp}{5}{}\protected@file@percent }
+\newlabel{sec:gb10-speedup}{{\mbox  {V-A}}{5}{}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Biaya Transfer dan Hukum Amdahl}{5}{}\protected@file@percent }
+\newlabel{sec:nvlink}{{\mbox  {V-B}}{5}{}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Validasi Lintas Platform pada Perangkat Keras GPU Diskret}{5}{}\protected@file@percent }
+\newlabel{sec:rtx4090}{{VI}{5}{}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Penyesuaian Metodologi dan Percepatan GPU}{5}{}\protected@file@percent }
+\citation{nvidiacudaguide}
+\citation{nvidiagracehopper2022,wahlgren2025upm}
+\citation{go2017apunet}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Kesamaan Bit Lintas Arsitektur}{6}{}\protected@file@percent }
+\newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{6}{}{subsection.6.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Penyelarasan Warp Berlaku Umum Lintas Arsitektur GPU}{6}{}\protected@file@percent }
+\newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{6}{}{subsection.6.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Memori Non-Terpadu dan Presisi FP64}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Waktu kernel Layer~8 GPU menurut konfigurasi grid, rerata $\pm $ SD atas 6 run. Grid selaras warp $32{\times }8$ (bergaris tebal) tercepat pada kedua arsitektur.}}{6}{}\protected@file@percent }
+\newlabel{fig:warp-cross}{{2}{6}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Keterbatasan dan Pekerjaan Lanjutan}{6}{}\protected@file@percent }
+\newlabel{sec:limitations}{{VII}{6}{}{section.7}{}}
+\bibcite{annisa2025}{1}
+\bibcite{dong2016fsrcnn}{2}
+\bibcite{wang2020pipeit}{3}
+\bibcite{bilbao2023pmcsched}{4}
+\bibcite{eichenberger2012ompaffinity}{5}
+\bibcite{nvidiacudaguide}{6}
+\bibcite{go2017apunet}{7}
+\bibcite{wang2004ssim}{8}
+\bibcite{dong2014srcnn}{9}
+\bibcite{amdahl1967}{10}
+\bibcite{williams2009roofline}{11}
+\bibcite{chetlur2014cudnn}{12}
+\bibcite{serebryany2009threadsanitizer}{13}
+\bibcite{lashgar2012warpresize}{14}
+\bibcite{dumoulin2016convolution}{15}
+\bibcite{nvidiagb10_2025}{16}
+\bibcite{asusgx10_datasheet}{17}
+\bibcite{armdynamiq}{18}
+\bibcite{nvidiaada2022}{19}
+\bibcite{nvidiagracehopper2022}{20}
+\bibcite{wahlgren2025upm}{21}
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Kesimpulan}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{7}{}\protected@file@percent }
+\gdef \@abspage@last{7}
