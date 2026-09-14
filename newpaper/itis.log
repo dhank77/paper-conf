@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  14 SEP 2026 16:34
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  14 SEP 2026 16:45
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -347,75 +347,84 @@ LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 8
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
-Underfull \hbox (badness 1975) in paragraph at lines 133--134
+<figures/architecture_pipeline.pdf, id=13, 529.89969pt x 193.12149pt>
+File: figures/architecture_pipeline.pdf Graphic file (type pdf)
+<use figures/architecture_pipeline.pdf>
+Package pdftex.def Info: figures/architecture_pipeline.pdf  used on input line 
+116.
+(pdftex.def)             Requested size: 516.0pt x 188.06137pt.
+
+Underfull \hbox (badness 1975) in paragraph at lines 140--141
 []\OT1/ptm/m/n/10 The work-load is 150 frames of the Suzie se-quence
  []
 
 
-Underfull \hbox (badness 3291) in paragraph at lines 133--134
+Underfull \hbox (badness 3291) in paragraph at lines 140--141
 \OT1/ptm/m/n/10 ($\OT1/cmr/m/n/10 176[]144 \OMS/cmsy/m/n/10 ! \OT1/cmr/m/n/10 3
 52[]288$\OT1/ptm/m/n/10 , YUV420p). Ev-ery con-fig-u-ra-
  []
 
 
-Underfull \hbox (badness 3701) in paragraph at lines 133--134
+Underfull \hbox (badness 3701) in paragraph at lines 140--141
 \OT1/ptm/m/n/10 7 recorded as mean $\OMS/cmsy/m/n/10 ^^F$ \OT1/ptm/m/n/10 SD. C
 PU bi-na-ries use \OT1/pcr/m/n/10 gcc
  []
 
 [2]
-<figures/correctness_visual_check.pdf, id=21, 523.35527pt x 136.46986pt>
+<figures/correctness_visual_check.pdf, id=22, 523.35527pt x 136.46986pt>
 File: figures/correctness_visual_check.pdf Graphic file (type pdf)
 <use figures/correctness_visual_check.pdf>
 Package pdftex.def Info: figures/correctness_visual_check.pdf  used on input li
-ne 144.
+ne 151.
 (pdftex.def)             Requested size: 252.0pt x 65.71092pt.
 
-Underfull \hbox (badness 1558) in paragraph at lines 195--196
+Underfull \hbox (badness 1558) in paragraph at lines 202--203
 \OT1/ptm/m/n/10 we con-structed one: Suzie was bicubic-downsampled to
  []
 
-
-Underfull \hbox (badness 1515) in paragraph at lines 207--208
+[3 <./figures/architecture_pipeline.pdf> <./figures/correctness_visual_check.pd
+f>]
+Underfull \hbox (badness 1515) in paragraph at lines 214--215
 \OT1/ptm/m/n/10 ex-clude it. Those copies are is-sued \OT1/ptm/m/it/10 in-side 
 \OT1/ptm/m/n/10 the win-dow
  []
 
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 2
-34.
+41.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-) [3 <./figures/correctness_visual_check.pdf>] [4]
-<figures/warp_alignment_cross_platform.pdf, id=34, 433.62pt x 303.534pt>
+) [4]
+[5]
+<figures/warp_alignment_cross_platform.pdf, id=223, 433.62pt x 303.534pt>
 File: figures/warp_alignment_cross_platform.pdf Graphic file (type pdf)
 <use figures/warp_alignment_cross_platform.pdf>
 Package pdftex.def Info: figures/warp_alignment_cross_platform.pdf  used on inp
-ut line 284.
+ut line 291.
 (pdftex.def)             Requested size: 252.0pt x 176.40182pt.
- [5 <./figures/warp_alignment_cross_platform.pdf>]
-Underfull \hbox (badness 4859) in paragraph at lines 339--340
+ [6 <./figures/warp_alignment_cross_platform.pdf>]
+Underfull \hbox (badness 4859) in paragraph at lines 346--347
 []\OT1/ptm/m/n/8 ASUSTeK Com-puter Inc., \OT1/ptm/m/it/8 ASUS As-cent GX10 Data
 sheet\OT1/ptm/m/n/8 , v8,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 339--340
+Underfull \hbox (badness 10000) in paragraph at lines 346--347
 \OT1/ptm/m/n/8 202506 / 5c0fb57c -[] 4e48 -[] 4e96 -[] 8c97 -[] 04bf8df2677c / 
 asus -[] ascent -[] gx10 -[]
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 345--346
+Underfull \hbox (badness 10000) in paragraph at lines 352--353
 []\OT1/ptm/m/n/8 NVIDIA Corp., ``Grace Hop-per Su-per-chip ar-chi-tec-ture in-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 345--346
+Underfull \hbox (badness 10000) in paragraph at lines 352--353
 \OT1/ptm/m/n/8 depth,'' NVIDIA De-vel-oper Blog, 2022. [On-line]. Avail-able:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 345--346
+Underfull \hbox (badness 10000) in paragraph at lines 352--353
 \OT1/ptm/m/n/8 https : / / developer\OML/cmm/m/it/8 :\OT1/ptm/m/n/8 nvidia\OML/
 cmm/m/it/8 :\OT1/ptm/m/n/8 com / blog / nvidia -[] grace -[] hopper -[] superch
 ip -[]
@@ -432,17 +441,19 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[6] (./itis.aux)
+[7
+
+] (./itis.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 4295 strings out of 469006
- 68057 string characters out of 5454814
- 503210 words of memory out of 5000000
- 32943 multiletter control sequences out of 15000+600000
+ 4305 strings out of 469006
+ 68432 string characters out of 5454814
+ 500660 words of memory out of 5000000
+ 32953 multiletter control sequences out of 15000+600000
  668997 words of font info for 120 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
  57i,14n,65p,1652b,298s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -455,16 +466,17 @@ fonts/cm/cmr10.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/
 amsfonts/cm/cmr7.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/publi
 c/amsfonts/cm/cmr8.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/pub
 lic/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1
-/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/ty
-pe1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1
-/urw/times/utmb8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/
-times/utmbi8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/time
-s/utmr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/times/utm
-ri8a.pfb>
-Output written on itis.pdf (6 pages, 279383 bytes).
+/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/ty
+pe1/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2026basic/texmf-dist/fonts
+/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/ty
+pe1/urw/times/utmb8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/u
+rw/times/utmbi8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/t
+imes/utmr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/times/
+utmri8a.pfb>
+Output written on itis.pdf (7 pages, 348769 bytes).
 PDF statistics:
- 105 PDF objects out of 1000 (max. 8388607)
- 63 compressed objects within 1 object stream
+ 300 PDF objects out of 1000 (max. 8388607)
+ 91 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 11 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 16 words of extra memory for PDF output out of 10000 (max. 10000000)
 

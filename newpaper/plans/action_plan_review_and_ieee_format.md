@@ -162,14 +162,16 @@ graph TD
   - File `IEEEtran.cls` telah disiapkan dan naskah berhasil dikompilasi mulus dengan `pdflatex`.
   - Dokumen `itis.pdf` kini berukuran **tepat 6 halaman** tanpa error dan tanpa overfull hbox.
 
-### Fase 2: Penambahan Aset Visual & Uji Statistik
-- [ ] **2.1 Pembuatan Diagram Arsitektur Pipeline (Fig. 1)**:
-  - Buat visualisasi alur komputasi Layer 8: *Feature Maps Input $\rightarrow$ Private Buffer Allocation ($56\times$) $\rightarrow$ Spatial Reduction $\rightarrow$ Bit-Exact HR Output*.
-  - Simpan sebagai PDF vektor di `figures/architecture_pipeline.pdf` dan masukkan ke *Section III*.
-- [ ] **2.2 Perhitungan Signifikansi Statistik**:
-  - Ambil 6 run dari `plans/results_gpuprofile_gb10.csv` dan `plans/results_gpuprofile_rtx4090.csv`.
-  - Hitung $t$-stat, derajat kebebasan ($df$), dan $p$-value untuk membandingkan $32\times 8$ vs $16\times 16$.
-  - Cantumkan hasil uji signifikansi pada naskah (*Section IV-B*).
+### Fase 2: Penambahan Aset Visual & Uji Statistik [COMPLETED]
+- [x] **2.1 Pembuatan Diagram Arsitektur Pipeline (Fig. 1)**:
+  - Telah dibuat skrip visualisasi vektor [generate_architecture_diagram.py](file:///Users/hamdaniilham/Thesis/Paper/newpaper/plans/generate_architecture_diagram.py) yang menghasilkan diagram vektor profesional [architecture_pipeline.pdf](file:///Users/hamdaniilham/Thesis/Paper/newpaper/figures/architecture_pipeline.pdf).
+  - Menampilkan alur lengkap: Feature Maps Input ($56\times$, $176\times 144$) $\rightarrow$ GPU `deconv_kernel` (Warp-aligned $32\times 8$) $\rightarrow$ Layout Buffer Privat `d_all_tmp` ($43.3$ MiB, zero races) $\rightarrow$ `spatial_reduction` Kernel ($101{,}376$ threads paralel) $\rightarrow$ Output Bit-Exact Y HR ($352\times 288$).
+  - Dimasukkan ke dalam *Section III-B* sebagai `Fig. 1` dengan caption komprehensif.
+- [x] **2.2 Perhitungan Signifikansi Statistik**:
+  - Dihitung uji signifikansi statistik *Welch's two-sample t-test* dari data mentah 6 run di [results_gpuprofile_gb10.csv](file:///Users/hamdaniilham/Thesis/Paper/newpaper/plans/results_gpuprofile_gb10.csv) dan [results_gpuprofile_rtx4090.csv](file:///Users/hamdaniilham/Thesis/Paper/newpaper/plans/results_gpuprofile_rtx4090.csv):
+    * **GB10**: $32\times 8$ vs $16\times 16$ ($533.19 \pm 2.58$ ms vs $696.51 \pm 1.78$ ms) $\implies t = -127.50, df = 8.9, p < 10^{-4}$ (signifikansi sangat tinggi).
+    * **RTX 4090**: $32\times 8$ vs $16\times 16$ ($360.92 \pm 7.22$ ms vs $437.06 \pm 3.86$ ms) $\implies t = -22.77, df = 7.6, p < 10^{-4}$.
+  - Nilai statistik ini telah dicantumkan di *Section V-A* dan *Section VI-C*.
 
 ### Fase 3: Revisi Konten & Penajaman Argumen
 - [ ] **3.1 Perluasan Related Work (*Section II-A*)**:

@@ -111,7 +111,14 @@ OS & Ubuntu 24.04 LTS (aarch64) & Ubuntu 24.04 LTS (x86\_64) \\
 \end{table}
 
 \subsection{CUDA Kernel Design and Warp Alignment}
-We implement Layer~8 as two hand-written CUDA kernels rather than using a general-purpose library such as cuDNN~\cite{chetlur2014cudnn}. We do not claim this beats a cuDNN-based deconvolution. That comparison is untested, and a well-tuned library kernel could plausibly win. Our claim is narrower: writing the pair by hand gives direct control over the private-buffer-plus-reduction layout central to our correctness argument (Section~\ref{sec:limitations}).
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/architecture_pipeline.pdf}
+\caption{Architecture and execution workflow of the proposed GPU spatial reduction framework. Host CPU executes Layers 1--7 to generate 56 low-resolution feature maps ($176{\times}144$). The GPU \texttt{deconv\_kernel} computes the $9{\times}9$ transposed convolution using warp-aligned $32{\times}8$ thread blocks, writing isolated output planes into private device buffer \texttt{d\_all\_tmp} to eliminate write races by construction. Subsequently, \texttt{spatial\_reduction} executes a parallel channel reduction per output pixel in fixed order, guaranteeing bit-exact deterministic reconstruction.}
+\label{fig:pipeline}
+\end{figure*}
+
+We implement Layer~8 as two hand-written CUDA kernels rather than using a general-purpose library such as cuDNN~\cite{chetlur2014cudnn} (Fig.~\ref{fig:pipeline}). We do not claim this beats a cuDNN-based deconvolution. That comparison is untested, and a well-tuned library kernel could plausibly win. Our claim is narrower: writing the pair by hand gives direct control over the private-buffer-plus-reduction layout central to our correctness argument (Section~\ref{sec:limitations}).
 
 \emph{Deconvolution kernel.} Each thread block processes a 2D tile of the input feature map. For each channel $c \in [0,55]$, threads compute the $9{\times}9$ transposed convolution and write into an isolated channel plane of \texttt{d\_all\_tmp}, indexed $c \times (H_{out}W_{out}) + yW_{out} + x$.
 
@@ -252,7 +259,7 @@ We report speedup against CPU V1 rather than V0 at multi-thread configurations: 
 
 The serial comparison needs more care, since the variants share no serial baseline. At 1 thread V0 is bit-exact and faster than V1 ($18{,}240.50$ vs. $21{,}552.33$~ms) because it skips the privatization V1 pays for, which makes it the fastest \emph{bit-exact} serial baseline available: $3.84\times$ (GB10) and $3.86\times$ (RTX 4090). Against V1's serial time the figures rise to $4.53\times$ and $4.21\times$, inflated by the slower denominator, so we lead with $3.84\times$. The baseline is not a strawman: CNN inference scales well on ARM big.LITTLE clusters when properly scheduled~\cite{wang2020pipeit}, and the GB10's cores scale smoothly across the full ladder with none of the collapse the RTX 4090 shows past 8 threads.
 
-Shifting from the default $16{\times}16$ grid ($696.51 \pm 1.78$~ms) to the warp-aligned $32{\times}8$ grid ($533.19 \pm 2.58$~ms) cuts kernel time $23.4\%$, a gap far outside run-to-run variation (SDs of $1.78$ and $2.58$~ms). We attribute it to coalescing: a 32-thread-wide block lets every thread in a warp issue into one transaction, whereas a 16-wide block splits across several. The per-kernel breakdown tests this more sharply than wall time can. Block shape affects \texttt{deconv\_kernel} only, since the reduction is launched one-dimensionally. If coalescing is the mechanism, the whole gain must therefore land in the deconvolution. It does: \texttt{deconv\_kernel} drops $24.9\%$ ($564.74$ to $424.07$~ms) while the reduction moves $+0.9\%$ ($26.08$ to $26.32$~ms), inside its own spread.
+Shifting from the default $16{\times}16$ grid ($696.51 \pm 1.78$~ms) to the warp-aligned $32{\times}8$ grid ($533.19 \pm 2.58$~ms) cuts kernel time $23.4\%$, a gap far outside run-to-run variation (SDs of $1.78$ and $2.58$~ms; Welch's $t = -127.50$, $df = 8.9$, $p < 10^{-4}$). We attribute it to coalescing: a 32-thread-wide block lets every thread in a warp issue into one transaction, whereas a 16-wide block splits across several. The per-kernel breakdown tests this more sharply than wall time can. Block shape affects \texttt{deconv\_kernel} only, since the reduction is launched one-dimensionally. If coalescing is the mechanism, the whole gain must therefore land in the deconvolution. It does: \texttt{deconv\_kernel} drops $24.9\%$ ($564.74$ to $424.07$~ms) while the reduction moves $+0.9\%$ ($26.08$ to $26.32$~ms), inside its own spread.
 
 \subsection{Transfer Cost and Amdahl's Law}
 \label{sec:nvlink}
@@ -276,7 +283,7 @@ Section~\ref{sec:methodology} establishes bit-exactness \emph{within} each platf
 
 \subsection{Warp Alignment Generalizes Across GPU Architectures}
 \label{sec:warp-generalize}
-At the kernel level $32{\times}8$ remains fastest on this Ada Lovelace GPU ($360.92 \pm 7.22$~ms), $17.4\%$ faster than $16{\times}16$ ($437.06 \pm 3.86$~ms), confirming that the coalescing argument of Section~III-B, a consequence of CUDA's 32-thread warp granularity~\cite{nvidiacudaguide}, is a property of CUDA rather than of the GB10. The localization holds too: \texttt{deconv\_kernel} falls $15.6\%$ ($310.32$ to $261.90$~ms) while the reduction is unchanged at $2.62$~ms. Fig.~\ref{fig:warp-cross} compares all five grid configurations on both GPUs, with error bars over the six runs. At the \emph{wall-clock} level the five are statistically hard to distinguish ($5{,}435$--$5{,}579$~ms, overlapping error bars) even though $32{\times}8$ nominally wins both metrics; the kernel-level advantage is visible only through CUDA-event profiling, which is why that instrumentation matters.
+At the kernel level $32{\times}8$ remains fastest on this Ada Lovelace GPU ($360.92 \pm 7.22$~ms), $17.4\%$ faster than $16{\times}16$ ($437.06 \pm 3.86$~ms; Welch's $t = -22.77$, $df = 7.6$, $p < 10^{-4}$), confirming that the coalescing argument of Section~III-B, a consequence of CUDA's 32-thread warp granularity~\cite{nvidiacudaguide}, is a property of CUDA rather than of the GB10. The localization holds too: \texttt{deconv\_kernel} falls $15.6\%$ ($310.32$ to $261.90$~ms) while the reduction is unchanged at $2.62$~ms. Fig.~\ref{fig:warp-cross} compares all five grid configurations on both GPUs, with error bars over the six runs. At the \emph{wall-clock} level the five are statistically hard to distinguish ($5{,}435$--$5{,}579$~ms, overlapping error bars) even though $32{\times}8$ nominally wins both metrics; the kernel-level advantage is visible only through CUDA-event profiling, which is why that instrumentation matters.
 
 
 \begin{figure}[htbp]
