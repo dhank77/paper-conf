@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  19 AUG 2026 15:35
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  14 SEP 2026 16:34
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -6,7 +6,7 @@ entering extended mode
 (./itis.tex
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
-(../IEEEtran.cls
+(./IEEEtran.cls
 Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
 -- See the "IEEEtran_HOWTO" manual for usage information.
 -- http://www.michaelshell.org/tex/ieeetran/
@@ -281,20 +281,20 @@ File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 ) (./itis.aux)
 \openout1 = `itis.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
 
 -- Lines per column: 56 (exact).
 (/usr/local/texlive/2026basic/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
@@ -321,18 +321,18 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-LaTeX Font Info:    Trying to load font information for U+msa on input line 63.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 65.
 
  (/usr/local/texlive/2026basic/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 63.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 65.
 
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-Underfull \hbox (badness 2150) in paragraph at lines 72--73
+Underfull \hbox (badness 2150) in paragraph at lines 74--75
 []\OT1/ptm/m/n/10 CNN super-resolution pro-gressed from early for-mu-la-
  []
 
@@ -341,24 +341,24 @@ usr/local/texlive/2026basic/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
 
 ]
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 7
-8.
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 8
+0.
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
-Underfull \hbox (badness 1975) in paragraph at lines 130--131
+Underfull \hbox (badness 1975) in paragraph at lines 133--134
 []\OT1/ptm/m/n/10 The work-load is 150 frames of the Suzie se-quence
  []
 
 
-Underfull \hbox (badness 3291) in paragraph at lines 130--131
+Underfull \hbox (badness 3291) in paragraph at lines 133--134
 \OT1/ptm/m/n/10 ($\OT1/cmr/m/n/10 176[]144 \OMS/cmsy/m/n/10 ! \OT1/cmr/m/n/10 3
 52[]288$\OT1/ptm/m/n/10 , YUV420p). Ev-ery con-fig-u-ra-
  []
 
 
-Underfull \hbox (badness 3701) in paragraph at lines 130--131
+Underfull \hbox (badness 3701) in paragraph at lines 133--134
 \OT1/ptm/m/n/10 7 recorded as mean $\OMS/cmsy/m/n/10 ^^F$ \OT1/ptm/m/n/10 SD. C
 PU bi-na-ries use \OT1/pcr/m/n/10 gcc
  []
@@ -368,21 +368,21 @@ PU bi-na-ries use \OT1/pcr/m/n/10 gcc
 File: figures/correctness_visual_check.pdf Graphic file (type pdf)
 <use figures/correctness_visual_check.pdf>
 Package pdftex.def Info: figures/correctness_visual_check.pdf  used on input li
-ne 141.
+ne 144.
 (pdftex.def)             Requested size: 252.0pt x 65.71092pt.
 
-Underfull \hbox (badness 1558) in paragraph at lines 189--190
+Underfull \hbox (badness 1558) in paragraph at lines 195--196
 \OT1/ptm/m/n/10 we con-structed one: Suzie was bicubic-downsampled to
  []
 
 
-Underfull \hbox (badness 1515) in paragraph at lines 201--202
+Underfull \hbox (badness 1515) in paragraph at lines 207--208
 \OT1/ptm/m/n/10 ex-clude it. Those copies are is-sued \OT1/ptm/m/it/10 in-side 
 \OT1/ptm/m/n/10 the win-dow
  []
 
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 2
-26.
+34.
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 ) [3 <./figures/correctness_visual_check.pdf>] [4]
@@ -390,17 +390,35 @@ File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 File: figures/warp_alignment_cross_platform.pdf Graphic file (type pdf)
 <use figures/warp_alignment_cross_platform.pdf>
 Package pdftex.def Info: figures/warp_alignment_cross_platform.pdf  used on inp
-ut line 275.
+ut line 284.
 (pdftex.def)             Requested size: 252.0pt x 176.40182pt.
  [5 <./figures/warp_alignment_cross_platform.pdf>]
-Underfull \hbox (badness 10000) in paragraph at lines 332--333
-[]\OT1/ptm/m/n/8 Arm Ltd., ``Dy-namIQ tech-nol-ogy.'' [On-line]. Avail-able:
+Underfull \hbox (badness 4859) in paragraph at lines 339--340
+[]\OT1/ptm/m/n/8 ASUSTeK Com-puter Inc., \OT1/ptm/m/it/8 ASUS As-cent GX10 Data
+sheet\OT1/ptm/m/n/8 , v8,
  []
 
 
-Underfull \hbox (badness 2119) in paragraph at lines 336--337
-[]\OT1/ptm/m/n/8 NVIDIA Corp., ``Grace Hop-per Su-per-chip ar-chi-tec-ture in-d
-epth,''
+Underfull \hbox (badness 10000) in paragraph at lines 339--340
+\OT1/ptm/m/n/8 202506 / 5c0fb57c -[] 4e48 -[] 4e96 -[] 8c97 -[] 04bf8df2677c / 
+asus -[] ascent -[] gx10 -[]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 345--346
+[]\OT1/ptm/m/n/8 NVIDIA Corp., ``Grace Hop-per Su-per-chip ar-chi-tec-ture in-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 345--346
+\OT1/ptm/m/n/8 depth,'' NVIDIA De-vel-oper Blog, 2022. [On-line]. Avail-able:
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 345--346
+\OT1/ptm/m/n/8 https : / / developer\OML/cmm/m/it/8 :\OT1/ptm/m/n/8 nvidia\OML/
+cmm/m/it/8 :\OT1/ptm/m/n/8 com / blog / nvidia -[] grace -[] hopper -[] superch
+ip -[]
  []
 
 
@@ -421,13 +439,13 @@ L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 4293 strings out of 469006
- 67982 string characters out of 5454814
- 502216 words of memory out of 5000000
- 32940 multiletter control sequences out of 15000+600000
+ 4295 strings out of 469006
+ 68057 string characters out of 5454814
+ 503210 words of memory out of 5000000
+ 32943 multiletter control sequences out of 15000+600000
  668997 words of font info for 120 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 57i,14n,65p,1652b,289s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 57i,14n,65p,1652b,298s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmex1
 0.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/cm/c
 mmi10.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/
@@ -443,7 +461,7 @@ pe1/urw/courier/ucrr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1
 times/utmbi8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/time
 s/utmr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/times/utm
 ri8a.pfb>
-Output written on itis.pdf (6 pages, 278880 bytes).
+Output written on itis.pdf (6 pages, 279383 bytes).
 PDF statistics:
  105 PDF objects out of 1000 (max. 8388607)
  63 compressed objects within 1 object stream

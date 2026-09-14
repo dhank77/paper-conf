@@ -8,12 +8,14 @@
 \IEEEoverridecommandlockouts
 
 \usepackage{cite}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{url}
+\def\UrlBreaks{\do\/\do\-\do\_}
+\urlstyle{same}
 
 % IEEEtran prescribes Courier (pcr) for \texttt. If the courier package is
 % missing -- it is absent from the TeX Live "basic" scheme -- every \texttt
@@ -116,6 +118,7 @@ We implement Layer~8 as two hand-written CUDA kernels rather than using a genera
 \emph{Spatial reduction kernel.} One thread per output pixel $(y,x)$ iterates all 56 planes, sums them, and adds the Layer~8 bias:
 \begin{equation}
 \text{output}[y, x] = \left( \sum_{c=0}^{55} \text{d\_all\_tmp}[c, y, x] \right) + \text{bias}_8
+\label{eq:spatial_reduction}
 \end{equation}
 Channel writes are isolated during deconvolution and read-only during reduction, so execution is race-free and deterministic by construction.
 
@@ -180,8 +183,11 @@ GPU V2 (Best Grid) & Grid $32{\times}8\_256$ & $5{,}435.50 \pm 148.01$ & 4.21$\t
 \end{tabular}%
 }
 
-\vspace{2mm}
-\footnotesize{\emph{Speedup vs. Serial}: CPU rows against their own variant's 1-thread time; GPU V2 has none of its own, so its denominator is CPU V1's serial time on that platform (Section~\ref{sec:gb10-speedup} also reports it against the faster bit-exact V0 serial time). \emph{Speedup vs. Best CPU}: GPU V2 only, against CPU V1's fastest correctness-verified configuration. \emph{Dev./SSIM} are against each platform's own deterministic reference; ``bit-exact'' is logically equivalent to \texttt{cmp -l}, not an independent quality measurement, and figures are all-component averages (Section~\ref{sec:methodology}). \emph{GPU L8 Kernel}: mean $\pm$ SD over 6 runs of the profiling sweep (Section~\ref{sec:breakdown}); kernel times for the three remaining grid configurations are given in Section~\ref{sec:warp-generalize}.}
+\vspace{1ex}
+\begin{minipage}{\textwidth}
+\footnotesize
+\emph{Speedup vs. Serial}: CPU rows against their own variant's 1-thread time; GPU V2 has none of its own, so its denominator is CPU V1's serial time on that platform (Section~\ref{sec:gb10-speedup} also reports it against the faster bit-exact V0 serial time). \emph{Speedup vs. Best CPU}: GPU V2 only, against CPU V1's fastest correctness-verified configuration. \emph{Dev./SSIM} are against each platform's own deterministic reference; ``bit-exact'' is logically equivalent to \texttt{cmp -l}, not an independent quality measurement, and figures are all-component averages (Section~\ref{sec:methodology}). \emph{GPU L8 Kernel}: mean $\pm$ SD over 6 runs of the profiling sweep (Section~\ref{sec:breakdown}); kernel times for the three remaining grid configurations are given in Section~\ref{sec:warp-generalize}.
+\end{minipage}
 \end{table*}
 
 \subsection{Reconstruction Quality Against a High-Resolution Reference}
@@ -222,8 +228,11 @@ Total Wall Time & $4{,}750.67 \pm 30.40$ & $5{,}471.17 \pm 76.17$ \\
 \end{tabular}%
 }
 
-\vspace{1mm}
-\footnotesize{Indented rows decompose the event window above them and are not additional wall-time slices. They come from a separately instrumented binary whose event recording inflates that window by $8.4\%$ (GB10) and $15.4\%$ (RTX 4090). That overhead is incurred \emph{per launch}, so it is concentrated almost entirely in the $8{,}400$ \texttt{deconv\_kernel} launches rather than the $150$ reduction launches: dividing the inflation by the launch count gives $5.34$~\textmu s (GB10) and $6.64$~\textmu s (RTX 4090), two independent platforms agreeing to within an order. The reduction figure is therefore inflated by only about $0.80$~ms on the GB10, some $3\%$, and deflating the whole window uniformly instead would wrongly place the reduction above its platform's DRAM peak. The production \texttt{h2d\_ms} counter is omitted (see text).}
+\vspace{1ex}
+\begin{minipage}{\columnwidth}
+\footnotesize
+Indented rows decompose the event window above them and are not additional wall-time slices. They come from a separately instrumented binary whose event recording inflates that window by $8.4\%$ (GB10) and $15.4\%$ (RTX 4090). That overhead is incurred \emph{per launch}, so it is concentrated almost entirely in the $8{,}400$ \texttt{deconv\_kernel} launches rather than the $150$ reduction launches: dividing the inflation by the launch count gives $5.34$~\textmu s (GB10) and $6.64$~\textmu s (RTX 4090), two independent platforms agreeing to within an order. The reduction figure is therefore inflated by only about $0.80$~ms on the GB10, some $3\%$, and deflating the whole window uniformly instead would wrongly place the reduction above its platform's DRAM peak. The production \texttt{h2d\_ms} counter is omitted (see text).
+\end{minipage}
 \end{table}
 
 Two results stand out, pointing in opposite directions.
@@ -295,45 +304,45 @@ We introduced a GPU spatial-reduction framework for FSRCNN's Layer~8 deconvoluti
 \footnotesize
 \itemsep0pt plus 0.5pt
 
-\bibitem{annisa2025} Annisa, Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artif. Intell. Mechatron. Syst. (AIMS)}, 2025, pp. 1--8.
+\bibitem{annisa2025} A. Annisa, A. Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artif. Intell. Mechatron. Syst. (AIMS)}, 2025, pp. 1--8.
 
 \bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the super-resolution convolutional neural network,'' in \emph{Proc. ECCV}, 2016, pp. 391--407.
 
-\bibitem{wang2020pipeit} S. Wang \emph{et al.}, ``High-throughput CNN inference on embedded ARM big.LITTLE multicore processors,'' \emph{IEEE TCAD}, vol. 39, no. 10, pp. 2254--2267, 2020.
+\bibitem{wang2020pipeit} S. Wang, G. Ananthanarayanan, Y. Zeng, N. Goel, A. Pathania, and T. Mitra, ``High-throughput CNN inference on embedded ARM big.LITTLE multicore processors,'' \emph{IEEE Trans. Comput.-Aided Design Integr. Circuits Syst.}, vol. 39, no. 10, pp. 2254--2267, Oct. 2020.
 
-\bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible system software scheduling for asymmetric multicore systems with PMCSched: a case for Intel Alder Lake,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
+\bibitem{bilbao2023pmcsched} C. Bilbao, J. C. Saez, and M. Prieto-Mat\'ias, ``Flexible system software scheduling for asymmetric multicore systems with PMCSched: A case for Intel Alder Lake,'' \emph{Concurr. Comput. Pract. Exper.}, vol. 35, no. 25, e7814, 2023.
 
-\bibitem{eichenberger2012ompaffinity} A. E. Eichenberger \emph{et al.}, ``The design of OpenMP thread affinity,'' in \emph{IWOMP}, LNCS 7312, 2012, pp. 15--28.
+\bibitem{eichenberger2012ompaffinity} A. E. Eichenberger, C. Terboven, M. Wong, and D. an Mey, ``The design of OpenMP thread affinity,'' in \emph{Proc. IWOMP}, LNCS 7312, 2012, pp. 15--28.
 
-\bibitem{nvidiacudaguide} NVIDIA Corp., \emph{CUDA C++ Programming Guide}. [Online]. Available: docs.nvidia.com/cuda/cuda-c-programming-guide/
+\bibitem{nvidiacudaguide} NVIDIA Corp., ``CUDA C++ programming guide,'' 2024. [Online]. Available: \url{https://docs.nvidia.com/cuda/cuda-c-programming-guide/}
 
-\bibitem{go2017apunet} Y. Go \emph{et al.}, ``APUNet: revitalizing GPU as packet processing accelerator,'' in \emph{Proc. USENIX NSDI}, 2017, pp. 83--96.
+\bibitem{go2017apunet} Y. Go, M. A. Jamshed, Y. Moon, C. Hwang, and K. Park, ``APUNet: Revitalizing GPU as packet processing accelerator,'' in \emph{Proc. USENIX NSDI}, 2017, pp. 83--96.
 
-\bibitem{wang2004ssim} Z. Wang \emph{et al.}, ``Image quality assessment: from error visibility to structural similarity,'' \emph{IEEE Trans. Image Process.}, vol. 13, no. 4, pp. 600--612, 2004.
+\bibitem{wang2004ssim} Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, ``Image quality assessment: From error visibility to structural similarity,'' \emph{IEEE Trans. Image Process.}, vol. 13, no. 4, pp. 600--612, Apr. 2004.
 
-\bibitem{dong2014srcnn} C. Dong \emph{et al.}, ``Learning a deep convolutional network for image super-resolution,'' in \emph{Proc. ECCV}, 2014, pp. 184--199.
+\bibitem{dong2014srcnn} C. Dong, C. C. Loy, K. He, and X. Tang, ``Learning a deep convolutional network for image super-resolution,'' in \emph{Proc. ECCV}, 2014, pp. 184--199.
 
 \bibitem{amdahl1967} G. M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \emph{Proc. AFIPS}, 1967, pp. 483--485.
 
-\bibitem{williams2009roofline} S. Williams, A. Waterman, and D. Patterson, ``Roofline: an insightful visual performance model for multicore architectures,'' \emph{Commun. ACM}, vol. 52, no. 4, pp. 65--76, 2009.
+\bibitem{williams2009roofline} S. Williams, A. Waterman, and D. Patterson, ``Roofline: An insightful visual performance model for multicore architectures,'' \emph{Commun. ACM}, vol. 52, no. 4, pp. 65--76, Apr. 2009.
 
-\bibitem{chetlur2014cudnn} S. Chetlur \emph{et al.}, ``cuDNN: efficient primitives for deep learning,'' arXiv:1410.0759, 2014.
+\bibitem{chetlur2014cudnn} S. Chetlur \emph{et al.}, ``cuDNN: Efficient primitives for deep learning,'' 2014, arXiv:1410.0759. [Online]. Available: \url{https://arxiv.org/abs/1410.0759}
 
-\bibitem{serebryany2009threadsanitizer} K. Serebryany and T. Iskhodzhanov, ``ThreadSanitizer: data race detection in practice,'' in \emph{Proc. WBIA}, 2009, pp. 62--71.
+\bibitem{serebryany2009threadsanitizer} K. Serebryany and T. Iskhodzhanov, ``ThreadSanitizer: Data race detection in practice,'' in \emph{Proc. WBIA}, 2009, pp. 62--71.
 
-\bibitem{lashgar2012warpresize} A. Lashgar, A. Baniasadi, and A. Khonsari, ``Warp size impact in GPUs: large or small?,'' in \emph{Proc. GPGPU-5}, 2012, pp. 27--32.
+\bibitem{lashgar2012warpresize} A. Lashgar, A. Baniasadi, and A. Khonsari, ``Warp size impact in GPUs: Large or small?,'' in \emph{Proc. GPGPU-5}, 2012, pp. 27--32.
 
-\bibitem{dumoulin2016convolution} V. Dumoulin and F. Visin, ``A guide to convolution arithmetic for deep learning,'' arXiv:1603.07285, 2016.
+\bibitem{dumoulin2016convolution} V. Dumoulin and F. Visin, ``A guide to convolution arithmetic for deep learning,'' 2016, arXiv:1603.07285. [Online]. Available: \url{https://arxiv.org/abs/1603.07285}
 
-\bibitem{nvidiagb10_2025} NVIDIA Corp., ``NVIDIA puts Grace Blackwell on every desk and at every AI developer's fingertips,'' NVIDIA Newsroom, Jan. 2025. [Online]. Available: nvidianews.nvidia.com/news/nvidia-puts-grace-blackwell-on-every-desk-and-at-every-ai-developers-fingertips
+\bibitem{nvidiagb10_2025} NVIDIA Corp., ``NVIDIA puts Grace Blackwell on every desk and at every AI developer's fingertips,'' NVIDIA Newsroom, Jan. 2025. [Online]. Available: \url{https://nvidianews.nvidia.com/news/nvidia-puts-grace-blackwell-on-every-desk-and-at-every-ai-developers-fingertips}
 
-\bibitem{asusgx10_datasheet} ASUSTeK Computer Inc., \emph{ASUS Ascent GX10 Datasheet}, v8, 2025. [Online]. Available: dlcdnwebimgs.asus.com/files/media/202506/5c0fb57c-4e48-4e96-8c97-04bf8df2677c/asus-ascent-gx10-datasheet.pdf
+\bibitem{asusgx10_datasheet} ASUSTeK Computer Inc., \emph{ASUS Ascent GX10 Datasheet}, v8, 2025. [Online]. Available: \url{https://dlcdnwebimgs.asus.com/files/media/202506/5c0fb57c-4e48-4e96-8c97-04bf8df2677c/asus-ascent-gx10-datasheet.pdf}
 
-\bibitem{armdynamiq} Arm Ltd., ``DynamIQ technology.'' [Online]. Available: arm.com/technologies/dynamiq
+\bibitem{armdynamiq} Arm Ltd., ``DynamIQ technology,'' 2024. [Online]. Available: \url{https://www.arm.com/technologies/dynamiq}
 
-\bibitem{nvidiaada2022} NVIDIA Corp., \emph{NVIDIA Ada GPU Architecture}, Whitepaper V2.02, 2022.
+\bibitem{nvidiaada2022} NVIDIA Corp., ``NVIDIA Ada GPU architecture,'' Whitepaper V2.02, 2022.
 
-\bibitem{nvidiagracehopper2022} NVIDIA Corp., ``Grace Hopper Superchip architecture in-depth,'' NVIDIA Developer Blog, 2022.
+\bibitem{nvidiagracehopper2022} NVIDIA Corp., ``Grace Hopper Superchip architecture in-depth,'' NVIDIA Developer Blog, 2022. [Online]. Available: \url{https://developer.nvidia.com/blog/nvidia-grace-hopper-superchip-architecture-in-depth/}
 
 \bibitem{wahlgren2025upm} J. Wahlgren \emph{et al.}, ``Dissecting CPU-GPU unified physical memory on AMD MI300A APUs,'' in \emph{Proc. IEEE IISWC}, 2025.
 
