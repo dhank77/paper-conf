@@ -173,23 +173,22 @@ graph TD
     * **RTX 4090**: $32\times 8$ vs $16\times 16$ ($360.92 \pm 7.22$ ms vs $437.06 \pm 3.86$ ms) $\implies t = -22.77, df = 7.6, p < 10^{-4}$.
   - Nilai statistik ini telah dicantumkan di *Section V-A* dan *Section VI-C*.
 
-### Fase 3: Revisi Konten & Penajaman Argumen
-- [ ] **3.1 Perluasan Related Work (*Section II-A*)**:
-  - Tambahkan ulasan singkat mengenai GPU inference frameworks (TensorRT, cuDNN determinism flags, kernel fusion).
-- [ ] **3.2 Penegasan Argumen Metodologis (*Section III-B & Section VII*)**:
-  - Tuliskan justifikasi tegas mengapa *atomicAdd* FP64 dihindari (non-deterministic rounding) dan mengapa *hand-written spatial reduction* adalah pilihan terbaik untuk *correctness by construction*.
-  - Pertajam pembahasan generalizability (Suzie sequence sebagai representasi evaluasi determinisme arsitektur).
-- [ ] **3.3 Parafrase Kalimat Terlalu Padat**:
-  - Sederhanakan kalimat-kalimat panjang di Abstract, Section I, dan Section V.
-  - Perbaiki alur transisi antar paragraf agar ramah bagi pembaca umum.
+### Fase 3: Revisi Konten & Penajaman Argumen [COMPLETED]
+- [x] **3.1 Perluasan Related Work (*Section II-A*)**:
+  - Ditambahkan ulasan mengenai GPU inference frameworks modern (TensorRT, TVM, autotuning vs. determinisme numerik).
+- [x] **3.2 Penegasan Argumen Metodologis (*Section III-B & Section VII*)**:
+  - Diberikan justifikasi teknis mendalam mengapa `atomicAdd` FP64 dihindari (non-associative summation yang merusak determinisme bit-exact lintas warp scheduler) dan mengapa custom kernel dengan buffer privat diperlukan dibandingkan cuDNN (opaque GEMM layout tanpa akses buffer terisolasi).
+  - Diperjelas pemilihan dataset Suzie 150-frame sebagai paritas langsung terhadap baseline Annisa et al. (2025) serta implikasi scaling ke resolusi 1080p/4K.
+- [x] **3.3 Parafrase Kalimat Terlalu Padat**:
+  - Kalimat-kalimat majemuk panjang di Abstract, Section I, Section IV, Section V, VI, VII, dan VIII telah diparafrase menjadi kalimat yang lugas, padat, dan mudah dipahami.
 
-### Fase 4: Kompilasi & Verifikasi Akhir
-- [ ] **4.1 Kompilasi LaTeX Bersih**:
-  - Jalankan `pdflatex` dan pastikan tidak ada error atau overfull hbox yang signifikan.
-- [ ] **4.2 Pengecekan Batas Halaman (*Page Budget Check*)**:
-  - Pastikan panjang paper pas dengan batas halaman target (6 halaman atau sesuai ketentuan final IEEE ITIS 2026).
-- [ ] **4.3 Double-Blind vs Camera-Ready Switch**:
-  - Siapkan switch untuk mengembalikan identitas penulis dan afiliasi asli saat status paper berpindah ke Camera-Ready.
+### Fase 4: Kompilasi & Verifikasi Akhir [COMPLETED]
+- [x] **4.1 Kompilasi LaTeX Bersih**:
+  - Telah dijalankan `pdflatex` berulang kali; dokumen berhasil dikompilasi dengan status exit code 0 tanpa error dan tanpa warning.
+- [x] **4.2 Pengecekan Batas Halaman (*Page Budget Check*)**:
+  - Paper `itis.pdf` kini berukuran **tepat 5 halaman penuh** (dari batas maksimum 6 halaman IEEE). Halaman 5 terisi seimbang dan proporsional oleh Subbagian VI-D, Section VII, Section VIII, serta seluruh 21 referensi daftar pustaka.
+- [x] **4.3 Double-Blind vs Camera-Ready Switch**:
+  - Struktur judul, penulis, dan metadata telah diverifikasi siap untuk mode review (double-blind) maupun transisi ke camera-ready.
 
 ### Fase 5: Penyusunan Dokumen Rebuttal (*Response to Reviewers*)
 - [ ] **5.1 Pembuatan Dokumen Rebuttal**:
