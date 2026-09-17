@@ -1,0 +1,43 @@
+==============================================================
+ spatial_reduction_kernel -- L2 read/write breakdown -- gb10
+ gpu:       NVIDIA GB10
+ hostname:  node6
+ date:      2026-09-18T06:22:10+08:00
+ grid:      32x8_256
+ launches:  3 (1 per frame)
+ algorithmic bytes read per launch: 45416448 (43.3 MiB private buffer)
+==============================================================
+
+spatial_reduction_kernel (n=3 launches)
+  lts__t_sector_op_read_hit_rate.pct                      mean=0.043
+  lts__t_sector_op_write_hit_rate.pct                     mean=0.588
+  lts__t_sectors_srcunit_tex_op_read.sum                  mean=1419264.000
+  lts__t_sectors_srcunit_tex_op_read_lookup_hit.sum       mean=0.000
+  dram__bytes_read.sum                                    NOT AVAILABLE on this chip/ncu version
+  dram__bytes.sum                                         NOT AVAILABLE on this chip/ncu version
+  -> implied read bytes/launch from sectors: 45.42 MB (algorithmic buffer: 45.42 MB)
+  -> implied L2-hit bytes/launch: 0.00 MB (0.0% of read traffic)
+
+Metrics not present in this export at all (skipped by ncu for this chip):
+  - dram__bytes_read.sum
+  - dram__bytes.sum
+
+Reading this:
+  - If 'DRAM bytes actually read/launch' is much smaller than the 43.3 MB
+    algorithmic buffer size, most of the read traffic never touched DRAM
+    -- direct, hit-rate-percentage-independent proof of caching, and the
+    likely resolution to the GDDR6X-exceeding-peak anomaly (Section VII).
+  - If read hit rate is much higher than the combined (read+write) hit
+    rate collect_ncu_profile.sh reported (2.1% on RTX 4090), the mix of
+    reads and writes in the combined metric was hiding a real read-side
+    caching effect -- this would explain the anomaly without contradicting
+    the earlier, correctly-reported combined number.
+  - dram__bytes_read.sum is not available on GB10 (no discrete DRAM/FBPA
+    partition on this unified-memory chip); the sector-based estimate
+    above is the only ground-truth check available there.
+
+Files to send back:
+  /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_l2rw_gb10.txt
+  /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_l2rw_gb10.csv
+  /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_l2rw_gb10.ncu-rep
+==============================================================
