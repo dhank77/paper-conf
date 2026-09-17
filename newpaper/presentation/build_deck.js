@@ -62,13 +62,13 @@ function citation(slide, text) {
   });
 }
 
-function pendingTag(slide, x, y, w = 1.6) {
+function pendingTag(slide, x, y, w = 1.6, label = "DATA PENDING") {
   slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
     x, y, w, h: 0.32,
     fill: { color: COLORS.pendingBg }, line: { color: COLORS.pending, pt: 1 },
     rectRadius: 0.05,
   });
-  slide.addText("DATA PENDING", {
+  slide.addText(label, {
     x, y, w, h: 0.32, fontSize: 12, bold: true, fontFace: FONTS.face,
     color: COLORS.pending, align: "center", valign: "middle",
   });
@@ -102,9 +102,13 @@ function pendingTag(slide, x, y, w = 1.6) {
     x: 0.7, y: 3.5, w: 8.6, h: 0.4,
     fontSize: 16, fontFace: FONTS.face, color: "A0BBDD",
   });
-  slide.addText("M. Hamdani Ilham Latjoro", {
-    x: 0.7, y: 3.95, w: 8.6, h: 0.5,
+  slide.addText("M. Hamdani Ilham Latjoro, Adnan", {
+    x: 0.7, y: 3.95, w: 8.6, h: 0.4,
     fontSize: 17, fontFace: FONTS.face, color: "FFFFFF", bold: true,
+  });
+  slide.addText("Dept. of Informatics Engineering, Hasanuddin University, Makassar, Indonesia", {
+    x: 0.7, y: 4.35, w: 8.6, h: 0.4,
+    fontSize: 13, fontFace: FONTS.face, color: "CADCFC", italic: true,
   });
 }
 
@@ -365,18 +369,49 @@ function pendingTag(slide, x, y, w = 1.6) {
       valAxisTitle: "%", showValAxisTitle: true, valAxisTitleColor: COLORS.muted, valAxisTitleFontSize: 12,
     }
   );
-  slide.addText("Why: an L2-cache boundary", {
+  slide.addText("Why: a memory-bandwidth boundary", {
     x: 5.9, y: y0, w: 3.6, h: 0.35, fontSize: FONTS.sectionHeader - 2, fontFace: FONTS.face, color: COLORS.accent, bold: true,
   });
   slide.addText(
     [
-      { text: "RTX 4090's 72 MB L2 holds the 43.3 MiB private buffer → reduction served from cache.", options: { breakLine: true } },
-      { text: "GB10 streams the buffer from unified DRAM at 95% of peak bandwidth → 10× costlier.", options: { breakLine: true } },
-      { text: "This L2 story is currently inferred from bandwidth arithmetic, not measured directly (see Open Questions).", options: { breakLine: true, italic: true } },
+      { text: "GB10 streams the 43.3 MiB private buffer from unified DRAM at 95% of peak bandwidth.", options: { breakLine: true } },
+      { text: "RTX 4090's reduction is 10× faster — but measured hardware counters rule out L2 caching as the reason (next slide).", options: { breakLine: true } },
+      { text: "Both platforms are bandwidth-bound; the gap tracks raw memory throughput, not cache residency.", options: { breakLine: true, italic: true } },
     ],
     { x: 5.9, y: y0 + 0.4, w: 3.6, h: 2.8, fontSize: 13, fontFace: FONTS.face, color: COLORS.body, bullet: true, paraSpaceAfter: 10 }
   );
-  citation(slide, "Section VI-D, Table III");
+  citation(slide, "Section IV-D, Table III");
+}
+
+// ---------------------------------------------------------------------------
+// 12b. Results: Nsight Compute rules out the L2-cache explanation
+// ---------------------------------------------------------------------------
+{
+  const slide = pres.addSlide();
+  const y0 = actionTitle(slide, "Measured L2 hit rate rules out cache residency as the reduction speedup's cause", { h: 1.0 });
+  const rows = [
+    [{ text: "Metric (spatial_reduction_kernel)", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
+     { text: "GB10", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
+     { text: "RTX 4090", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } }],
+    ["L2 hit rate", "0.07%", "2.1%"],
+    ["Memory-pipeline throughput", "11.4% of peak", "90.5% of peak (DRAM)"],
+    ["Achieved occupancy", "84.5%", "49.0%"],
+  ];
+  slide.addTable(rows, {
+    x: M, y: y0, w: 9.0, h: 1.8,
+    fontSize: 15, fontFace: FONTS.face, color: COLORS.body,
+    border: { type: "solid", color: COLORS.rule, pt: 0.5 }, valign: "middle",
+  });
+  slide.addText(
+    [
+      { text: "Both platforms score under 3% L2 hit rate: ", options: { bold: true, breakLine: false } },
+      { text: "the private buffer is not cache-resident on either GPU, contradicting our initial bandwidth-arithmetic inference.", options: { breakLine: true } },
+      { text: "Open question: ", options: { bold: true, breakLine: false } },
+      { text: "the RTX 4090's reduction still runs at 2.5× its own GDDR6X peak bandwidth. We measure this; we do not yet explain it.", options: { breakLine: true } },
+    ],
+    { x: M, y: y0 + 2.0, w: 9.0, h: 1.3, fontSize: FONTS.body - 1, fontFace: FONTS.face, color: COLORS.body, bullet: true, paraSpaceAfter: 10 }
+  );
+  citation(slide, "Nsight Compute (ncu), lts__t_sector_hit_rate.pct — Section IV-E, Section VII");
 }
 
 // ---------------------------------------------------------------------------
@@ -420,10 +455,10 @@ function pendingTag(slide, x, y, w = 1.6) {
     border: { type: "solid", color: COLORS.rule, pt: 0.5 }, valign: "middle",
   });
   slide.addText(
-    "No single architecture wins every stage: which memory model helps depends on whether the stage is transfer-bound or bandwidth-bound-and-cacheable.",
+    "No single architecture wins every stage: which memory model helps depends on whether the stage is transfer-bound or streaming-bandwidth-bound.",
     { x: M, y: y0 + 2.0, w: 9.0, h: 0.8, fontSize: FONTS.body, fontFace: FONTS.face, color: COLORS.body }
   );
-  citation(slide, "Section VI-D, Table III");
+  citation(slide, "Section IV-D, Table III");
 }
 
 // ---------------------------------------------------------------------------
@@ -431,12 +466,12 @@ function pendingTag(slide, x, y, w = 1.6) {
 // ---------------------------------------------------------------------------
 {
   const slide = pres.addSlide();
-  const y0 = actionTitle(slide, "Three open questions the paper names as future work", { h: 0.85 });
+  const y0 = actionTitle(slide, "Two open questions remain after measurement; one baseline was reasoned, not run", { h: 1.0 });
 
   const items = [
     ["No competitive GPU baseline (atomicAdd, cuDNN)", "Reasoned in the paper: both break bit-exactness or hide the buffers we verify — not run.", null],
-    ["L2 residency model is inferred, not measured", "Nsight Compute profiling (L2 hit rate, throughput, occupancy) on both GPUs.", "PENDING"],
-    ["FP32 / FP16 / BF16 trade-off is unmeasured", "Reduced-precision Layer 8 variant built; throughput vs. PSNR-Y/SSIM trade-off to be measured.", "PENDING"],
+    ["Why does RTX 4090 exceed its own GDDR6X peak by 2.5×?", "L2 hit rate measured at 2.1% (Nsight Compute) — rules out caching, mechanism still open.", "OPEN"],
+    ["FP32 / FP16 / BF16 trade-off is partially measured", "Accuracy measured (PSNR-Y, SSIM); throughput comparison inconclusive — see Appendix C.", "PARTIAL"],
   ];
 
   let yy = y0;
@@ -445,7 +480,7 @@ function pendingTag(slide, x, y, w = 1.6) {
       x: M, y: yy, w: tag ? 7.1 : 9.0, h: 0.4,
       fontSize: FONTS.body, fontFace: FONTS.face, color: COLORS.primary, bold: true,
     });
-    if (tag) pendingTag(slide, 8.0, yy + 0.02);
+    if (tag) pendingTag(slide, 8.0, yy + 0.02, 1.6, tag);
     slide.addText(body, {
       x: M, y: yy + 0.4, w: 9.0, h: 0.6,
       fontSize: 15, fontFace: FONTS.face, color: COLORS.body,
@@ -453,7 +488,7 @@ function pendingTag(slide, x, y, w = 1.6) {
     yy += 1.15;
   });
 
-  citation(slide, "Section VII — collect_ncu_profile.sh / collect_fp16_comparison.sh will supply the two pending numbers");
+  citation(slide, "Sections IV-E and VII — collect_ncu_profile.sh / collect_fp16_comparison.sh");
 }
 
 // ---------------------------------------------------------------------------
@@ -473,12 +508,12 @@ function pendingTag(slide, x, y, w = 1.6) {
       { text: "2. It is also faster: ", options: { bold: true, breakLine: false } },
       { text: "1.46× (GB10, 31.5 FPS) and 1.63× (RTX 4090, 27.6 FPS) over the fastest verified CPU baseline.", options: { breakLine: true, breakLine: true } },
       { text: "3. Warp-aligned 32×8 blocks cut kernel time 23.4%/17.4%; ", options: { bold: true, breakLine: false } },
-      { text: "memory architecture picks the winner per stage — unified wins transfer, discrete wins the cacheable reduction.", options: { breakLine: true } },
+      { text: "memory architecture picks the winner per stage — unified wins transfer, discrete wins the bandwidth-bound reduction by raw throughput, not caching.", options: { breakLine: true } },
     ],
     { x: M, y: 0.85, w: 9.0, h: 3.6, fontSize: FONTS.body, fontFace: FONTS.face, color: "FFFFFF", paraSpaceAfter: 16 }
   );
-  slide.addText("M. Hamdani Ilham Latjoro  |  IEEE ITIS 2026", {
-    x: M, y: 4.9, w: 8.0, h: 0.4, fontSize: 14, fontFace: FONTS.face, color: "A0BBDD",
+  slide.addText("M. Hamdani Ilham Latjoro, Adnan  |  Hasanuddin University  |  IEEE ITIS 2026", {
+    x: M, y: 4.9, w: 9.0, h: 0.4, fontSize: 14, fontFace: FONTS.face, color: "A0BBDD",
   });
 }
 
@@ -530,25 +565,29 @@ function pendingTag(slide, x, y, w = 1.6) {
 // ---------------------------------------------------------------------------
 {
   const slide = pres.addSlide();
-  slide.addText("Appendix B — In Progress", { x: M, y: 0.15, w: 9.0, h: 0.4, fontSize: 14, fontFace: FONTS.face, color: COLORS.muted, italic: true });
+  slide.addText("Appendix B — Measured", { x: M, y: 0.15, w: 9.0, h: 0.4, fontSize: 14, fontFace: FONTS.face, color: COLORS.muted, italic: true });
   slide.addText("Nsight Compute counters for deconv_kernel / spatial_reduction_kernel", {
     x: M, y: 0.6, w: 9.0, h: 0.75, fontSize: FONTS.title - 4, fontFace: FONTS.face, color: COLORS.primary, bold: true,
   });
-  pendingTag(slide, M, 1.35);
   const rows = [
-    [{ text: "Metric", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
+    [{ text: "Kernel / Metric", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
      { text: "GB10", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
      { text: "RTX 4090", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } }],
-    ["L2 hit rate (lts__t_sector_hit_rate.pct)", "TBD", "TBD"],
-    ["L2 throughput (% of peak)", "TBD", "TBD"],
-    ["DRAM throughput (% of peak)", "TBD", "TBD"],
-    ["Achieved occupancy (sm__warps_active)", "TBD", "TBD"],
+    ["deconv_kernel — L2 hit rate", "31.2%", "86.7%"],
+    ["deconv_kernel — occupancy", "74.7%", "44.5%"],
+    ["spatial_reduction — L2 hit rate", "0.07%", "2.1%"],
+    ["spatial_reduction — mem. throughput*", "11.4%", "90.5% (DRAM)"],
+    ["spatial_reduction — occupancy", "84.5%", "49.0%"],
   ];
   slide.addTable(rows, {
-    x: M, y: 1.9, w: 9.0, h: 2.4, fontSize: 15, fontFace: FONTS.face, color: COLORS.muted,
+    x: M, y: 1.5, w: 9.0, h: 2.2, fontSize: 14, fontFace: FONTS.face, color: COLORS.body,
     border: { type: "solid", color: COLORS.rule, pt: 0.5 }, valign: "middle",
   });
-  citation(slide, "Run: newpaper/plans/collect_ncu_profile.sh on both machines, then fill this table.");
+  slide.addText(
+    "*GB10 exposes no dram__throughput counter (no discrete DRAM/FBPA partition on this unified-memory chip, confirmed via ncu --query-metrics); gpu__compute_memory_throughput substitutes as the closest available metric, not a like-for-like number vs. RTX 4090's dram__throughput.",
+    { x: M, y: 3.9, w: 9.0, h: 1.0, fontSize: 11, fontFace: FONTS.face, color: COLORS.muted, italic: true }
+  );
+  citation(slide, "ncu --launch-count 57 (1 frame), winning 32×8 grid — newpaper/plans/collect_ncu_profile.sh");
 }
 
 // ---------------------------------------------------------------------------
@@ -556,25 +595,36 @@ function pendingTag(slide, x, y, w = 1.6) {
 // ---------------------------------------------------------------------------
 {
   const slide = pres.addSlide();
-  slide.addText("Appendix C — In Progress", { x: M, y: 0.15, w: 9.0, h: 0.4, fontSize: 14, fontFace: FONTS.face, color: COLORS.muted, italic: true });
-  slide.addText("What does bit-exact determinism cost against FP16/BF16?", {
+  slide.addText("Appendix C — Partially Measured", { x: M, y: 0.15, w: 9.0, h: 0.4, fontSize: 14, fontFace: FONTS.face, color: COLORS.muted, italic: true });
+  slide.addText("FP16/BF16: accuracy measured, throughput inconclusive", {
     x: M, y: 0.6, w: 9.0, h: 0.75, fontSize: FONTS.title - 4, fontFace: FONTS.face, color: COLORS.primary, bold: true,
   });
-  pendingTag(slide, M, 1.35);
   const rows = [
     [{ text: "Variant", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
-     { text: "GPU L8 time", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
      { text: "diff_bytes", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
-     { text: "PSNR-Y / SSIM", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } }],
-    ["FP64 (paper's baseline)", "533.19 ms (GB10)", "0 (bit-exact)", "∞ / 1.000"],
-    ["FP16", "TBD", "TBD", "TBD"],
-    ["BF16", "TBD", "TBD", "TBD"],
+     { text: "PSNR-Y", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } },
+     { text: "SSIM", options: { bold: true, color: "FFFFFF", fill: { color: COLORS.primary } } }],
+    ["FP64 (paper's baseline)", "0 (bit-exact)", "∞", "1.000000"],
+    ["FP16", "339,712", "64.64 dB", "0.999859"],
+    ["BF16", "2,844,668", "55.40 dB", "0.998824"],
   ];
   slide.addTable(rows, {
-    x: M, y: 1.9, w: 9.0, h: 2.0, fontSize: 15, fontFace: FONTS.face, color: COLORS.muted,
+    x: M, y: 1.4, w: 9.0, h: 1.6, fontSize: 15, fontFace: FONTS.face, color: COLORS.body,
     border: { type: "solid", color: COLORS.rule, pt: 0.5 }, valign: "middle",
   });
-  citation(slide, "Run: newpaper/plans/collect_fp16_comparison.sh on both machines, then fill this table.");
+  pendingTag(slide, M, 3.15, 2.1, "THROUGHPUT: INCONCLUSIVE");
+  slide.addText(
+    [
+      { text: "FP16 is far more accurate than BF16 here: ", options: { bold: true, breakLine: false } },
+      { text: "FP16's 10-bit mantissa outperforms BF16's 7-bit mantissa when the data doesn't need BF16's extra exponent range.", options: { breakLine: true } },
+      { text: "Bonus: ", options: { bold: true, breakLine: false } },
+      { text: "diff_bytes and PSNR-Y are identical on GB10 and RTX 4090 — determinism holds even at reduced precision.", options: { breakLine: true } },
+      { text: "Kernel-time numbers are excluded: ", options: { bold: true, breakLine: false } },
+      { text: "this implementation converts precision on the host per-channel, which dominates the measured GPU-time window — not a real GPU speed comparison.", options: { breakLine: true } },
+    ],
+    { x: M, y: 3.6, w: 9.0, h: 1.45, fontSize: 12, fontFace: FONTS.face, color: COLORS.body, bullet: true, paraSpaceAfter: 6 }
+  );
+  citation(slide, "collect_fp16_comparison.sh, both platforms, grid 32×8_256 — quality numbers only");
 }
 
 const OUT = path.join(__dirname, "itis_presentation.pptx");
