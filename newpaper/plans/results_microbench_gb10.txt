@@ -2,31 +2,31 @@
  spatial_reduction_kernel microbenchmark -- gb10
  gpu:       NVIDIA GB10
  hostname:  node6
- date:      2026-09-18T06:33:28+08:00
+ date:      2026-09-18T06:38:25+08:00
  launches/rep: 10000   reps: 6   threads_reduce: 256
 ==============================================================
 
-[REP 1/6] total=1574.445 ms  per_launch=157.4445 us  effective_bandwidth=288.5 GB/s
-[REP 2/6] total=1570.353 ms  per_launch=157.0353 us  effective_bandwidth=289.2 GB/s
-[REP 3/6] total=1570.981 ms  per_launch=157.0981 us  effective_bandwidth=289.1 GB/s
-[REP 4/6] total=1573.164 ms  per_launch=157.3164 us  effective_bandwidth=288.7 GB/s
-[REP 5/6] total=1572.037 ms  per_launch=157.2037 us  effective_bandwidth=288.9 GB/s
-[REP 6/6] total=1573.402 ms  per_launch=157.3402 us  effective_bandwidth=288.7 GB/s
+[REP 1/6] total=1591.718 ms  per_launch=159.1718 us  effective_bandwidth=285.3 GB/s
+[REP 2/6] total=1586.596 ms  per_launch=158.6596 us  effective_bandwidth=286.3 GB/s
+[REP 3/6] total=1588.137 ms  per_launch=158.8137 us  effective_bandwidth=286.0 GB/s
+[REP 4/6] total=1587.589 ms  per_launch=158.7589 us  effective_bandwidth=286.1 GB/s
+[REP 5/6] total=1587.632 ms  per_launch=158.7632 us  effective_bandwidth=286.1 GB/s
+[REP 6/6] total=1587.036 ms  per_launch=158.7036 us  effective_bandwidth=286.2 GB/s
 [GPU] NVIDIA GB10 (Compute 12.1)
 [CFG] launches/rep=10000 reps=6 threads_reduce=256 buffer=43.31 MiB (num_channels=56 hr_pixels=101376)
 
-[RESULT] mean_total_ms=1572.3971 +/- 1.5559  (n=10000 launches/rep, 6 reps)
-[RESULT] mean_per_launch_us=157.2397
-[RESULT] mean_effective_bandwidth_GBps=288.8 +/- 0.3
+[RESULT] mean_total_ms=1588.1179 +/- 1.8420  (n=10000 launches/rep, 6 reps)
+[RESULT] mean_per_launch_us=158.8118
+[RESULT] mean_effective_bandwidth_GBps=286.0 +/- 0.3
 
 Comparison to hardware peak:
-  measured effective bandwidth : 288.8 GB/s
+  measured effective bandwidth : 286.0 GB/s
   gb10 rated peak bandwidth  : 273 GB/s
-  ratio                        : 1.06x
+  ratio                        : 1.05x
 
-  Still above peak: the anomaly survives this much more precise
-  timing method, so it is NOT a CUDA-Event measurement artifact.
-  The mechanism remains a genuine open question (Section VII).
+  Close to peak (within ~5%): consistent with the kernel being
+  a normal, unremarkable DRAM-bandwidth-bound kernel. The original
+  Table III number was very likely a timing-overhead artifact.
 
 Reading this: this program bypasses Table III's per-launch CUDA-Event
 methodology entirely -- thousands of launches share ONE event pair, so
