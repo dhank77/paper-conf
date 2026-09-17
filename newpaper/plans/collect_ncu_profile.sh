@@ -62,13 +62,42 @@ die()  { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 # Preconditions
 # ---------------------------------------------------------------------------
 command -v nvcc >/dev/null 2>&1 || die "nvcc not on PATH."
-NCU_BIN="$(command -v ncu || true)"
-if [ -z "$NCU_BIN" ]; then
-    for cand in /usr/local/cuda/bin/ncu /opt/nvidia/nsight-compute/*/ncu; do
-        [ -x "$cand" ] && NCU_BIN="$cand" && break
+
+# Nsight Compute is frequently installed as a *versioned* package
+# (e.g. apt's "nsight-compute-2026.2.1") that drops its binary under a
+# versioned directory without ever symlinking "ncu" onto PATH -- so
+# `command -v ncu` alone is not reliable. Try PATH first, then every
+# install layout we have actually seen, then a bounded filesystem search,
+# and only as a last resort try to apt-install the unversioned meta
+# package (which does register PATH) if we're root and apt is present.
+find_ncu() {
+    command -v ncu 2>/dev/null && return 0
+    local cand
+    for cand in /usr/local/cuda/bin/ncu \
+                /opt/nvidia/nsight-compute/*/ncu \
+                /opt/nvidia/nsight-compute-*/ncu \
+                /usr/local/NVIDIA-Nsight-Compute*/ncu \
+                /usr/local/cuda-*/bin/ncu; do
+        [ -x "$cand" ] && echo "$cand" && return 0
     done
+    find /opt /usr/local /usr/lib/nvidia 2>/dev/null -maxdepth 5 -type f -name ncu -perm -u+x -print -quit
+}
+
+# Respect an explicit override (NCU_BIN=/custom/path/ncu bash collect_ncu_profile.sh)
+# before doing any auto-detection at all.
+NCU_BIN="${NCU_BIN:-}"
+[ -n "$NCU_BIN" ] || NCU_BIN="$(find_ncu)"
+
+if [ -z "$NCU_BIN" ] && command -v apt-get >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
+    warn "ncu not found anywhere on this machine; attempting 'apt-get install -y nsight-compute' (unversioned meta package, registers PATH)..."
+    apt-get install -y nsight-compute >/tmp/_ncu_apt_install.log 2>&1 || true
+    hash -r
+    NCU_BIN="$(find_ncu)"
 fi
-[ -n "$NCU_BIN" ] || die "ncu (Nsight Compute) not found. Install with the CUDA toolkit or from https://developer.nvidia.com/tools-overview/nsight-compute."
+
+[ -n "$NCU_BIN" ] || die "ncu (Nsight Compute) not found, and auto-install did not resolve it (see /tmp/_ncu_apt_install.log if it ran). Install manually with 'apt install nsight-compute', or if it's already installed under a custom path, run: NCU_BIN=/path/to/ncu bash $0"
+
+info "Using ncu: $NCU_BIN"
 [ -f "$INPUT_YUV" ] || die "missing $INPUT_YUV (run from plans/)"
 [ -f "fsrcnn_gpu_main.cu" ] || die "missing fsrcnn_gpu_main.cu"
 for i in 1 2 3 4 5 6 7 8; do
@@ -124,13 +153,19 @@ METRICS="lts__t_sector_hit_rate.pct,lts__throughput.avg.pct_of_peak_sustained_el
 
 info "Running ncu (this replays the first $NCU_LAUNCHES kernel launches several times -- expect a few minutes, not seconds)..."
 
+# Two separate steps on purpose. Combining --csv/--log-file with -o in one
+# invocation was tried first and silently swallowed the metrics table: with
+# -o present, ncu writes the full result into the binary .ncu-rep and only
+# prints its own Connected/Disconnected/"Report:" status lines to stdout,
+# so --log-file just captured that status chatter instead of data. Step 1
+# collects counters into the .ncu-rep; step 2 re-opens that saved report and
+# asks it (and only it) for the CSV table, which is the documented way to
+# get both a GUI-browsable report and a CSV export from the same run.
 "$NCU_BIN" \
     --kernel-name-base function \
     --kernel-name "regex:deconv_kernel|spatial_reduction_kernel" \
     --launch-count "$NCU_LAUNCHES" \
     --metrics "$METRICS" \
-    --csv \
-    --log-file "$OUT_CSV" \
     -o "${OUT_REP%.ncu-rep}" \
     -f \
     ./fsrcnn_gpu_prof "$INPUT_YUV" /tmp/_ncu_out.yuv "$BX" "$BY" "$TR" \
@@ -138,12 +173,21 @@ info "Running ncu (this replays the first $NCU_LAUNCHES kernel launches several 
 STATUS=$?
 
 if [ $STATUS -ne 0 ]; then
-    if grep -qi "ERR_NVGPUCTRPERM\|permission" /tmp/_ncu_stdout.log "$OUT_CSV" 2>/dev/null; then
+    if grep -qi "ERR_NVGPUCTRPERM\|permission" /tmp/_ncu_stdout.log 2>/dev/null; then
         cat /tmp/_ncu_stdout.log
         die "ncu was denied access to performance counters. Re-run with 'sudo bash collect_ncu_profile.sh', or see the header of this script for the permanent modprobe fix."
     fi
     cat /tmp/_ncu_stdout.log
     die "ncu exited with status $STATUS -- see output above."
+fi
+
+[ -f "$OUT_REP" ] || die "ncu did not produce $OUT_REP -- see /tmp/_ncu_stdout.log"
+
+info "Re-opening $OUT_REP to export CSV..."
+"$NCU_BIN" --import "$OUT_REP" --csv --page raw > "$OUT_CSV" 2>/tmp/_ncu_import.log
+if [ ! -s "$OUT_CSV" ] || ! head -1 "$OUT_CSV" | grep -qi "Kernel Name"; then
+    cat /tmp/_ncu_import.log
+    die "CSV export from $OUT_REP did not look like a metrics table -- see /tmp/_ncu_import.log and inspect $OUT_REP by hand (ncu-ui / ncu --import)."
 fi
 
 rm -f /tmp/_ncu_out.yuv

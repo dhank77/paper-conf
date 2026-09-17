@@ -65,11 +65,21 @@ done
 
 GPU_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
 case "$GPU_NAME" in
-    *GB10*) TAG="gb10" ;;
-    *4090*) TAG="rtx4090" ;;
+    *GB10*) TAG="gb10";    DEFAULT_BACKDROP=20 ;;
+    *4090*) TAG="rtx4090"; DEFAULT_BACKDROP=4  ;;
     *)      TAG="unknown"
+            if [ "$(uname -m)" = "x86_64" ]; then DEFAULT_BACKDROP=4; else DEFAULT_BACKDROP=20; fi
             warn "Could not identify the GPU from nvidia-smi (got '${GPU_NAME:-nothing}'); tagging output 'unknown'." ;;
 esac
+# Same convention as collect_gpu_profile.sh: Layers 1-7 run on OpenMP CPU
+# threads, and the paper's own numbers depend on using each platform's
+# optimal backdrop (20 on GB10, 4 on the RTX 4090's P-cores). Without this,
+# OpenMP defaults to nproc threads, which collapses performance on the
+# hybrid P/E-core RTX 4090 (Section VI-A) and makes cpu_l17_ms / wall_ms
+# incomparable to Table II-III; it happened to look fine on GB10 only
+# because nproc there is close to 20 anyway.
+BACKDROP="${GPU_BACKDROP_THREADS:-$DEFAULT_BACKDROP}"
+export OMP_NUM_THREADS="$BACKDROP"
 
 OUT_TXT="results_fp16_${TAG}.txt"
 OUT_CSV="results_fp16_${TAG}.csv"
@@ -104,7 +114,7 @@ build_cu fsrcnn_gpu_fp16.cu ./fsrcnn_gpu_fp16
 build_cu fsrcnn_gpu_fp16.cu ./fsrcnn_gpu_bf16 -DUSE_BF16
 
 read -r BX BY TR <<< "$GRID"
-info "Platform: ${GPU_NAME:-unknown}  tag=$TAG  grid=${BX}x${BY}_${TR}  reps=$REPS"
+info "Platform: ${GPU_NAME:-unknown}  tag=$TAG  grid=${BX}x${BY}_${TR}  reps=$REPS  backdrop=OMP_NUM_THREADS=$BACKDROP"
 
 # ---------------------------------------------------------------------------
 # Helpers (same conventions as run_experiments.sh)
