@@ -142,7 +142,8 @@ echo "tag,variant,rep,wall_ms,cpu_l17_ms,h2d_ms,gpu_l8_ms,d2h_ms,diff_bytes,psnr
 declare -a SUMMARY
 
 run_variant() {
-    local bin="$1" variant="$2" out_yuv="/tmp/_fp16cmp_${variant}.yuv"
+    local bin="$1" variant="$2"
+    local out_yuv="/tmp/_fp16cmp_${variant}.yuv"
     info "--- $variant : $REPS reps ---"
     local walls=() l17=() h2d=() l8=() d2h=() vram="" diffs=() psnrs=() ssims=()
     for r in $(seq 1 "$REPS"); do
