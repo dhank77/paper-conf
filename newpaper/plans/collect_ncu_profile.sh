@@ -62,6 +62,7 @@ die()  { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 # Preconditions
 # ---------------------------------------------------------------------------
 command -v nvcc >/dev/null 2>&1 || die "nvcc not on PATH."
+command -v python3 >/dev/null 2>&1 || die "python3 not on PATH (needed to parse ncu's quoted-CSV output correctly)."
 
 # Nsight Compute is frequently installed as a *versioned* package
 # (e.g. apt's "nsight-compute-2026.2.1") that drops its binary under a
@@ -148,8 +149,19 @@ info "Platform: ${GPU_NAME:-unknown}  tag=$TAG  grid=${BX}x${BY}_${TR}  launches
 # exactly the four numbers Section VII currently infers from bandwidth
 # arithmetic; if you want more (e.g. sector-level coalescing counters),
 # open the .ncu-rep in the GUI instead of widening this list.
+#
+# dram__throughput.* does not exist on GB10 (confirmed via `ncu
+# --query-metrics` on-device: GB10's Grace-Blackwell unified-memory design
+# has no discrete DRAM/FBPA partition counters). gpu__compute_memory_
+# throughput.avg.pct_of_peak_sustained_elapsed is requested alongside it as
+# the closest cross-platform equivalent ("Compute Memory Pipeline
+# Throughput", the whole SM<->Caches<->DRAM path). It is not a like-for-like
+# swap for dram__throughput -- it is a broader aggregate -- so report both
+# columns rather than treating them as interchangeable. Unsupported metrics
+# are silently skipped by ncu rather than erroring the run, so requesting
+# both on both platforms is safe.
 # ---------------------------------------------------------------------------
-METRICS="lts__t_sector_hit_rate.pct,lts__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,sm__warps_active.avg.pct_of_peak_sustained_active"
+METRICS="lts__t_sector_hit_rate.pct,lts__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed,sm__warps_active.avg.pct_of_peak_sustained_active"
 
 info "Running ncu (this replays the first $NCU_LAUNCHES kernel launches several times -- expect a few minutes, not seconds)..."
 
@@ -194,8 +206,15 @@ rm -f /tmp/_ncu_out.yuv
 
 # ---------------------------------------------------------------------------
 # Summarize: mean per metric, split by kernel name, from ncu's own CSV.
-# ncu's CSV has one row per (kernel launch, metric); "Kernel Name" and
-# "Metric Name"/"Metric Value" columns carry what we need.
+#
+# `--page raw` is wide format: one row per kernel launch, one column per
+# metric (283 columns on GB10, 271 on RTX 4090 -- the two ncu versions/chips
+# do not even agree on column order, so match by header NAME, never index).
+# It also has a quoted "Kernel Name" column containing literal commas (the
+# C++ argument list, e.g. "deconv_kernel(const double *, double *, ...)"),
+# which a naive `awk -F','` would split incorrectly and misalign every
+# column after it. Use python3's csv module instead, which both machines
+# have by default, rather than depend on gawk-only FPAT csv parsing.
 # ---------------------------------------------------------------------------
 {
 echo "=============================================================="
@@ -207,37 +226,69 @@ echo " grid:      ${BX}x${BY}_${TR} (paper's winning configuration)"
 echo " launches:  $NCU_LAUNCHES (= 1 frame: 56x deconv_kernel + 1x spatial_reduction_kernel)"
 echo "=============================================================="
 echo
-echo "Per-kernel mean of each metric (ncu CSV -> awk):"
+echo "Per-kernel mean of each metric (ncu CSV, matched by column name):"
 echo
 
-awk -F',' '
-NR==1 {
-    for (i=1; i<=NF; i++) { gsub(/"/,"",$i); h[$i]=i }
-    next
-}
-{
-    for (i=1; i<=NF; i++) gsub(/"/,"",$i)
-    kname = $(h["Kernel Name"])
-    mname = $(h["Metric Name"])
-    mval  = $(h["Metric Value"])
-    gsub(/,/,"",mval)
-    key = kname SUBSEP mname
-    sum[key] += mval
-    cnt[key]++
-}
-END {
-    for (k in sum) {
-        split(k, parts, SUBSEP)
-        printf "%-28s %-55s mean=%.3f (n=%d)\n", parts[1], parts[2], sum[k]/cnt[k], cnt[k]
-    }
-}' "$OUT_CSV" | sort
+python3 - "$OUT_CSV" <<'PYEOF'
+import csv, sys
+from collections import defaultdict
+
+path = sys.argv[1]
+wanted = [
+    "lts__t_sector_hit_rate.pct",
+    "lts__throughput.avg.pct_of_peak_sustained_elapsed",
+    "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+    "gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed",
+    "sm__warps_active.avg.pct_of_peak_sustained_active",
+]
+
+with open(path, newline="") as f:
+    r = csv.reader(f)
+    header = next(r)
+    idx = {name: header.index(name) for name in wanted if name in header}
+    missing = [name for name in wanted if name not in header]
+    kidx = header.index("Kernel Name") if "Kernel Name" in header else None
+
+    sums = defaultdict(lambda: defaultdict(float))
+    counts = defaultdict(int)
+    for row in r:
+        kname = row[kidx].split("(")[0] if kidx is not None else ""
+        if not kname:
+            continue
+        counts[kname] += 1
+        for name, i in idx.items():
+            v = row[i].replace(",", "").replace("%", "").strip()
+            try:
+                sums[kname][name] += float(v)
+            except ValueError:
+                pass
+
+for kname in sorted(counts):
+    print(f"{kname} (n={counts[kname]})")
+    for name in wanted:
+        if name in idx:
+            print(f"  {name:<70s} mean={sums[kname][name]/counts[kname]:.3f}")
+        else:
+            print(f"  {name:<70s} NOT AVAILABLE on this chip/ncu version")
+
+if missing:
+    print()
+    print("Metrics not present in this export at all (skipped by ncu for this chip):")
+    for name in missing:
+        print(f"  - {name}")
+PYEOF
 
 echo
 echo "Reading this: lts__t_sector_hit_rate.pct is the L2 hit rate the paper's"
 echo "cache-boundary claim (Section IV-D / VI-D) currently infers from"
-echo "bandwidth arithmetic. dram__throughput.../lts__throughput... are the"
-echo "two 'is it bandwidth-bound' checks; sm__warps_active... is achieved"
-echo "occupancy, unrelated to the cache claim but asked for by Reviewer 2."
+echo "bandwidth arithmetic. dram__throughput / gpu__compute_memory_throughput"
+echo "and lts__throughput are the 'is it bandwidth-bound' checks -- GB10 has"
+echo "no dram__ counters (unified-memory chip, confirmed via 'ncu"
+echo "--query-metrics' on-device), so gpu__compute_memory_throughput is its"
+echo "closest available equivalent; treat the two as different metrics, not"
+echo "directly interchangeable, when comparing across platforms."
+echo "sm__warps_active... is achieved occupancy, unrelated to the cache"
+echo "claim but asked for by Reviewer 2."
 echo
 echo "Files to send back:"
 echo "  $(pwd)/$OUT_TXT"
