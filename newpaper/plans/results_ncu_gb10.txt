@@ -1,0 +1,25 @@
+==============================================================
+ FSRCNN Layer 8 -- Nsight Compute counters -- gb10
+ gpu:       NVIDIA GB10
+ hostname:  node6
+ date:      2026-09-17T11:17:31+08:00
+ grid:      32x8_256 (paper's winning configuration)
+ launches:  57 (= 1 frame: 56x deconv_kernel + 1x spatial_reduction_kernel)
+==============================================================
+
+Per-kernel mean of each metric (ncu CSV -> awk):
+
+==PROF== Disconnected from process 111503 ==PROF== Disconnected from process 111503               mean=0.000 (n=1)
+==PROF== Report: /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_ncu_gb10.ncu-rep ==PROF== Report: /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_ncu_gb10.ncu-rep mean=0.000 (n=1)
+
+Reading this: lts__t_sector_hit_rate.pct is the L2 hit rate the paper's
+cache-boundary claim (Section IV-D / VI-D) currently infers from
+bandwidth arithmetic. dram__throughput.../lts__throughput... are the
+two 'is it bandwidth-bound' checks; sm__warps_active... is achieved
+occupancy, unrelated to the cache claim but asked for by Reviewer 2.
+
+Files to send back:
+  /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_ncu_gb10.txt
+  /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_ncu_gb10.csv
+  /home/lab_iot/FSRCNN/paper-itis/newpaper/plans/results_ncu_gb10.ncu-rep
+==============================================================
