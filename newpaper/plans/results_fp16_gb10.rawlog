@@ -1,72 +1,72 @@
-### variant=fp64 rep=1 wall_ms=4731 status=0
-[PROFILING] cpu_l17_ms=3337.24 h2d_ms=506.18 gpu_l8_ms=533.58 d2h_ms=3.50 total_ms=4380.50 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+### variant=fp64 rep=1 wall_ms=17964 status=0
+[PROFILING] cpu_l17_ms=3631.79 h2d_ms=12897.76 gpu_l8_ms=12654.23 d2h_ms=3.64 total_ms=29187.42 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp64 rep=2 wall_ms=4719 status=0
-[PROFILING] cpu_l17_ms=3361.04 h2d_ms=515.14 gpu_l8_ms=533.38 d2h_ms=3.48 total_ms=4413.03 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+### variant=fp64 rep=2 wall_ms=17999 status=0
+[PROFILING] cpu_l17_ms=3634.06 h2d_ms=12944.89 gpu_l8_ms=12695.88 d2h_ms=4.00 total_ms=29278.84 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp64 rep=3 wall_ms=4723 status=0
-[PROFILING] cpu_l17_ms=3370.53 h2d_ms=506.69 gpu_l8_ms=534.85 d2h_ms=3.55 total_ms=4415.62 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+### variant=fp64 rep=3 wall_ms=17933 status=0
+[PROFILING] cpu_l17_ms=3644.80 h2d_ms=12872.31 gpu_l8_ms=12603.02 d2h_ms=3.77 total_ms=29123.89 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp64 rep=4 wall_ms=4723 status=0
-[PROFILING] cpu_l17_ms=3367.80 h2d_ms=511.37 gpu_l8_ms=536.70 d2h_ms=3.54 total_ms=4419.41 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+### variant=fp64 rep=4 wall_ms=21621 status=0
+[PROFILING] cpu_l17_ms=3677.21 h2d_ms=16561.89 gpu_l8_ms=16009.28 d2h_ms=3.91 total_ms=36252.28 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp64 rep=5 wall_ms=4692 status=0
-[PROFILING] cpu_l17_ms=3359.95 h2d_ms=498.11 gpu_l8_ms=535.65 d2h_ms=3.40 total_ms=4397.10 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+### variant=fp64 rep=5 wall_ms=24719 status=0
+[PROFILING] cpu_l17_ms=3698.73 h2d_ms=19614.17 gpu_l8_ms=18896.35 d2h_ms=4.20 total_ms=42213.45 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp64 rep=6 wall_ms=4693 status=0
-[PROFILING] cpu_l17_ms=3364.14 h2d_ms=499.76 gpu_l8_ms=534.73 d2h_ms=3.40 total_ms=4402.02 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
+### variant=fp64 rep=6 wall_ms=24754 status=0
+[PROFILING] cpu_l17_ms=3595.18 h2d_ms=19647.86 gpu_l8_ms=18997.10 d2h_ms=4.31 total_ms=42244.44 vram_kb=45382 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp16 rep=1 wall_ms=4959 status=0
-[PROFILING] precision=fp16 cpu_l17_ms=3383.32 h2d_ms=156.62 gpu_l8_ms=985.25 d2h_ms=4.59 total_ms=4529.78 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=fp16 rep=1 wall_ms=20583 status=0
+[PROFILING] precision=fp16 cpu_l17_ms=3613.33 h2d_ms=14977.61 gpu_l8_ms=15675.57 d2h_ms=5.85 total_ms=34272.37 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp16 rep=2 wall_ms=4899 status=0
-[PROFILING] precision=fp16 cpu_l17_ms=3350.35 h2d_ms=141.41 gpu_l8_ms=967.32 d2h_ms=4.44 total_ms=4463.51 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=fp16 rep=2 wall_ms=20704 status=0
+[PROFILING] precision=fp16 cpu_l17_ms=3599.45 h2d_ms=15053.69 gpu_l8_ms=15772.03 d2h_ms=5.79 total_ms=34430.96 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp16 rep=3 wall_ms=4953 status=0
-[PROFILING] precision=fp16 cpu_l17_ms=3388.62 h2d_ms=141.41 gpu_l8_ms=977.39 d2h_ms=4.52 total_ms=4511.94 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=fp16 rep=3 wall_ms=21164 status=0
+[PROFILING] precision=fp16 cpu_l17_ms=3622.68 h2d_ms=15547.06 gpu_l8_ms=16241.22 d2h_ms=5.80 total_ms=35416.76 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp16 rep=4 wall_ms=4923 status=0
-[PROFILING] precision=fp16 cpu_l17_ms=3339.32 h2d_ms=157.41 gpu_l8_ms=981.74 d2h_ms=4.49 total_ms=4482.97 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=fp16 rep=4 wall_ms=20572 status=0
+[PROFILING] precision=fp16 cpu_l17_ms=3579.65 h2d_ms=14949.84 gpu_l8_ms=15653.79 d2h_ms=5.73 total_ms=34189.01 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp16 rep=5 wall_ms=4989 status=0
-[PROFILING] precision=fp16 cpu_l17_ms=3374.97 h2d_ms=158.95 gpu_l8_ms=986.98 d2h_ms=4.58 total_ms=4525.48 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=fp16 rep=5 wall_ms=21520 status=0
+[PROFILING] precision=fp16 cpu_l17_ms=3653.37 h2d_ms=15794.60 gpu_l8_ms=16495.33 d2h_ms=5.74 total_ms=35949.04 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=fp16 rep=6 wall_ms=4971 status=0
-[PROFILING] precision=fp16 cpu_l17_ms=3384.01 h2d_ms=144.79 gpu_l8_ms=977.26 d2h_ms=4.49 total_ms=4510.55 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=fp16 rep=6 wall_ms=14760 status=0
+[PROFILING] precision=fp16 cpu_l17_ms=3531.25 h2d_ms=9324.06 gpu_l8_ms=10064.24 d2h_ms=5.39 total_ms=22924.94 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=bf16 rep=1 wall_ms=4836 status=0
-[PROFILING] precision=bf16 cpu_l17_ms=3357.33 h2d_ms=152.04 gpu_l8_ms=893.81 d2h_ms=4.52 total_ms=4407.70 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=bf16 rep=1 wall_ms=18010 status=0
+[PROFILING] precision=bf16 cpu_l17_ms=3692.83 h2d_ms=12412.86 gpu_l8_ms=13038.18 d2h_ms=5.91 total_ms=29149.78 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=bf16 rep=2 wall_ms=4845 status=0
-[PROFILING] precision=bf16 cpu_l17_ms=3334.22 h2d_ms=149.16 gpu_l8_ms=886.98 d2h_ms=4.42 total_ms=4374.79 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=bf16 rep=2 wall_ms=18048 status=0
+[PROFILING] precision=bf16 cpu_l17_ms=3654.08 h2d_ms=12504.84 gpu_l8_ms=13122.89 d2h_ms=5.60 total_ms=29287.42 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=bf16 rep=3 wall_ms=4878 status=0
-[PROFILING] precision=bf16 cpu_l17_ms=3353.14 h2d_ms=151.83 gpu_l8_ms=897.21 d2h_ms=4.57 total_ms=4406.75 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=bf16 rep=3 wall_ms=18032 status=0
+[PROFILING] precision=bf16 cpu_l17_ms=3672.94 h2d_ms=12442.62 gpu_l8_ms=13058.71 d2h_ms=5.53 total_ms=29179.79 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=bf16 rep=4 wall_ms=4928 status=0
-[PROFILING] precision=bf16 cpu_l17_ms=3396.29 h2d_ms=157.74 gpu_l8_ms=903.80 d2h_ms=4.45 total_ms=4462.28 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=bf16 rep=4 wall_ms=17999 status=0
+[PROFILING] precision=bf16 cpu_l17_ms=3693.33 h2d_ms=12438.45 gpu_l8_ms=13048.61 d2h_ms=5.40 total_ms=29185.79 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=bf16 rep=5 wall_ms=4898 status=0
-[PROFILING] precision=bf16 cpu_l17_ms=3365.64 h2d_ms=157.37 gpu_l8_ms=900.63 d2h_ms=4.54 total_ms=4428.18 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=bf16 rep=5 wall_ms=18055 status=0
+[PROFILING] precision=bf16 cpu_l17_ms=3678.17 h2d_ms=12444.72 gpu_l8_ms=13069.49 d2h_ms=6.07 total_ms=29198.46 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 
-### variant=bf16 rep=6 wall_ms=4810 status=0
-[PROFILING] precision=bf16 cpu_l17_ms=3358.82 h2d_ms=140.37 gpu_l8_ms=879.07 d2h_ms=4.48 total_ms=4382.74 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
+### variant=bf16 rep=6 wall_ms=18015 status=0
+[PROFILING] precision=bf16 cpu_l17_ms=3702.71 h2d_ms=12394.20 gpu_l8_ms=13007.23 d2h_ms=5.91 total_ms=29110.05 vram_kb=11939 block_x=32 block_y=8 threads_reduce=256
 [GPU] Device 0: NVIDIA GB10 (Compute 12.1, 121.63 GB VRAM)
 

@@ -2,7 +2,7 @@
  FSRCNN Layer 8 -- precision trade-off -- gb10
  gpu:       NVIDIA GB10
  hostname:  node6
- date:      2026-09-17T11:32:54+08:00
+ date:      2026-09-17T13:23:07+08:00
  grid:      32x8_256 (paper's winning configuration)
  reps:      6 per variant
  frames:    150, 176x144 -> 352x288
@@ -11,9 +11,9 @@
 
 variant      wall (ms)           | gpu_l8 (ms)         | cpu_l17 (ms)        | last-rep correctness
 -------------------------------------------------------------------------------------------------------
-fp64          4713.50 +/- 16.73  |   534.82 +/- 1.25   |  3360.12 +/- 11.90  | last_diff=0          last_psnr_y=inf        last_ssim=1.000000
-fp16          4949.00 +/- 32.79  |   979.32 +/- 7.09   |  3370.10 +/- 20.36  | last_diff=339712     last_psnr_y=64.639959  last_ssim=0.999859
-bf16          4865.83 +/- 43.56  |   893.58 +/- 9.18   |  3360.91 +/- 20.32  | last_diff=2844668    last_psnr_y=55.404578  last_ssim=0.998824
+fp64         20831.67 +/- 3339.73 | 15309.31 +/- 3103.55 |  3646.96 +/- 36.54  | last_diff=0          last_psnr_y=inf        last_ssim=1.000000
+fp16         19883.83 +/- 2537.90 | 14983.70 +/- 2433.79 |  3599.95 +/- 41.67  | last_diff=339712     last_psnr_y=64.639959  last_ssim=0.999859
+bf16         18026.50 +/- 22.21  | 13057.52 +/- 38.47  |  3682.34 +/- 17.61  | last_diff=2844668    last_psnr_y=55.404578  last_ssim=0.998824
 
 Reading this: fp64 should show diff_bytes=0 (bit-exact) -- if it does
 not, something in this environment differs from the paper's build and
