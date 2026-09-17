@@ -12,7 +12,6 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
-\usepackage{booktabs}
 \usepackage{url}
 \def\UrlBreaks{\do\/\do\-\do\_}
 \urlstyle{same}
@@ -24,23 +23,10 @@
 % Install with: tlmgr install courier
 \usepackage{courier}
 
-% Standard float spacing for IEEE conference
-\setlength{\textfloatsep}{5pt plus 1pt minus 1pt}
-\setlength{\dbltextfloatsep}{5pt plus 1pt minus 1pt}
-\setlength{\floatsep}{4pt plus 1pt minus 1pt}
-\setlength{\dblfloatsep}{4pt plus 1pt minus 1pt}
-\setlength{\abovecaptionskip}{3pt plus 1pt minus 1pt}
-\setlength{\belowcaptionskip}{0pt}
-
-% Float PLACEMENT thresholds only. These decide where LaTeX is willing to put a
-% float; no margin, column width, line spacing, font or float separation is
-% changed, so the IEEEtran-prescribed layout is untouched.
-\renewcommand{\topfraction}{0.92}
-\renewcommand{\bottomfraction}{0.85}
-\renewcommand{\textfraction}{0.06}
-\renewcommand{\floatpagefraction}{0.75}
-\renewcommand{\dbltopfraction}{0.92}
-\renewcommand{\dblfloatpagefraction}{0.75}
+% Margins, column widths, line spacing, fonts, and float placement/spacing
+% parameters are all left at IEEEtran's own class defaults, matching the
+% official IEEE-conference-template-062824 exactly -- neither \setlength nor
+% \renewcommand is used to alter any of them anywhere in this file.
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -50,15 +36,24 @@
 \title{Accelerating Super-Resolution CNN Inference via GPU Spatial Reduction: A Cross-Platform Study on Unified and Discrete Memory Architectures}
 
 \author{
-\IEEEauthorblockN{Anonymous Author(s)}
-\IEEEauthorblockA{Affiliation withheld for double-blind review}
+\IEEEauthorblockN{1\textsuperscript{st} M. Hamdani Ilham Latjoro}
+\IEEEauthorblockA{\textit{Dept. of Informatics Engineering}\\
+\textit{Hasanuddin University}\\
+Makassar, Indonesia \\
+latjoromhi25d@student.unhas.ac.id}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Adnan}
+\IEEEauthorblockA{\textit{Dept. of Informatics Engineering}\\
+\textit{Hasanuddin University}\\
+Makassar, Indonesia \\
+adnan@unhas.ac.id}
 }
 
 \maketitle
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-FSRCNN's final deconvolution layer is both its computational bottleneck and a critical correctness hazard: naive multi-threaded CPU accumulation causes data races that corrupt output non-reproducibly. We offload this layer to isolated per-channel CUDA kernels followed by a parallel reduction, eliminating races by construction. We evaluate our framework across two distinct platforms: an NVIDIA GB10 Grace Blackwell Superchip with unified memory, and an Intel i9-14900K desktop with an RTX 4090 over PCIe. On both, spatial-reduction output is byte-identical to a verified deterministic reference across all configurations, and GPU output remains bit-identical across platforms despite differing host instruction set architectures and GPU microarchitectures. A warp-aligned 32-by-8 thread block achieves optimal throughput on both GPUs, cutting kernel execution time by 23.4 percent and 17.4 percent via improved memory coalescing. Speedups over each platform's fastest verified deterministic CPU baseline reach 1.46 times on the GB10 (31.5 frames per second) and 1.63 times on the RTX 4090 (27.6 frames per second). Fine-grained profiling reveals that determinism overhead constitutes 4.6 percent of GPU layer-8 time on the GB10 but only 0.6 percent on the RTX 4090, governed by whether the private buffer fits within the GPU's last-level cache, whereas device-to-host transfer runs 4.74 times faster on unified memory.
+FSRCNN's final deconvolution layer is both its computational bottleneck and a critical correctness hazard: naive multi-threaded CPU accumulation causes data races that corrupt output non-reproducibly. We offload this layer to isolated per-channel CUDA kernels followed by a parallel reduction, eliminating races by construction. We evaluate our framework across two distinct platforms: an NVIDIA GB10 Grace Blackwell Superchip with unified memory, and an Intel i9-14900K desktop with an RTX 4090 over PCIe. On both, spatial-reduction output is byte-identical to a verified deterministic reference across all configurations, and GPU output remains bit-identical across platforms despite differing host instruction set architectures and GPU microarchitectures. A warp-aligned 32-by-8 thread block achieves optimal throughput on both GPUs, cutting kernel execution time by 23.4 percent and 17.4 percent via improved memory coalescing. Speedups over each platform's fastest verified deterministic CPU baseline reach 1.46 times on the GB10 (31.5 frames per second) and 1.63 times on the RTX 4090 (27.6 frames per second). Fine-grained profiling reveals that determinism overhead constitutes 4.6 percent of GPU layer-8 time on the GB10 but only 0.6 percent on the RTX 4090, tracking each platform's raw memory throughput, whereas device-to-host transfer runs 4.74 times faster on unified memory.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -72,7 +67,7 @@ Edge and workstation AI systems increasingly rely on heterogeneous SoCs combinin
 
 That final stage (Layer~8) carries a disproportionate computational burden: for $2\times$ upscaling, it applies a $9{\times}9$ transposed convolution across 56 channels and accumulates them into a single output plane. Parallelizing this stage on a multicore CPU introduces a fundamental dilemma. Naive shared accumulation races and corrupts output non-reproducibly~\cite{annisa2025}, while mutexes or atomic operations induce severe contention. Privatize-then-reduce resolves both issues by writing per-channel private buffers and reducing them deterministically, at the cost of $43.3$~MiB of extra memory traffic.
 
-We offload that deconvolution and reduction to CUDA while executing Layers 1--7 across CPU cores. Our contributions are fourfold: \emph{(i) GPU cost-profile shift:} Privatize-then-reduce is an established pattern, but offloading it to the GPU qualitatively reshapes its overhead. Private-buffer traffic consuming $8$--$18\%$ of CPU wall time drops to $4.6\%$ (GB10) and $0.6\%$ (RTX 4090) of GPU Layer~8 time while maintaining bit-exactness. On unified memory, the buffer remains stationary while compute shifts over it. \emph{(ii) Warp-aligned grid configuration:} A $32{\times}8$ block matches row-major memory strides, maximizing coalescing and cutting kernel time by $23.4\%$ and $17.4\%$, localized entirely to the deconvolution stage. \emph{(iii) Cross-platform determinism:} GPU outputs match the deterministic CPU reference byte-for-byte and achieve bit-identical parity across two distinct host ISAs and GPU generations, outperforming verified CPU baselines by $1.46\times$ and $1.63\times$. \emph{(iv) Cache boundary for reduction cost:} The reduction pass is bandwidth-bound; its overhead is near-zero ($0.6\%$) on the RTX 4090 whose 72~MB L2 cache holds the buffer, but $10\times$ costlier on the GB10, which streams from DRAM at $95\%$ of peak bandwidth. Conversely, device-to-host transfer runs $4.74\times$ faster on unified memory.
+We offload that deconvolution and reduction to CUDA while executing Layers 1--7 across CPU cores. Our contributions are fourfold: \emph{(i) GPU cost-profile shift:} Privatize-then-reduce is an established pattern, but offloading it to the GPU qualitatively reshapes its overhead. Private-buffer traffic consuming $8$--$18\%$ of CPU wall time drops to $4.6\%$ (GB10) and $0.6\%$ (RTX 4090) of GPU Layer~8 time while maintaining bit-exactness. On unified memory, the buffer remains stationary while compute shifts over it. \emph{(ii) Warp-aligned grid configuration:} A $32{\times}8$ block matches row-major memory strides, maximizing coalescing and cutting kernel time by $23.4\%$ and $17.4\%$, localized entirely to the deconvolution stage. \emph{(iii) Cross-platform determinism:} GPU outputs match the deterministic CPU reference byte-for-byte and achieve bit-identical parity across two distinct host ISAs and GPU generations, outperforming verified CPU baselines by $1.46\times$ and $1.63\times$. \emph{(iv) Memory-bandwidth boundary for reduction cost:} The reduction pass is bandwidth-bound on both platforms; its overhead is near-zero ($0.6\%$) on the RTX 4090 but $10\times$ costlier on the GB10 ($4.6\%$ of GPU Layer~8 time, which streams from DRAM at $95\%$ of peak bandwidth), tracking each platform's raw memory throughput, confirmed with Nsight Compute hardware counters (Section~\ref{sec:breakdown}). Conversely, device-to-host transfer runs $4.74\times$ faster on unified memory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Background and Baseline Architecture}
@@ -98,21 +93,31 @@ Our primary platform is the ASUS Ascent GX10~\cite{asusgx10_datasheet} with the 
 \label{tab:hardware}
 \centering
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lll}
-\toprule
-Component & GB10 (ASUS GX10) & RTX 4090 Desktop \\
-\midrule
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Component} & \textbf{GB10 (ASUS GX10)} & \textbf{RTX 4090 Desktop} \\
+\hline
 CPU & 20-core ARM v9.2-A DynamIQ & Intel Core i9-14900K \\
+\hline
  & 10$\times$ X925 P + 10$\times$ A725 E & 8 P-core (w/HT) + 16 E-core \\
+\hline
  & @ 3.90/2.81~GHz, no SMT & 24C/32T, up to 6.0~GHz \\
+\hline
 GPU & NVIDIA Blackwell, \texttt{sm\_121} & NVIDIA Ada Lovelace, \texttt{sm\_89} \\
+\hline
 GPU Cores & 6{,}144 CUDA, 48 SMs, Gen5 Tensor & 16{,}384 CUDA, 128 SMs~\cite{nvidiaada2022} \\
+\hline
 Memory & 128~GB LPDDR5x, \emph{unified} & 64~GB DDR (63~GB OS-visible) + 24~GB GDDR6X, \emph{discrete} \\
+\hline
 Interconnect & NVLink-C2C (5$\times$ PCIe 5.0) & PCIe (CPU $\leftrightarrow$ GPU) \\
+\hline
 CUDA & 13.0, Driver 580.159.03, \texttt{V13.0.88} & 13.0, Driver 580.65.06, \texttt{V13.0.48} \\
+\hline
 GCC & 13.3.0 (Ubuntu 24.04) & 13.3.0 (Ubuntu 24.04) \\
+\hline
 OS & Ubuntu 24.04 LTS (aarch64) & Ubuntu 24.04 LTS (x86\_64) \\
-\bottomrule
+\hline
 \end{tabular}%
 }
 \end{table}
@@ -120,7 +125,7 @@ OS & Ubuntu 24.04 LTS (aarch64) & Ubuntu 24.04 LTS (x86\_64) \\
 \subsection{CUDA Kernel Design and Warp Alignment}
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/architecture_pipeline.pdf}
+\includegraphics[width=1.0\textwidth]{figures/architecture_pipeline.pdf}
 \caption{Architecture and execution workflow of the proposed GPU spatial reduction framework. Host CPU executes Layers 1--7 to generate 56 low-resolution feature maps ($176{\times}144$). The GPU \texttt{deconv\_kernel} computes the $9{\times}9$ transposed convolution using warp-aligned $32{\times}8$ thread blocks, writing isolated output planes into private device buffer \texttt{d\_all\_tmp} to eliminate write races by construction. Subsequently, \texttt{spatial\_reduction} executes a parallel channel reduction per output pixel in fixed order, guaranteeing bit-exact deterministic reconstruction.}
 \label{fig:pipeline}
 \end{figure*}
@@ -151,7 +156,7 @@ V0 degrades non-monotonically due to data races: $13.8$~dB on the GB10 (4 thread
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\columnwidth]{figures/correctness_visual_check.pdf}
+\includegraphics[width=0.95\columnwidth]{figures/correctness_visual_check.pdf}
 \caption{Frame 26. (b) CPU-only naive baseline (V0, 32 threads on i9-14900K, $21.5$~dB PSNR-Y / $0.767$ SSIM against reference (a)), exhibiting scanline artifacts from concurrent writes to \texttt{img\_fltr\_8}. (c) CPU V1 and (d) GPU V2 are bit-identical to (a) across all configurations.}
 \label{fig:correctness}
 \end{figure}
@@ -167,29 +172,45 @@ Table~\ref{tab:benchmark} presents results for both platforms across thread coun
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{llcccccc}
-\toprule
-Variant & Configuration / Threads & Wall Time (ms) & Speedup vs. Serial & Speedup vs. Best CPU & Dev. from Ref. (dB) & SSIM & GPU L8 Kernel (ms) \\
-\midrule
-\multicolumn{8}{l}{\emph{GB10 (ASUS GX10), unified memory; CPU thread ladder 1--20}} \\
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|l|l|c|c|c|c|c|c|}
+\hline
+\textbf{Variant} & \textbf{Configuration / Threads} & \textbf{Wall Time (ms)} & \textbf{Speedup vs. Serial} & \textbf{Speedup vs. Best CPU} & \textbf{Dev. from Ref. (dB)} & \textbf{SSIM} & \textbf{GPU L8 Kernel (ms)} \\
+\hline
+\multicolumn{8}{|l|}{\emph{GB10 (ASUS GX10), unified memory; CPU thread ladder 1--20}} \\
+\hline
 CPU V0 (Naive) & 1 Thread & $18{,}240.50 \pm 228.82$ & 1.00$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 CPU V0 (Naive) & 4 Threads (worst) & $7{,}074.33 \pm 90.21$ & 2.58$\times$ & N/A & 13.785 & 0.518246 & N/A \\
+\hline
 CPU V0 (Naive) & 20 Threads (Max, fastest) & $6{,}346.33 \pm 32.60$ & 2.87$\times$ & N/A & 25.751 & 0.838930 & N/A \\
+\hline
 CPU V1 (Baseline) & 1 Thread (Serial) & $21{,}552.33 \pm 298.07$ & 1.00$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 CPU V1 & 4 Threads (cf. RTX optimum) & $8{,}316.50 \pm 58.06$ & 2.59$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 CPU V1 (Max Cores) & 20 Threads (fastest verified) & $6{,}921.83 \pm 82.49$ & 3.11$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 GPU V2 (Hybrid) & Grid $16{\times}16\_256$ (baseline) & $4{,}935.67 \pm 36.30$ & 4.37$\times$ & 1.40$\times$ & bit-exact & bit-exact & $696.51 \pm 1.78$ \\
+\hline
 GPU V2 (Best Grid) & Grid $32{\times}8\_256$ & $4{,}756.33 \pm 30.71$ & 4.53$\times$ & 1.46$\times$ & bit-exact & bit-exact & $533.19 \pm 2.58$ \\
-\midrule
-\multicolumn{8}{l}{\emph{RTX 4090 desktop, discrete memory; CPU thread ladder 1--32, 4-thread GPU backdrop}} \\
+\hline
+\multicolumn{8}{|l|}{\emph{RTX 4090 desktop, discrete memory; CPU thread ladder 1--32, 4-thread GPU backdrop}} \\
+\hline
 CPU V0 (Naive) & 1 Thread & $20{,}973.50 \pm 36.30$ & 1.00$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 CPU V0 (Naive) & 4 Threads (fastest) & $8{,}207.67 \pm 247.16$ & 2.56$\times$ & N/A & 68.559 & 0.999957 & N/A \\
+\hline
 CPU V0 (Naive) & 32 Threads (Max, worst) & $26{,}388.67 \pm 664.00$ & 0.79$\times$ & N/A & 23.006 & 0.845283 & N/A \\
+\hline
 CPU V1 (Baseline) & 1 Thread (Serial) & $22{,}904.17 \pm 86.90$ & 1.00$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 CPU V1 (Best) & 4 Threads (fastest verified) & $8{,}844.17 \pm 132.68$ & 2.59$\times$ & N/A & bit-exact & bit-exact & N/A \\
+\hline
 GPU V2 (Hybrid) & Grid $16{\times}16\_256$ (baseline) & $5{,}579.00 \pm 166.61$ & 4.11$\times$ & 1.59$\times$ & bit-exact & bit-exact & $437.06 \pm 3.86$ \\
+\hline
 GPU V2 (Best Grid) & Grid $32{\times}8\_256$ & $5{,}435.50 \pm 148.01$ & 4.21$\times$ & 1.63$\times$ & bit-exact & bit-exact & $360.92 \pm 7.22$ \\
-\bottomrule
+\hline
 \end{tabular}%
 }
 
@@ -208,7 +229,7 @@ To evaluate reconstruction quality against ground truth, the Suzie sequence was 
 \label{sec:cost-of-determinism}
 Table~\ref{tab:benchmark} quantifies the CPU determinism penalty via the wall-time delta between V0 (racy) and V1 (privatized): $+18.2\%$, $+17.6\%$, and $+9.1\%$ at 1, 4, and 20 threads on the GB10, and $+9.2\%$ and $+7.8\%$ at 1 and 4 threads on the RTX 4090. This overhead measures the cost of writing and re-reading $43.3$~MiB of private buffer space, amounting to $8$--$18\%$ of CPU wall time.
 
-On the GPU, per-kernel instrumentation reveals that the reduction pass constitutes $4.6\%$ of Layer~8 execution time on the GB10 and only $0.6\%$ on the RTX 4090 (amounting to $0.55\%$ and $0.05\%$ of total wall time). Peak device allocation remains bounded at $44.3$~MiB ($<0.1\%$ of system memory). This divergence is architectural: the reduction is bandwidth-bound, and the RTX 4090's 72~MB L2 cache accommodates the entire working set, whereas the GB10 streams from unified DRAM near hardware peak. Determinism is thus near-free whenever the privatization buffer fits within last-level cache.
+On the GPU, per-kernel instrumentation reveals that the reduction pass constitutes $4.6\%$ of Layer~8 execution time on the GB10 and only $0.6\%$ on the RTX 4090 (amounting to $0.55\%$ and $0.05\%$ of total wall time). Peak device allocation remains bounded at $44.3$~MiB ($<0.1\%$ of system memory). This divergence is architectural: the reduction is bandwidth-bound on both platforms, and the gap tracks their raw memory-throughput ceilings, as Section~\ref{sec:breakdown} measures directly with Nsight Compute. Determinism is thus near-free on hardware with enough raw memory bandwidth to absorb the extra pass.
 
 \subsection{Fine-Grained GPU Timing Breakdown}
 \label{sec:breakdown}
@@ -219,20 +240,27 @@ We instrumented CUDA Event profiling inside the GPU binary across six runs of th
 \label{tab:breakdown}
 \centering
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrr}
-\toprule
-Pipeline Stage & GB10 (unified) & RTX 4090 (discrete) \\
-\midrule
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Pipeline Stage} & \textbf{GB10 (unified)} & \textbf{RTX 4090 (discrete)} \\
+\hline
 CPU Layers 1--7 & $3{,}392.82 \pm 21.62$ & $4{,}624.50 \pm 70.96$ \\
+\hline
 GPU Layer 8, event window & $533.19 \pm 2.58$ & $360.92 \pm 7.22$ \\
+\hline
 \quad$\hookrightarrow$ \texttt{deconv\_kernel} ($56\times$) & $424.07 \pm 0.76$ & $261.90 \pm 3.09$ \\
+\hline
 \quad$\hookrightarrow$ \texttt{spatial\_reduction} ($1\times$) & $26.32 \pm 1.02$ & $2.62 \pm 0.01$ \\
+\hline
 \quad$\hookrightarrow$ in-window transfer, gaps & $127.65 \pm 4.10$ & $152.14 \pm 0.36$ \\
+\hline
 Device-to-Host & $3.46 \pm 0.06$ & $16.42 \pm 0.49$ \\
+\hline
 Unaccounted (launch, file I/O) & $821.20$ & $469.33$ \\
-\midrule
+\hline
 Total Wall Time & $4{,}750.67 \pm 30.40$ & $5{,}471.17 \pm 76.17$ \\
-\bottomrule
+\hline
 \end{tabular}%
 }
 
@@ -243,7 +271,7 @@ Indented rows decompose the event window. Instrumentation overhead ($5.34$~\text
 \end{minipage}
 \end{table}
 
-Two findings stand out. First, the reduction kernel requires $26.32$~ms on the GB10 but only $2.62$~ms on the RTX 4090, a $10.0\times$ gap. Reading the $43.31$~MiB private buffer once per frame ($6.81$~GB total) represents $259$~GB/s on the GB10 ($95\%$ of its $273$~GB/s LPDDR5x peak~\cite{asusgx10_datasheet}) and $2{,}597$~GB/s effective bandwidth on the RTX 4090 ($2.5\times$ its $1{,}008$~GB/s GDDR6X ceiling). This confirms that the RTX 4090 serves the reduction primarily from its 72~MB L2 cache, whereas the GB10 streams from unified memory.
+Two findings stand out. First, the reduction kernel requires $26.32$~ms on the GB10 but only $2.62$~ms on the RTX 4090, a $10.0\times$ gap. Reading the $43.31$~MiB private buffer once per frame ($6.81$~GB total) represents $259$~GB/s on the GB10 ($95\%$ of its $273$~GB/s LPDDR5x peak~\cite{asusgx10_datasheet}) and $2{,}597$~GB/s effective bandwidth on the RTX 4090 ($2.5\times$ its $1{,}008$~GB/s GDDR6X ceiling). Direct Nsight Compute measurement of \texttt{spatial\_reduction\_kernel}, profiled over one frame at the winning $32{\times}8$ grid, isolates the mechanism: L2 hit rate (\texttt{lts\_\_t\_sector\_hit\_rate.pct}) is $0.07\%$ on the GB10 and $2.1\%$ on the RTX 4090 -- both effectively zero -- indicating the gap tracks each platform's raw memory throughput rather than a cache-resident working set. The RTX 4090's effective bandwidth exceeding its own GDDR6X ceiling remains an open question we do not resolve here (Section~\ref{sec:limitations}).
 
 Second, device-to-host transfer exhibits the opposite pattern: $3.46$~ms on the GB10 versus $16.42$~ms on the RTX 4090 ($4.74\times$ faster on unified memory, $35.1$ vs. $7.4$~GB/s effective). Measured outside the event window after synchronization, this provides a clean demonstration of the unified-memory transfer advantage. Peak device memory remained constant at $44.3$~MiB across all configurations.
 
@@ -283,29 +311,29 @@ The $32{\times}8$ block remains fastest on Ada Lovelace ($360.92 \pm 7.22$~ms vs
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.88\columnwidth]{figures/warp_alignment_cross_platform.pdf}
+\includegraphics[width=0.95\columnwidth]{figures/warp_alignment_cross_platform.pdf}
 \caption{GPU Layer~8 kernel time across grid configurations (mean $\pm$ SD over 6 runs). The warp-aligned $32{\times}8$ grid is fastest across both architectures.}
 \label{fig:warp-cross}
 \end{figure}
 
 \subsection{Non-Unified Memory and FP64 Precision}
-Despite discrete PCIe transfers, the RTX 4090 achieves faster Layer~8 kernel times due to higher compute capacity and its 72~MB L2 cache. Furthermore, because Ada Lovelace restricts FP64 throughput to $1/64$ of FP32, the GPU operates with most compute units underutilized; an FP32 pipeline would yield substantially higher throughput at the cost of strict bit-exact determinism.
+Despite discrete PCIe transfers, the RTX 4090 achieves faster Layer~8 kernel times, consistent with its higher raw memory throughput and larger SM count (Section~\ref{sec:breakdown}). Furthermore, because Ada Lovelace restricts FP64 throughput to $1/64$ of FP32, the GPU operates with most compute units underutilized; an FP32 pipeline would yield substantially higher throughput at the cost of strict bit-exact determinism.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Limitations and Future Work}
 \label{sec:limitations}
-Several limitations bound this study, each with a concrete next step. First, competitive baselines such as \texttt{atomicAdd} and cuDNN were omitted because non-associative floating-point addition across asynchronous warps breaks bit-exactness, and closed-source cuDNN routines do not expose the per-channel buffers our verification depends on; a throughput-only comparison against both is still useful future work to price determinism against an unconstrained baseline. Second, our L2 residency model is inferred from bandwidth arithmetic rather than measured directly: the next step is Nsight Compute profiling of L2 hit rate and memory throughput on both GPUs to confirm it with hardware counters. Third, host-to-device measurements include launch latency and host padding. Fourth, we evaluated one 150-frame QCIF-to-CIF Suzie sequence ($176{\times}144 \rightarrow 352{\times}288$) at one scale factor for direct comparability with~\cite{annisa2025}; scaling to 1080p and 4K at $2\times$ and $4\times$ would push the working set past the RTX 4090's 72~MB L2 cache and test the cache-overflow threshold directly, and additional sequences would separate content-dependent effects from the architectural ones reported here. Finally, an FP32 or mixed FP16/BF16 variant of Layer~8 is the natural next experiment: it would put a number on what bit-exact determinism costs in throughput, the trade this paper argues for but does not measure.
+Several limitations bound this study, each with a concrete next step. First, competitive baselines such as \texttt{atomicAdd} and cuDNN were omitted because non-associative floating-point addition across asynchronous warps breaks bit-exactness, and closed-source cuDNN routines do not expose the per-channel buffers our verification depends on; a throughput-only comparison against both is still useful future work to price determinism against an unconstrained baseline. Second, direct Nsight Compute profiling (\texttt{lts\_\_t\_sector\_hit\_rate.pct}) refines the bandwidth-arithmetic estimate above: hit rate for \texttt{spatial\_reduction\_kernel} stays below $3\%$ on both GPUs (Section~\ref{sec:breakdown}), indicating the cost gap tracks raw memory throughput rather than cache capacity. What actually produces the RTX 4090's $2.5\times$-over-GDDR6X-peak effective bandwidth remains an open question. GB10 also exposes no \texttt{dram\_\_throughput} counter at all -- its unified-memory design has no discrete DRAM/FBPA partition, confirmed via \texttt{ncu~--query-metrics} on-device -- so we substitute \texttt{gpu\_\_compute\_memory\_throughput}, which puts its reduction kernel at only $11.4\%$ of peak, itself hard to square with a bandwidth-bound characterization. Third, host-to-device measurements include launch latency and host padding. Fourth, we evaluated one 150-frame QCIF-to-CIF Suzie sequence ($176{\times}144 \rightarrow 352{\times}288$) at one scale factor for direct comparability with~\cite{annisa2025}; scaling to 1080p and 4K at $2\times$ and $4\times$ would push the working set past the RTX 4090's 72~MB L2 cache and test the cache-overflow threshold directly, and additional sequences would separate content-dependent effects from the architectural ones reported here. Finally, an FP32 or mixed FP16/BF16 variant of Layer~8 is the natural next experiment: it would put a number on what bit-exact determinism costs in throughput, the trade this paper argues for but does not measure.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
-We presented a GPU spatial-reduction framework for FSRCNN's deconvolution layer, eliminating multi-threaded write races by construction. Evaluated across unified (GB10) and discrete (RTX 4090) platforms, our approach guarantees bit-exact output matching a deterministic CPU reference across all configurations, as well as bit-identical cross-platform reproducibility spanning two host ISAs and GPU generations. Warp-aligned $32{\times}8$ blocks optimize memory coalescing, accelerating deconvolution by $23.4\%$ and $17.4\%$, and yielding speedups of $1.46\times$ ($31.5$ FPS) and $1.63\times$ ($27.6$ FPS) over verified multicore CPU baselines. Platform asymmetries reveal that unified memory delivers $4.74\times$ faster host-device transfers, while discrete GPUs accelerate the bandwidth-bound reduction tenfold when intermediate buffers fit within last-level cache.
+We presented a GPU spatial-reduction framework for FSRCNN's deconvolution layer, eliminating multi-threaded write races by construction. Evaluated across unified (GB10) and discrete (RTX 4090) platforms, our approach guarantees bit-exact output matching a deterministic CPU reference across all configurations, as well as bit-identical cross-platform reproducibility spanning two host ISAs and GPU generations. Warp-aligned $32{\times}8$ blocks optimize memory coalescing, accelerating deconvolution by $23.4\%$ and $17.4\%$, and yielding speedups of $1.46\times$ ($31.5$ FPS) and $1.63\times$ ($27.6$ FPS) over verified multicore CPU baselines. Platform asymmetries reveal that unified memory delivers $4.74\times$ faster host-device transfers, while the bandwidth-bound reduction runs tenfold faster on the discrete GPU, tracking each platform's raw memory throughput.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{thebibliography}{00}
 \footnotesize
 \setlength{\itemsep}{0pt plus 0.2pt}
 
-\bibitem{annisa2025} A. Annisa, A. Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artif. Intell. Mechatron. Syst. (AIMS)}, 2025, pp. 1--8.
+\bibitem{annisa2025} A. Annisa, Adnan, and Z. Zainuddin, ``Enhancing computational efficiency: Transitioning from serial to parallel programming for low-to-high resolution video reconstruction using FSRCNN on AMP architecture,'' in \emph{Proc. IEEE Int. Conf. Artif. Intell. Mechatron. Syst. (AIMS)}, 2025, pp. 1--8.
 
 \bibitem{dong2016fsrcnn} C. Dong, C. C. Loy, and X. Tang, ``Accelerating the super-resolution convolutional neural network,'' in \emph{Proc. ECCV}, 2016, pp. 391--407.
 

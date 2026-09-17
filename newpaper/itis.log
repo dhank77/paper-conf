@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  17 SEP 2026 06:30
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.8.7)  17 SEP 2026 23:27
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -247,26 +247,6 @@ Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
 )
-(/usr/local/texlive/2026basic/texmf-dist/tex/latex/booktabs/booktabs.sty
-Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
-\heavyrulewidth=\dimen183
-\lightrulewidth=\dimen184
-\cmidrulewidth=\dimen185
-\belowrulesep=\dimen186
-\belowbottomsep=\dimen187
-\aboverulesep=\dimen188
-\abovetopsep=\dimen189
-\cmidrulesep=\dimen190
-\cmidrulekern=\dimen191
-\defaultaddspace=\dimen192
-\@cmidla=\count302
-\@cmidlb=\count303
-\@aboverulesep=\dimen193
-\@belowrulesep=\dimen194
-\@thisruleclass=\count304
-\@lastruleclass=\count305
-\@thisrulewidth=\dimen195
-)
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/url/url.sty
 \Urlmuskip=\muskip18
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
@@ -277,38 +257,38 @@ Package: courier 2020/03/25 PSNFSS-v9.3 (WaS)
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/l3backend/l3backend-pdftex.d
 ef
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count306
+\l__color_backend_stack_int=\count302
 ) (./itis.aux)
 \openout1 = `itis.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 34.
+LaTeX Font Info:    ... okay on input line 34.
 
 -- Lines per column: 56 (exact).
 (/usr/local/texlive/2026basic/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count307
-\scratchdimen=\dimen196
+\scratchcounter=\count303
+\scratchdimen=\dimen183
 \scratchbox=\box57
-\nofMPsegments=\count308
-\nofMParguments=\count309
+\nofMPsegments=\count304
+\nofMParguments=\count305
 \everyMPshowfont=\toks24
-\MPscratchCnt=\count310
-\MPscratchDim=\dimen197
-\MPnumerator=\count311
-\makeMPintoPDFobject=\count312
+\MPscratchCnt=\count306
+\MPscratchDim=\dimen184
+\MPnumerator=\count307
+\makeMPintoPDFobject=\count308
 \everyMPtoPDFconversion=\toks25
 )
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.s
@@ -321,18 +301,19 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-LaTeX Font Info:    Trying to load font information for U+msa on input line 73.
+LaTeX Font Info:    Calculating math sizes for size <11> on input line 52.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 52.
 
  (/usr/local/texlive/2026basic/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 73.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 52.
 
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-Underfull \hbox (badness 2150) in paragraph at lines 81--82
+Underfull \hbox (badness 2150) in paragraph at lines 76--77
 []\OT1/ptm/m/n/10 CNN super-resolution pro-gressed from early for-mu-la-
  []
 
@@ -342,7 +323,7 @@ usr/local/texlive/2026basic/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
 ]
 LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 8
-7.
+2.
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
@@ -351,17 +332,17 @@ File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 File: figures/architecture_pipeline.pdf Graphic file (type pdf)
 <use figures/architecture_pipeline.pdf>
 Package pdftex.def Info: figures/architecture_pipeline.pdf  used on input line 
-123.
-(pdftex.def)             Requested size: 474.71906pt x 173.01799pt.
-<figures/correctness_visual_check.pdf, id=14, 523.35527pt x 136.46986pt>
+128.
+(pdftex.def)             Requested size: 516.0pt x 188.06137pt.
+ [2]
+<figures/correctness_visual_check.pdf, id=22, 523.35527pt x 136.46986pt>
 File: figures/correctness_visual_check.pdf Graphic file (type pdf)
 <use figures/correctness_visual_check.pdf>
 Package pdftex.def Info: figures/correctness_visual_check.pdf  used on input li
-ne 154.
-(pdftex.def)             Requested size: 221.76123pt x 57.82712pt.
- [2]
+ne 159.
+(pdftex.def)             Requested size: 239.39923pt x 62.42497pt.
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 2
-42.
+70.
 
 (/usr/local/texlive/2026basic/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
@@ -374,39 +355,76 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 File: figures/warp_alignment_cross_platform.pdf Graphic file (type pdf)
 <use figures/warp_alignment_cross_platform.pdf>
 Package pdftex.def Info: figures/warp_alignment_cross_platform.pdf  used on inp
-ut line 286.
-(pdftex.def)             Requested size: 221.76123pt x 155.23564pt.
+ut line 314.
+(pdftex.def)             Requested size: 239.39923pt x 167.57874pt.
 
-Underfull \hbox (badness 4859) in paragraph at lines 340--341
+Underfull \hbox (badness 6125) in paragraph at lines 325--326
+\OT1/ptm/m/n/10 crete next step. First, com-pet-i-tive base-lines such as
+ []
+
+
+Underfull \hbox (badness 4279) in paragraph at lines 325--326
+\OT1/pcr/m/n/10 atomicAdd \OT1/ptm/m/n/10 and cuDNN were omit-ted be-cause non-
+
+ []
+
+
+Underfull \hbox (badness 2221) in paragraph at lines 325--326
+\OT1/ptm/m/n/10 breaks bit-exactness, and closed-source cuDNN rou-tines
+ []
+
+
+Underfull \hbox (badness 2635) in paragraph at lines 325--326
+\OT1/ptm/m/n/10 do not ex-pose the per-channel buffers our ver-i-fi-ca-tion
+ []
+
+
+Underfull \hbox (badness 1728) in paragraph at lines 325--326
+\OT1/ptm/m/n/10 de-pends on; a throughput-only com-par-i-son against both
+ []
+
+
+Underfull \hbox (badness 2418) in paragraph at lines 325--326
+\OT1/ptm/m/n/10 an un-con-strained base-line. Sec-ond, di-rect Nsight Com-
+ []
+
+
+Underfull \hbox (badness 4543) in paragraph at lines 325--326
+\OT1/ptm/m/n/10 pute pro-fil-ing (\OT1/pcr/m/n/10 lts__t_sector_hit_rate.pct\OT
+1/ptm/m/n/10 ) re-
+ []
+
+[5 <./figures/warp_alignment_cross_platform.pdf>]
+Underfull \hbox (badness 4859) in paragraph at lines 368--369
 []\OT1/ptm/m/n/8 ASUSTeK Com-puter Inc., \OT1/ptm/m/it/8 ASUS As-cent GX10 Data
 sheet\OT1/ptm/m/n/8 , v8,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 340--341
+Underfull \hbox (badness 10000) in paragraph at lines 368--369
 \OT1/ptm/m/n/8 202506 / 5c0fb57c -[] 4e48 -[] 4e96 -[] 8c97 -[] 04bf8df2677c / 
 asus -[] ascent -[] gx10 -[]
  []
 
-[5 <./figures/warp_alignment_cross_platform.pdf>]
-Underfull \hbox (badness 10000) in paragraph at lines 346--347
+
+Underfull \hbox (badness 10000) in paragraph at lines 374--375
 []\OT1/ptm/m/n/8 NVIDIA Corp., ``Grace Hop-per Su-per-chip ar-chi-tec-ture in-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 346--347
+Underfull \hbox (badness 10000) in paragraph at lines 374--375
 \OT1/ptm/m/n/8 depth,'' NVIDIA De-vel-oper Blog, 2022. [On-line]. Avail-able:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 346--347
+Underfull \hbox (badness 10000) in paragraph at lines 374--375
 \OT1/ptm/m/n/8 https : / / developer\OML/cmm/m/it/8 :\OT1/ptm/m/n/8 nvidia\OML/
 cmm/m/it/8 :\OT1/ptm/m/n/8 com / blog / nvidia -[] grace -[] hopper -[] superch
 ip -[]
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 352--353
+Underfull \hbox (badness 10000) in paragraph at lines 380--381
 \OT1/ptm/m/n/8 Avail-able: $https : / / docs\OML/cmm/m/it/8 :\OT1/ptm/m/n/8 nvi
 dia\OML/cmm/m/it/8 :\OT1/ptm/m/n/8 com / deeplearning / tensorrt / latest /
  []
@@ -422,22 +440,20 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[6
-
-] (./itis.aux)
+[6] (./itis.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 4307 strings out of 469006
- 68461 string characters out of 5454814
- 500927 words of memory out of 5000000
- 32955 multiletter control sequences out of 15000+600000
- 668997 words of font info for 120 fonts, out of 8000000 for 9000
+ 4261 strings out of 469006
+ 67654 string characters out of 5454814
+ 505885 words of memory out of 5000000
+ 32911 multiletter control sequences out of 15000+600000
+ 674524 words of font info for 135 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 57i,14n,65p,1639b,289s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 57i,14n,65p,2052b,348s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmex1
 0.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/cm/c
 mmi10.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/amsfonts/
@@ -454,7 +470,7 @@ pe1/urw/times/utmb8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/u
 rw/times/utmbi8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/t
 imes/utmr8a.pfb></usr/local/texlive/2026basic/texmf-dist/fonts/type1/urw/times/
 utmri8a.pfb>
-Output written on itis.pdf (6 pages, 339973 bytes).
+Output written on itis.pdf (6 pages, 343829 bytes).
 PDF statistics:
  295 PDF objects out of 1000 (max. 8388607)
  87 compressed objects within 1 object stream

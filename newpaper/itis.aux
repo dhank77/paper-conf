@@ -32,9 +32,9 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Baseline Variants}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {III}GPU Spatial Reduction Implementation}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Hardware Targets: GB10 and RTX 4090}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}CUDA Kernel Design and Warp Alignment}{2}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Hardware Specifications: GB10 (GX10) vs. RTX 4090 Desktop}}{2}{}\protected@file@percent }
 \newlabel{tab:hardware}{{I}{2}{}{table.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}CUDA Kernel Design and Warp Alignment}{2}{}\protected@file@percent }
 \newlabel{eq:spatial_reduction}{{1}{2}{}{equation.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Evaluation}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Evaluation Methodology}{2}{}\protected@file@percent }
@@ -51,24 +51,32 @@
 \newlabel{sec:cost-of-determinism}{{\mbox  {IV-D}}{3}{}{subsection.4.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Fine-Grained GPU Timing Breakdown}{3}{}\protected@file@percent }
 \newlabel{sec:breakdown}{{\mbox  {IV-E}}{3}{}{subsection.4.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion and Key Insights}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Speedup vs. Maxed-Out CPU Cores, and Warp Alignment}{3}{}\protected@file@percent }
-\newlabel{sec:gb10-speedup}{{\mbox  {V-A}}{3}{}{subsection.5.1}{}}
 \citation{wang2020pipeit}
-\citation{amdahl1967}
-\citation{eichenberger2012ompaffinity}
 \@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Key Configurations on Both Platforms: Performance and Deviation from Each Platform's Verified Deterministic Reference. Wall times are mean $\pm $ SD over the 6 measured runs of a 7-run repetition.}}{4}{}\protected@file@percent }
 \newlabel{tab:benchmark}{{II}{4}{}{table.2}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Layer~8 Profiling Breakdown, $32{\times }8\_256$, 150 Frames (ms, mean $\pm $ SD over 6 runs)}}{4}{}\protected@file@percent }
 \newlabel{tab:breakdown}{{III}{4}{}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion and Key Insights}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Speedup vs. Maxed-Out CPU Cores, and Warp Alignment}{4}{}\protected@file@percent }
+\newlabel{sec:gb10-speedup}{{\mbox  {V-A}}{4}{}{subsection.5.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Transfer Cost and Amdahl's Law}{4}{}\protected@file@percent }
 \newlabel{sec:nvlink}{{\mbox  {V-B}}{4}{}{subsection.5.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Cross-Platform Validation on Discrete-GPU Hardware}{4}{}\protected@file@percent }
-\newlabel{sec:rtx4090}{{VI}{4}{}{section.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Methodology Adjustment and GPU Speedup}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Cross-Architecture Bit-Exactness}{4}{}\protected@file@percent }
-\newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{4}{}{subsection.6.2}{}}
+\citation{amdahl1967}
+\citation{eichenberger2012ompaffinity}
 \citation{annisa2025}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Cross-Platform Validation on Discrete-GPU Hardware}{5}{}\protected@file@percent }
+\newlabel{sec:rtx4090}{{VI}{5}{}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Methodology Adjustment and GPU Speedup}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Cross-Architecture Bit-Exactness}{5}{}\protected@file@percent }
+\newlabel{sec:cross-arch-bitexact}{{\mbox  {VI-B}}{5}{}{subsection.6.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Warp Alignment Generalizes Across GPU Architectures}{5}{}\protected@file@percent }
+\newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{5}{}{subsection.6.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces GPU Layer~8 kernel time across grid configurations (mean $\pm $ SD over 6 runs). The warp-aligned $32{\times }8$ grid is fastest across both architectures.}}{5}{}\protected@file@percent }
+\newlabel{fig:warp-cross}{{3}{5}{}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{5}{}\protected@file@percent }
+\newlabel{sec:limitations}{{VII}{5}{}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{5}{}\protected@file@percent }
 \bibcite{annisa2025}{1}
 \bibcite{dong2016fsrcnn}{2}
 \bibcite{wang2020pipeit}{3}
@@ -87,18 +95,10 @@
 \bibcite{nvidiagb10_2025}{16}
 \bibcite{asusgx10_datasheet}{17}
 \bibcite{armdynamiq}{18}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Warp Alignment Generalizes Across GPU Architectures}{5}{}\protected@file@percent }
-\newlabel{sec:warp-generalize}{{\mbox  {VI-C}}{5}{}{subsection.6.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces GPU Layer~8 kernel time across grid configurations (mean $\pm $ SD over 6 runs). The warp-aligned $32{\times }8$ grid is fastest across both architectures.}}{5}{}\protected@file@percent }
-\newlabel{fig:warp-cross}{{3}{5}{}{figure.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Non-Unified Memory and FP64 Precision}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{5}{}\protected@file@percent }
-\newlabel{sec:limitations}{{VII}{5}{}{section.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{5}{}\protected@file@percent }
 \bibcite{nvidiaada2022}{19}
 \bibcite{nvidiagracehopper2022}{20}
 \bibcite{wahlgren2025upm}{21}
 \bibcite{chen2018tvm}{22}
 \bibcite{nvidiatensorrt}{23}
+\@writefile{toc}{\contentsline {section}{References}{6}{}\protected@file@percent }
 \gdef \@abspage@last{6}
