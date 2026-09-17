@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #define CHECK_CUDA(call)                                                     \
   do {                                                                       \
@@ -59,15 +60,28 @@ __global__ void spatial_reduction_kernel(const double *__restrict__ d_all_tmp,
   }
 }
 
-__global__ void fill_kernel(double *buf, size_t n, unsigned int seed) {
+__global__ void fill_kernel(double *buf, size_t n, unsigned long long seed) {
   size_t i = blockIdx.x * (size_t)blockDim.x + threadIdx.x;
   if (i < n) {
-    // Deterministic pseudo-random fill; values are irrelevant to timing,
-    // only the fact that every element is touched (real allocation, no
-    // lazy zero-pages) matters.
-    unsigned int x = (unsigned int)i ^ seed;
-    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
-    buf[i] = (double)(x % 1000) / 1000.0;
+    // High-entropy fill: a 64-bit avalanche hash (MurmurHash3 finalizer)
+    // gives each element a near-uniform random 52-bit mantissa, unlike the
+    // earlier "(x % 1000)" pattern, which only had 1000 distinct values
+    // repeated across 5.7M elements -- exactly the kind of low-entropy,
+    // repetitive pattern GPU memory controllers can transparently compress
+    // in DRAM. A compressed buffer would move fewer physical bytes than
+    // its logical size, inflating the measured "effective bandwidth"
+    // for a reason that has nothing to do with the kernel itself. Fixing
+    // the exponent bits at 0x3FF keeps every value finite and in a narrow
+    // magnitude range (no NaN/Inf risk) while randomizing the full
+    // mantissa, which is what determines DRAM-level compressibility.
+    unsigned long long x = (i + 1) * 0x9E3779B97F4A7C15ULL ^ seed;
+    x ^= x >> 33; x *= 0xff51afd7ed558ccdULL;
+    x ^= x >> 33; x *= 0xc4ceb9fe1a85ec53ULL;
+    x ^= x >> 33;
+    unsigned long long bits = (0x3FFULL << 52) | (x & 0x000FFFFFFFFFFFFFULL);
+    double v;
+    memcpy(&v, &bits, sizeof(v));
+    buf[i] = v - 1.5; // finite, full-mantissa entropy, roughly in [-0.5, 0.5]
   }
 }
 
