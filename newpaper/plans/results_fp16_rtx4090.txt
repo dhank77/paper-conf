@@ -1,0 +1,28 @@
+==============================================================
+ FSRCNN Layer 8 -- precision trade-off -- rtx4090
+ gpu:       NVIDIA GeForce RTX 4090
+ hostname:  lab-iot-MS-7E06
+ date:      2026-09-17T11:41:14+08:00
+ grid:      32x8_256 (paper's winning configuration)
+ reps:      6 per variant
+ frames:    150, 176x144 -> 352x288
+ reference: ground_truth.yuv (V1 serial, double precision)
+==============================================================
+
+variant      wall (ms)           | gpu_l8 (ms)         | cpu_l17 (ms)        | last-rep correctness
+-------------------------------------------------------------------------------------------------------
+fp64         14487.00 +/- 1106.98 |   591.25 +/- 34.31  | 13197.55 +/- 1050.40 | last_diff=0          last_psnr_y=inf        last_ssim=1.000000
+fp16         20193.50 +/- 121.97 |  4844.50 +/- 17.90  | 14740.02 +/- 97.39  | last_diff=339712     last_psnr_y=64.639959  last_ssim=0.999859
+bf16         19419.17 +/- 451.05 |  4348.24 +/- 106.06 | 14475.27 +/- 344.27 | last_diff=2844668    last_psnr_y=55.404578  last_ssim=0.998824
+
+Reading this: fp64 should show diff_bytes=0 (bit-exact) -- if it does
+not, something in this environment differs from the paper's build and
+the fp16/bf16 numbers below are not trustworthy either. fp16/bf16 are
+expected to have diff_bytes > 0; the PSNR-Y/SSIM columns quantify how
+much accuracy was traded for whatever speedup gpu_l8 shows.
+
+Files to send back:
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_fp16_rtx4090.txt
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_fp16_rtx4090.csv
+  /home/lab-iot/FSRCNN/paper-conf/newpaper/plans/results_fp16_rtx4090.rawlog
+==============================================================
